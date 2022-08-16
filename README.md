@@ -1,2 +1,1 @@
-# RickDangerousUpdate
-This is a simple script that will help on fixing and improving a RickDangerousInsanium Build on a Retropie
+# This is a work-in-progress and not ready to be used!
