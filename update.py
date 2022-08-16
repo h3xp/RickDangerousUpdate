@@ -426,7 +426,7 @@ def restore_retroarch_menu():
         host, username, password = connect_pi()
         localpath = pathlib.Path(__file__).parent.resolve()
         selection_path = localpath / "resources" / "retroarch_configs" / selection
-        copydir(host, username, password, selection_path, "/tmp/" + selection)
+        copydir(host, username, password, selection_path, "/opt/retropie/configs/" + selection)
         cls()
         print("All done!")
         break
