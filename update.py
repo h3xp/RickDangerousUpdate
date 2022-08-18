@@ -10,6 +10,8 @@ import pathlib
 import zipfile
 import shutil
 
+from megadl import get_available_updates, download_update
+
 class MySFTPClient(paramiko.SFTPClient):
     def put_dir(self, source, target):
         ''' Uploads the contents of the source directory to the target path. The
@@ -90,7 +92,7 @@ def enter_connection():
         if password == "":
             password = "raspberry"
         if ip == "":
-            ip = "192.168.178.179"
+            ip = "192.168.119.179"
         return ip, username, password
 
 
@@ -150,12 +152,32 @@ def main_menu():
 def improvements_menu():
     while True:
         cls()
-        print('\nPulling updates automatically is not supported yet. Make sure to place the .zip files in the improvements directory.')
-        input('\nPress any key to continue.')
-        host, username, password = connect_pi()
+        print('\n ===========[ AVAILABLE UPDATES ]=============')
+        print('  ')
+        available_updates = get_available_updates()
         localpath = pathlib.Path(__file__).parent.resolve()
         improvements_dir = localpath / "improvements"
+        os.mkdir(improvements_dir)
         extracted = improvements_dir / "extracted"
+
+        print("0. all")
+        for i in range(len(available_updates)):
+            print(str(i+1) + ". " + available_updates[i][0])
+        selection = input('\nSelect which update you want to apply: ')
+        selected_updates = []
+        if int(selection) in range(len(available_updates)+1):
+            if int(selection) == 0:
+                print("Downloading all available updates...")
+                selected_updates = available_updates
+            else:
+                print("Downloading: " + available_updates[int(selection)-1][0] + "...")
+                selected_updates.append(available_updates[int(selection)-1])
+            for update in selected_updates:
+                download_update(update[1])
+        else:
+            print("Invalid selection.")
+            break
+        host, username, password = connect_pi()
         for filename in os.listdir(improvements_dir):
             f = os.path.join(improvements_dir, filename)
             if os.path.isfile(f):
@@ -163,11 +185,11 @@ def improvements_menu():
                     print(f)
                     with zipfile.ZipFile(f, 'r') as zip_ref:
                         zip_ref.extractall(extracted)
-                    copydir(host, username, password, extracted, "/")
-                    try:
-                        shutil.rmtree(extracted)
-                    except OSError as e:
-                        print("Error: %s : %s" % (extracted, e.strerror))
+                    copydir(host, username, password, extracted, "/tmp/")
+        try:
+            shutil.rmtree(improvements_dir)
+        except OSError as e:
+            print("Error: %s : %s" % (extracted, e.strerror))
 
         cls()
         print("All done!")

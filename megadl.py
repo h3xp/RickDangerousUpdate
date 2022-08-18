@@ -1,3 +1,9 @@
+'''
+https://stackoverflow.com/questions/64488709/how-can-i-list-the-contents-of-a-mega-public-folder-by-its-shared-url-using-meg
+
+edited by LizardWiz
+'''
+
 import json
 import os
 from pathlib import Path
@@ -143,20 +149,37 @@ def decrypt_node_key(key_str: str, shared_key: str):
     encrypted_key = base64_to_a32(key_str.split(":")[1])
     return decrypt_key(encrypted_key, shared_key)
 
+def get_available_updates():
+    (root_folder, shared_enc_key) = parse_folder_url("https://mega.nz/folder/DfBWGTjA#BFcNX-XcMEnY-cdFDWTx1Q")
+    shared_key = base64_to_a32(shared_enc_key)
+    nodes = get_nodes_in_shared_folder(root_folder)
+    available_updates = []
+    for node in nodes:
+        key = decrypt_node_key(node["k"], shared_key)
+        if node["t"] == 0:  # Is a file
+            k = (key[0] ^ key[4], key[1] ^ key[5], key[2] ^ key[6], key[3] ^ key[7])
+        elif node["t"] == 1:  # Is a folder
+            k = key
+        attrs = decrypt_attr(base64_url_decode(node["a"]), k)
+        file_name = attrs["n"]
+        file_id = node["h"]
+        if node["t"] == 0:
+            #print("file_name: {}\tfile_id: {}".format(file_name, file_id))
+            available_updates.append([file_name, file_id])
+    return available_updates
 
-(root_folder, shared_enc_key) = parse_folder_url("https://mega.nz/folder/DfBWGTjA#BFcNX-XcMEnY-cdFDWTx1Q")
-shared_key = base64_to_a32(shared_enc_key)
-nodes = get_nodes_in_shared_folder(root_folder)
-for node in nodes:
-    key = decrypt_node_key(node["k"], shared_key)
-    if node["t"] == 0:  # Is a file
-        k = (key[0] ^ key[4], key[1] ^ key[5], key[2] ^ key[6], key[3] ^ key[7])
-    elif node["t"] == 1:  # Is a folder
-        k = key
-    attrs = decrypt_attr(base64_url_decode(node["a"]), k)
-    file_name = attrs["n"]
-    file_id = node["h"]
-    print("file_name: {}\tfile_id: {}".format(file_name, file_id))
-    if node["t"] == 0:
-        file_data = get_encryption_key(file_id, root_folder)
-        download_file(file_id, key, file_data)
+def download_update(ID):
+    (root_folder, shared_enc_key) = parse_folder_url("https://mega.nz/folder/DfBWGTjA#BFcNX-XcMEnY-cdFDWTx1Q")
+    shared_key = base64_to_a32(shared_enc_key)
+    nodes = get_nodes_in_shared_folder(root_folder)
+    for node in nodes:
+        key = decrypt_node_key(node["k"], shared_key)
+        if node["t"] == 0:  # Is a file
+            k = (key[0] ^ key[4], key[1] ^ key[5], key[2] ^ key[6], key[3] ^ key[7])
+        elif node["t"] == 1:  # Is a folder
+            k = key
+        attrs = decrypt_attr(base64_url_decode(node["a"]), k)
+        file_id = node["h"]
+        if file_id == ID:
+            file_data = get_encryption_key(file_id, root_folder)
+            download_file(file_id, key, file_data, "C:\\Users\\tomni\\Documents\\GitHub\\RickDangerousUpdate\\improvements\\")
