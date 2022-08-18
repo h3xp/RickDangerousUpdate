@@ -10,6 +10,8 @@ import pathlib
 import zipfile
 import shutil
 import configparser
+import platform
+from distutils.dir_util import copy_tree
 
 from megadl import get_available_updates, download_update
 config = configparser.ConfigParser()
@@ -42,37 +44,49 @@ def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
-def runcmd(host, username, password, command):
-    client = paramiko.client.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-    client.connect(host, username=username, password=password)
-    _stdin, _stdout, _stderr = client.exec_command(command)
+def runcmd(command):
+    if os.environ["RetroPieUpdaterUseSSH"] == "Yes":
+        host, username, password = connect_pi()
+        client = paramiko.client.SSHClient()
+        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+        client.connect(host, username=username, password=password)
+        _stdin, _stdout, _stderr = client.exec_command(command)
 
-    client.close()
+        client.close()
+    else:
+        os.system(command)
 
 
-def copyfile(host, username, password, localpath, filepath):
-    transport = paramiko.Transport((host, 22))
-    transport.connect(None, username, password)
+def copyfile(localpath, filepath):
+    if os.environ["RetroPieUpdaterUseSSH"] == "Yes":
+        host, username, password = connect_pi()
+        transport = paramiko.Transport((host, 22))
+        transport.connect(None, username, password)
 
-    sftp = paramiko.SFTPClient.from_transport(transport)
-    sftp.put(localpath, filepath)
+        sftp = paramiko.SFTPClient.from_transport(transport)
+        sftp.put(localpath, filepath)
 
-    if sftp:
+        if sftp:
+            sftp.close()
+        if transport:
+            transport.close()
+    else:
+        shutil.copy(localpath, filepath)
+
+
+
+def copydir(source_path, target_path):
+    if os.environ["RetroPieUpdaterUseSSH"] == "Yes":
+        host, username, password = connect_pi()
+        transport = paramiko.Transport((host, 22))
+        transport.connect(None, username, password)
+
+        sftp = MySFTPClient.from_transport(transport)
+        sftp.mkdir(target_path, ignore_existing=True)
+        sftp.put_dir(source_path, target_path)
         sftp.close()
-    if transport:
-        transport.close()
-
-
-def copydir(host, username, password, source_path, target_path):
-    transport = paramiko.Transport((host, 22))
-    transport.connect(None, username, password)
-
-    sftp = MySFTPClient.from_transport(transport)
-    sftp.mkdir(target_path, ignore_existing=True)
-    sftp.put_dir(source_path, target_path)
-    sftp.close()
-
+    else:
+        copy_tree(source_path, target_path)
 
 def ip_instructions():
     while True:
@@ -161,6 +175,10 @@ def main_menu():
         elif uinp == '3':
             restore_retroarch_menu()
             break
+        elif uinp == '4':
+            print("not yet supported")
+            break
+            return
         elif uinp == '9':
             break
             return
@@ -196,7 +214,6 @@ def improvements_menu():
         else:
             print("Invalid selection.")
             break
-        host, username, password = connect_pi()
         for filename in os.listdir(improvements_dir):
             f = os.path.join(improvements_dir, filename)
             if os.path.isfile(f):
@@ -204,7 +221,7 @@ def improvements_menu():
                     print(f)
                     with zipfile.ZipFile(f, 'r') as zip_ref:
                         zip_ref.extractall(extracted)
-                    copydir(host, username, password, extracted, "/")
+                    copydir(extracted, "/")
         try:
             shutil.rmtree(improvements_dir)
         except OSError as e:
@@ -226,18 +243,15 @@ def bugs_menu():
         uinp = input('\n Enter your Selection: ')
 
         if uinp == '1':
-            host, username, password = connect_pi()
-            runcmd(host, username, password,
-                   'sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
+            runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
             cls()
             print("All done!")
             break
         elif uinp == '2':
-            host, username, password = connect_pi()
             localpath = pathlib.Path(__file__).parent.resolve()
             videomodes_dir = localpath / "resources" / "bugs" / "videomodes" / "opt" / "retropie" / "configs" / "all"
             videomodes_file = videomodes_dir / "videomodes.cfg"
-            copyfile(host, username, password, videomodes_file, "/opt/retropie/configs/all/videomodes.cfg")
+            copyfile(videomodes_file, "/opt/retropie/configs/all/videomodes.cfg")
             cls()
             print("All done!")
             break
@@ -465,14 +479,25 @@ def restore_retroarch_menu():
         if uinp == "":
             uinp = "1"
         selection = switch_dict.get(int(uinp))
-        host, username, password = connect_pi()
         localpath = pathlib.Path(__file__).parent.resolve()
         selection_path = localpath / "resources" / "retroarch_configs" / selection
-        copydir(host, username, password, selection_path, "/opt/retropie/configs/" + selection)
+        copydir(selection_path, "/opt/retropie/configs/" + selection)
+
         cls()
         print("All done!")
         break
 
 
-main_menu()
+def check_hostname():
+    if platform.uname()[1] == "retropie":
+        os.environ["RetroPieUpdaterUseSSH"] = "No"
+    else:
+        os.environ["RetroPieUpdaterUseSSH"] = "Yes"
 
+
+def main():
+    check_hostname()
+    main_menu()
+
+
+main()
