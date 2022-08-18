@@ -24,11 +24,13 @@ seqno = random.randint(0, 0xFFFFFFFF)
 logger = logging.getLogger(__name__)
 timeout = 160
 
-
+localpath = Path(__file__).parent.resolve()
+destpath = localpath / "improvements"
+destpath = str(destpath)
 def download_file(file_handle,
                   file_key,
                   file_data,
-                  dest_path=None,
+                  dest_path=destpath,
                   dest_filename=None):
     k = (file_key[0] ^ file_key[4], file_key[1] ^ file_key[5],
          file_key[2] ^ file_key[6], file_key[3] ^ file_key[7])
@@ -182,4 +184,4 @@ def download_update(ID):
         file_id = node["h"]
         if file_id == ID:
             file_data = get_encryption_key(file_id, root_folder)
-            download_file(file_id, key, file_data, "C:\\Users\\tomni\\Documents\\GitHub\\RickDangerousUpdate\\improvements\\")
+            download_file(file_id, key, file_data)
