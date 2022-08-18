@@ -9,8 +9,10 @@ import paramiko
 import pathlib
 import zipfile
 import shutil
+import configparser
 
 from megadl import get_available_updates, download_update
+config = configparser.ConfigParser()
 
 class MySFTPClient(paramiko.SFTPClient):
     def put_dir(self, source, target):
@@ -34,6 +36,7 @@ class MySFTPClient(paramiko.SFTPClient):
                 pass
             else:
                 raise
+
 
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
@@ -60,7 +63,8 @@ def copyfile(host, username, password, localpath, filepath):
     if transport:
         transport.close()
 
-def copydir(host,username, password, source_path, target_path):
+
+def copydir(host, username, password, source_path, target_path):
     transport = paramiko.Transport((host, 22))
     transport.connect(None, username, password)
 
@@ -68,6 +72,7 @@ def copydir(host,username, password, source_path, target_path):
     sftp.mkdir(target_path, ignore_existing=True)
     sftp.put_dir(source_path, target_path)
     sftp.close()
+
 
 def ip_instructions():
     while True:
@@ -93,33 +98,46 @@ def enter_connection():
             password = "raspberry"
         if ip == "":
             ip = "192.168.119.179"
+        config['SSH'] = {'host': ip, 'username': username, 'password': password}
+        with open('config.ini', 'w') as configfile:
+            config.write(configfile)
         return ip, username, password
 
 
 def connect_pi():
-    while True:
-        cls()
-        print('\n ===========[ CONNECT RETROPIE ]=============')
-        print("\nIn order to automatically apply updates/fixes \n"
-              "to your Retropie you have to provide it's IP address.")
-        print(' ')
-        print(' 1. Enter IP')
-        print(' 2. Where do I find the IP adress?')
-        print(' 9. Quit ❌')
+    if os.path.exists('config.ini'):
+        config.read("config.ini")
+        host = config.get('SSH', 'host')
+        username = config.get('SSH', 'username')
+        password = config.get('SSH', 'password')
+        print(username)
+        print(password)
+        print(host)
+        return host, username, password
+    else:
+        while True:
+            cls()
+            print('\n ===========[ CONNECT RETROPIE ]=============')
+            print("\nIn order to automatically apply updates/fixes \n"
+                  "to your Retropie you have to provide it's IP address.")
+            print(' ')
+            print(' 1. Enter IP')
+            print(' 2. Where do I find the IP adress?')
+            print(' 9. Quit ❌')
 
-        uinp = input('\n Enter your Selection: ')
+            uinp = input('\n Enter your Selection: ')
 
-        if uinp == '1':
-            host, username, password = enter_connection()
-            return host, username, password
-            break
-        elif uinp == '2':
-            ip_instructions()
-        elif uinp == '9':
-            break
-            return
-        else:
-            print('\n  Please select from the Menu.')
+            if uinp == '1':
+                host, username, password = enter_connection()
+                return host, username, password
+                break
+            elif uinp == '2':
+                ip_instructions()
+            elif uinp == '9':
+                break
+                return
+            else:
+                print('\n  Please select from the Menu.')
 
 
 def main_menu():
@@ -149,6 +167,7 @@ def main_menu():
         else:
             print('\n  Please select from the Menu.')
 
+
 def improvements_menu():
     while True:
         cls()
@@ -157,7 +176,7 @@ def improvements_menu():
         available_updates = get_available_updates()
         localpath = pathlib.Path(__file__).parent.resolve()
         improvements_dir = localpath / "improvements"
-        os.mkdir(improvements_dir)
+        os.makedirs(improvements_dir, exist_ok=True)
         extracted = improvements_dir / "extracted"
 
         print("0. all")
@@ -227,6 +246,7 @@ def bugs_menu():
             main_menu()
         else:
             print('\n  Please select from the Menu. For more details check README.md.')
+
 
 def restore_retroarch_menu():
     while True:
@@ -452,6 +472,7 @@ def restore_retroarch_menu():
         cls()
         print("All done!")
         break
+
 
 main_menu()
 

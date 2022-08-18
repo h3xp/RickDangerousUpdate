@@ -40,6 +40,8 @@ python update.py
 
 # Attention
 
-Be aware: The script will overwrite files on your retropie.
+The script automatically creates a 'config.ini' which saves your SSH credentials.
+
+The script will overwrite files on your retropie.
 
 You will loose any changes you made to gamelist.xml or any other configuration file if they are included in any improvement archive.
