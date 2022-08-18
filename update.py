@@ -185,7 +185,7 @@ def improvements_menu():
                     print(f)
                     with zipfile.ZipFile(f, 'r') as zip_ref:
                         zip_ref.extractall(extracted)
-                    copydir(host, username, password, extracted, "/tmp/")
+                    copydir(host, username, password, extracted, "/")
         try:
             shutil.rmtree(improvements_dir)
         except OSError as e:

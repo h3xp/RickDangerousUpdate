@@ -2,6 +2,16 @@
 
 This script aims to help people adding improvements, fixing known bugs or resetting certain configurations.
 
+```
+ ===========[ MAIN MENU ]=============
+
+ 1. Load Improvements ✨
+ 2. Fix known bugs 🐛
+ 3. Restore retroarch configurations 👾
+ 4. Update this script 📄
+ 9. Quit ❌
+```
+
 # Installation
 
 Make sure you have python3 installed.
