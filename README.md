@@ -23,7 +23,7 @@ in a terminal on your raspberrypi:
 bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N)
 ```
 
-# Alternative Installation
+# Alternative Installation (using SSH)
 
 If you wish to run it manually or on a Windows system make sure python3 and pip3 is installed.
 
