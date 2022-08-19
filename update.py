@@ -23,6 +23,8 @@ from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from mega.crypto import base64_to_a32, base64_url_decode, decrypt_attr, decrypt_key, a32_to_str, get_chunks, str_to_a32
 from mega.errors import ValidationError, RequestError
+import xml.etree.ElementTree as ET
+
 
 logger = logging.getLogger(__name__)
 localpath = Path(__file__).parent.resolve()
@@ -228,7 +230,7 @@ def cls():
 
 
 def runcmd(command):
-    if os.environ["RetroPieUpdaterUseSSH"] == "Yes":
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
         host, username, password = connect_pi()
         client = paramiko.client.SSHClient()
         client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
@@ -241,7 +243,7 @@ def runcmd(command):
 
 
 def copyfile(localpath, filepath):
-    if os.environ["RetroPieUpdaterUseSSH"] == "Yes":
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
         host, username, password = connect_pi()
         transport = paramiko.Transport((host, 22))
         transport.connect(None, username, password)
@@ -258,7 +260,7 @@ def copyfile(localpath, filepath):
 
 
 def copydir(source_path, target_path):
-    if os.environ["RetroPieUpdaterUseSSH"] == "Yes":
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
         host, username, password = connect_pi()
         transport = paramiko.Transport((host, 22))
         transport.connect(None, username, password)
@@ -336,6 +338,22 @@ def connect_pi():
                 print('\n  Please select from the Menu.')
 
 
+def merge_gamelist(directory):
+    #check if gamelist.xml has been updated
+    for gamelist in Path(directory).rglob('*.xml'):
+        #find corresponding xmls
+        print(gamelist)
+        corr = gamelist.parts[-6:]
+        corr = Path(*corr)
+        print(corr)
+
+        tree = ET.parse(corr)
+        root = tree.getroot()
+
+
+
+
+
 def main_menu():
     while True:
         cls()
@@ -372,7 +390,10 @@ def improvements_menu():
         print('  ')
         available_updates = get_available_updates()
         localpath = pathlib.Path(__file__).parent.resolve()
-        improvements_dir = localpath / "improvements"
+        if os.environ["RetroPieUpdaterRemote"] == "Yes":
+            improvements_dir = localpath / "improvements"
+        else:
+            improvements_dir = Path("/", "tmp", "improvements")
         os.makedirs(improvements_dir, exist_ok=True)
         extracted = improvements_dir / "extracted"
 
@@ -400,6 +421,7 @@ def improvements_menu():
                     print(f)
                     with zipfile.ZipFile(f, 'r') as zip_ref:
                         zip_ref.extractall(extracted)
+                    #merge_gamelist(extracted)
                     copydir(extracted, "/")
         try:
             shutil.rmtree(improvements_dir)
@@ -441,18 +463,21 @@ def restore_retroarch_menu():
         print(' 2. No')
         uinp = input("\nPlease select from the menu: ")
         if uinp == "1":
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", "retroarch_configs.zip")
-            localpath = pathlib.Path(__file__).parent.resolve()
+            if os.environ["RetroPieUpdaterRemote"] == "Yes":
+                localpath = pathlib.Path(__file__).parent.resolve()
+            else:
+                localpath = Path("/", "tmp")
+            urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", localpath / "retroarch_configs.zip")
             f = os.path.join(localpath, "retroarch_configs.zip")
             if os.path.isfile(f):
                 with zipfile.ZipFile(f, 'r') as zip_ref:
                     zip_ref.extractall("retroarch_configs")
-                copydir("retroarch_configs/", "/opt/retropie/configs/")
+                copydir(localpath / "retroarch_configs/", "/opt/retropie/configs/")
                 try:
-                    shutil.rmtree("retroarch_configs")
+                    shutil.rmtree(localpath / "retroarch_configs")
                 except OSError as e:
-                    print("Error: %s : %s" % ("retroarch_configs", e.strerror))
-                os.remove("retroarch_configs.zip")
+                    print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
+                os.remove(localpath / "retroarch_configs.zip")
         else:
             break
         cls()
@@ -462,9 +487,9 @@ def restore_retroarch_menu():
 
 def check_hostname():
     if platform.uname()[1] == "retropie":
-        os.environ["RetroPieUpdaterUseSSH"] = "No"
+        os.environ["RetroPieUpdaterRemote"] = "No"
     else:
-        os.environ["RetroPieUpdaterUseSSH"] = "Yes"
+        os.environ["RetroPieUpdaterRemote"] = "Yes"
 
 
 def main():
