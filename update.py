@@ -164,8 +164,10 @@ def main_menu():
         print(' 3. Restore retroarch configurations 👾')
         print(' 4. Update this script 📄')
         print(' 9. Quit ❌')
-        uinp = input('\n Enter your Selection: ')
-
+        try:
+            uinp = input('\n Enter your Selection: ')
+        except EOFError:
+            break
         if uinp == '1':
             improvements_menu()
             break
