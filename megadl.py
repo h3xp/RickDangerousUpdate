@@ -1,11 +1,9 @@
 '''
 Date: 17.08.22
-By: LizardWiz
+Edited By: LizardWiz
 
 original solution found at:
 https://stackoverflow.com/questions/64488709/how-can-i-list-the-contents-of-a-mega-public-folder-by-its-shared-url-using-meg
-
-edited by LizardWiz
 '''
 
 import json
