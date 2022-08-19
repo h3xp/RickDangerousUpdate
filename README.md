@@ -10,7 +10,6 @@ It can be run directly from the retropie and apply updates locally, or you can r
  1. Load Improvements ✨
  2. Fix known bugs 🐛
  3. Restore retroarch configurations 👾
- 4. Update this script 📄
  9. Quit ❌
 ```
 

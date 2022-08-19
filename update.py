@@ -30,6 +30,7 @@ destpath = localpath / "improvements"
 destpath = str(destpath)
 config = configparser.ConfigParser()
 
+
 def download_file(file_handle,
                   file_key,
                   file_data,
@@ -197,6 +198,7 @@ def download_update(ID):
             file_data = get_file_data(file_id, root_folder)
             download_file(file_id, key, file_data)
 
+
 class MySFTPClient(paramiko.SFTPClient):
     def put_dir(self, source, target):
         ''' Uploads the contents of the source directory to the target path. The
@@ -253,7 +255,6 @@ def copyfile(localpath, filepath):
             transport.close()
     else:
         shutil.copy(localpath, filepath)
-
 
 
 def copydir(source_path, target_path):
@@ -343,7 +344,6 @@ def main_menu():
         print(' 1. Load Improvements ✨')
         print(' 2. Fix known bugs 🐛')
         print(' 3. Restore retroarch configurations 👾')
-        print(' 4. Update this script 📄')
         print(' 9. Quit ❌')
         try:
             uinp = input('\n Enter your Selection: ')
@@ -358,10 +358,6 @@ def main_menu():
         elif uinp == '3':
             restore_retroarch_menu()
             break
-        elif uinp == '4':
-            print("not yet supported")
-            break
-            return
         elif uinp == '9':
             break
             return
@@ -421,20 +417,11 @@ def bugs_menu():
         print('\n ===========[ FIX BUGS ]=============')
         print('  ')
         print(' 1. Fix permissions')
-        print(' 2. Fix videomodes.cfg')
         print(' 9. Return ')
         uinp = input('\n Enter your Selection: ')
 
         if uinp == '1':
             runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
-            cls()
-            print("All done!")
-            break
-        elif uinp == '2':
-            localpath = pathlib.Path(__file__).parent.resolve()
-            videomodes_dir = localpath / "resources" / "bugs" / "videomodes" / "opt" / "retropie" / "configs" / "all"
-            videomodes_file = videomodes_dir / "videomodes.cfg"
-            copyfile(videomodes_file, "/opt/retropie/configs/all/videomodes.cfg")
             cls()
             print("All done!")
             break
@@ -461,9 +448,13 @@ def restore_retroarch_menu():
                 with zipfile.ZipFile(f, 'r') as zip_ref:
                     zip_ref.extractall("retroarch_configs")
                 copydir("retroarch_configs/", "/opt/retropie/configs/")
+                try:
+                    shutil.rmtree("retroarch_configs")
+                except OSError as e:
+                    print("Error: %s : %s" % ("retroarch_configs", e.strerror))
+                os.remove("retroarch_configs.zip")
         else:
             break
-
         cls()
         print("All done!")
         break
