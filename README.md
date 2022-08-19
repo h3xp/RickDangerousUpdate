@@ -14,28 +14,30 @@ It can be run directly from the retropie and apply updates locally, or you can r
  9. Quit ❌
 ```
 
-# Installation
+# Easy Installation & Usage
 
-Make sure you have python3 and pip3 installed. If you are running this on the retropie directly install pip3 with this command:
+The easiest way to run the updater is directly from the retropie. Just copy and paste the following command
+in a terminal on your raspberrypi:
 
 ```
-sudo apt-get install python3-pip
+bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N)
 ```
+
+# Alternative Installation
+
+If you wish to run it manually or on a Windows system make sure python3 and pip3 is installed.
 
 You can download this repository with your browser by pressing the green "Code ▼" button and clicking on "Download ZIP".
 Make sure to extract the zip afterwards.
 
 Alternatively if you have git installed on your computer (it is installed on your retropie) you can run:
-```bash
-git clone https://github.com/h3xp/RickDangerousUpdate.git
-```
 
 ```bash
+git clone https://github.com/h3xp/RickDangerousUpdate.git
 cd RickDangerousUpdate
 pip3 install -r requirements.txt
 ```
 
-# Usage
 
 The script is self-explanatory, it will guide you through the whole process, you make your choices by simple pressing numbers on your keyboard.
 Just run the script inside a terminal like this:
