@@ -167,7 +167,7 @@ def main_menu():
         try:
             uinp = input('\n Enter your Selection: ')
         except EOFError:
-            print("EOF")
+            main_menu()
         if uinp == '1':
             improvements_menu()
             break
