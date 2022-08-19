@@ -13,7 +13,7 @@ It can be run directly from the retropie and apply updates locally, or you can r
  9. Quit ❌
 ```
 
-# Easy Installation & Usage
+# Easy Installation & Usage (recommended)
 
 The easiest way to run the updater is directly from the retropie. Just copy and paste the following command
 in a terminal on your raspberrypi:
