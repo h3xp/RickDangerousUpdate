@@ -27,7 +27,7 @@ import xml.etree.ElementTree as ET
 
 
 logger = logging.getLogger(__name__)
-localpath = Path(__file__).parent.resolve()
+localpath = Path.cwd().resolve()
 destpath = localpath / "improvements"
 destpath = str(destpath)
 config = configparser.ConfigParser()
@@ -389,7 +389,7 @@ def improvements_menu():
         print('\n ===========[ AVAILABLE UPDATES ]=============')
         print('  ')
         available_updates = get_available_updates()
-        localpath = pathlib.Path(__file__).parent.resolve()
+        localpath = Path.cwd().resolve()
         if os.environ["RetroPieUpdaterRemote"] == "Yes":
             improvements_dir = localpath / "improvements"
         else:
@@ -464,7 +464,7 @@ def restore_retroarch_menu():
         uinp = input("\nPlease select from the menu: ")
         if uinp == "1":
             if os.environ["RetroPieUpdaterRemote"] == "Yes":
-                localpath = pathlib.Path(__file__).parent.resolve()
+                localpath = Path.cwd().resolve()
             else:
                 localpath = Path("/", "tmp")
             urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", localpath / "retroarch_configs.zip")
