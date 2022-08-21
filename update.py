@@ -347,11 +347,43 @@ def merge_gamelist(directory):
         corr = Path(*corr)
         print(corr)
 
-        tree = ET.parse(corr)
-        root = tree.getroot()
+        merge_xml(gamelist, corr)
 
+def merge_xml(src_xml: str, dest_xml: str):
+    do_not_overwrite = ["favorite", "lastplayed", "playcount"]
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+    dest_tree = ET.parse(dest_xml)
+    dest_root = dest_tree.getroot()
 
+    for src_game in src_root:
+        src_path = src_game.find("path")
+        if src_path.text is not None:
+            parents = dest_tree.findall(".//game[path='{}']".format(src_path.text))
+            if len(parents) == 0:
+                dest_root.append(ET.fromstring("<game></game>"))
+                parent = dest_root[len(dest_root) -1]
+                for src_node in src_game:
+                    if src_node.tag not in do_not_overwrite:
+                        parent.append(ET.fromstring("<" + src_node.tag + " />") if src_node.text is None else ET.fromstring("<"+ src_node.tag +">" + src_node.text + "</"+ src_node.tag +">"))
+                        #print(src_node.tag + ":" + ("" if src_node.text is None else src_node.text))
+            else:
+                for parent in dest_tree.findall(".//game[path='{}']".format(src_path.text)):
+                    for src_node in src_game:
+                        if src_node.tag not in do_not_overwrite:
+                            dest_node = parent.find(src_node.tag)
+                            if dest_node is None:
+                                parent.append(ET.fromstring("<" + src_node.tag + " />") if src_node.text is None else ET.fromstring("<"+ src_node.tag +">" + src_node.text + "</"+ src_node.tag +">"))
+                            else:
+                                dest_node.text = None if src_node.text is None else src_node.text
+                                
+                            #print(src_node.tag + ":" + ("" if src_node.text is None else src_node.text))
 
+    dest_tree = ET.ElementTree(dest_root)
+    with open(dest_xml, "wb") as fh:
+        ET.indent(dest_tree, space="\t", level=0)
+        dest_tree.write(fh)
+        
 
 
 def main_menu():
@@ -421,7 +453,7 @@ def improvements_menu():
                     print(f)
                     with zipfile.ZipFile(f, 'r') as zip_ref:
                         zip_ref.extractall(extracted)
-                    #merge_gamelist(extracted)
+                    merge_gamelist(extracted)
                     copydir(extracted, "/")
         try:
             shutil.rmtree(improvements_dir)
@@ -490,7 +522,6 @@ def check_hostname():
         os.environ["RetroPieUpdaterRemote"] = "No"
     else:
         os.environ["RetroPieUpdaterRemote"] = "Yes"
-
 
 def main():
     check_hostname()
