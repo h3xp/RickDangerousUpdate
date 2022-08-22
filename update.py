@@ -357,8 +357,14 @@ def merge_xml(src_xml: str, dest_xml: str):
     dest_root = dest_tree.getroot()
 
     for src_game in src_root:
+        if src_game.tag != "game":
+            continue
+
         src_path = src_game.find("path")
-        if src_path.text is not None:
+        if src_path is not None:
+            if src_path.text is None:
+                continue
+            
             parents = dest_tree.findall(".//game[path='{}']".format(src_path.text))
             if len(parents) == 0:
                 dest_root.append(ET.fromstring("<game></game>"))
