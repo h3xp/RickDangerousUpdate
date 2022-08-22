@@ -24,7 +24,8 @@ from Crypto.Util import Counter
 from mega.crypto import base64_to_a32, base64_url_decode, decrypt_attr, decrypt_key, a32_to_str, get_chunks, str_to_a32
 from mega.errors import ValidationError, RequestError
 import xml.etree.ElementTree as ET
-
+import datetime
+import shutil
 
 logger = logging.getLogger(__name__)
 localpath = Path.cwd().resolve()
@@ -350,6 +351,8 @@ def merge_gamelist(directory):
         merge_xml(gamelist, corr)
 
 def merge_xml(src_xml: str, dest_xml: str):
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
     do_not_overwrite = ["favorite", "lastplayed", "playcount"]
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
@@ -372,7 +375,6 @@ def merge_xml(src_xml: str, dest_xml: str):
                 for src_node in src_game:
                     if src_node.tag not in do_not_overwrite:
                         parent.append(ET.fromstring("<" + src_node.tag + " />") if src_node.text is None else ET.fromstring("<"+ src_node.tag +">" + src_node.text + "</"+ src_node.tag +">"))
-                        #print(src_node.tag + ":" + ("" if src_node.text is None else src_node.text))
             else:
                 for parent in dest_tree.findall(".//game[path='{}']".format(src_path.text)):
                     for src_node in src_game:
@@ -382,14 +384,16 @@ def merge_xml(src_xml: str, dest_xml: str):
                                 parent.append(ET.fromstring("<" + src_node.tag + " />") if src_node.text is None else ET.fromstring("<"+ src_node.tag +">" + src_node.text + "</"+ src_node.tag +">"))
                             else:
                                 dest_node.text = None if src_node.text is None else src_node.text
-                                
-                            #print(src_node.tag + ":" + ("" if src_node.text is None else src_node.text))
 
+    shutil.copy2(dest_xml, dest_xml + "." + file_time)
     dest_tree = ET.ElementTree(dest_root)
+    
     with open(dest_xml, "wb") as fh:
         ET.indent(dest_tree, space="\t", level=0)
         dest_tree.write(fh, "utf-8")
-        
+
+    if os.path.getsize(dest_xml) > 0:
+        os.remove(dest_xml + "." + file_time)        
 
 
 def main_menu():
