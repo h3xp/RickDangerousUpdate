@@ -388,7 +388,7 @@ def merge_xml(src_xml: str, dest_xml: str):
     dest_tree = ET.ElementTree(dest_root)
     with open(dest_xml, "wb") as fh:
         ET.indent(dest_tree, space="\t", level=0)
-        dest_tree.write(fh)
+        dest_tree.write(fh, "utf-8")
         
 
 
