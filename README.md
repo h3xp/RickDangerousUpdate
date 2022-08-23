@@ -1,6 +1,6 @@
 ![Nice banner saying Insanium Edition Update Tool](banner.png)
 
-**Disclaimer:** This repository is only for educational purpose. Only use this with your own files.
+**Disclaimer:** This repository is only for educational purpose. Only use this with your own files/backups.
 
 This script aims to help people adding improvements, fixing known bugs or resetting certain configurations.
 It can be run directly from the retropie and apply updates locally, or you can run it on a device in the same local network by providing ssh credentials.
@@ -24,7 +24,7 @@ Join Ricks discord server to keep track on the latest changes.
 # Easy Installation & Usage (recommended)
 
 The easiest way to run the updater is directly from the retropie. Just copy and paste the following command
-in a terminal on your raspberrypi (replace [link] with a link to your personal mega storage)
+in a terminal on your raspberrypi (replace [link] with a link to your personal mega storage):
 
 
 ```
@@ -50,10 +50,10 @@ pip3 install -r requirements.txt
 
 
 The script is self-explanatory, it will guide you through the whole process, you make your choices by simple pressing numbers on your keyboard.
-Just run the script inside a terminal like this:
+Just run the script inside a terminal like this (replace [link] with a link to your personal mega storage):
 
 ```
-python3 update.py 
+python3 update.py [link]
 ```
 
 # Attention
