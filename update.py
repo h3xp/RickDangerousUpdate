@@ -30,16 +30,6 @@ logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
 
-if os.environ.get('RickDangerousUpdateTests') is not None:
-    megadrive = "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
-else:
-    if len(sys.argv) > 1:
-        megadrive = str(sys.argv[1])
-    else:
-        print("You didnt provide a link to your personal backup drive.")
-        exit(1)
-
-
 def download_file(file_handle,
                   file_key,
                   file_data,
@@ -167,7 +157,7 @@ def decrypt_node_key(key_str: str, shared_key: str):
     return decrypt_key(encrypted_key, shared_key)
 
 
-def get_available_updates():
+def get_available_updates(megadrive):
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -188,7 +178,7 @@ def get_available_updates():
     return available_updates
 
 
-def download_update(ID, destdir):
+def download_update(ID, destdir, megadrive):
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -516,13 +506,25 @@ def main_menu():
             print('\n  Please select from the Menu.')
 
 
+def check_drive():
+    if os.environ.get('RickDangerousUpdateTests') is not None:
+       return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
+    else:
+        if len(sys.argv) > 1:
+            return str(sys.argv[1])
+        else:
+            print("You didnt provide a link to the mega drive.")
+            exit(1)
+
+
 def improvements_menu():
+    megadrive = check_drive()
     check_wrong_permissions()
     while True:
         cls()
         print('\n ===========[ AVAILABLE UPDATES ]=============')
         print('  ')
-        available_updates = get_available_updates()
+        available_updates = get_available_updates(megadrive)
         localpath = Path.cwd().resolve()
         if os.environ["RetroPieUpdaterRemote"] == "Yes":
             improvements_dir = localpath / "improvements"
@@ -545,7 +547,7 @@ def improvements_menu():
                 selected_updates.append(available_updates[int(selection)-1])
             print(selected_updates)
             for update in selected_updates:
-                download_update(update[1], improvements_dir)
+                download_update(update[1], improvements_dir, megadrive)
         else:
             print("Invalid selection.")
             break
@@ -615,7 +617,7 @@ def restore_retroarch_menu():
             f = os.path.join(localpath, "retroarch_configs.zip")
             if os.path.isfile(f):
                 with zipfile.ZipFile(f, 'r') as zip_ref:
-                    zip_ref.extractall("retroarch_configs")
+                    zip_ref.extractall(localpath / "retroarch_configs")
                 copydir(localpath / "retroarch_configs/", "/opt/retropie/configs/")
                 try:
                     shutil.rmtree(localpath / "retroarch_configs")

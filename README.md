@@ -24,7 +24,7 @@ Join Ricks discord server to keep track on the latest changes.
 # Easy Installation & Usage (recommended)
 
 The easiest way to run the updater is directly from the retropie. Just copy and paste the following command
-in a terminal on your raspberrypi (replace [link] with a link to your personal mega storage):
+in a terminal on your raspberrypi (replace [URL] with a URL to the mega storage containing the updates):
 
 
 ```
@@ -50,7 +50,7 @@ pip3 install -r requirements.txt
 
 
 The script is self-explanatory, it will guide you through the whole process, you make your choices by simple pressing numbers on your keyboard.
-Just run the script inside a terminal like this (replace [link] with a link to your personal mega storage):
+Just run the script inside a terminal like this (replace [URL] with a URL to the mega storage containing the updates):
 
 ```
 python3 update.py [link]
