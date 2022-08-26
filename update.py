@@ -26,6 +26,7 @@ import datetime
 import shutil
 import sys
 
+
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
@@ -342,16 +343,13 @@ def connect_pi():
         host = config.get('SSH', 'host')
         username = config.get('SSH', 'username')
         password = config.get('SSH', 'password')
-        print(username)
-        print(password)
-        print(host)
         return host, username, password
     else:
         while True:
             cls()
             print('\n ===========[ CONNECT RETROPIE ]=============')
             print("\nIn order to automatically apply updates/fixes \n"
-                  "to your Retropie you have to provide it's IP address.")
+                  "to your Retropie you have to provide its IP address.")
             print(' ')
             print(' 1. Enter IP')
             print(' 2. Where do I find the IP adress?')
@@ -369,7 +367,7 @@ def connect_pi():
                 break
                 return
             else:
-                print('\n  Please select from the Menu.')
+                print('\n  Please select from the menu.')
 
 
 def merge_gamelist(directory):
@@ -482,9 +480,10 @@ def main_menu():
         cls()
         print('\n ===========[ MAIN MENU ]=============')
         print('  ')
-        print(' 1. Load Improvements ✨')
-        print(' 2. Fix known bugs 🐛')
+        print(' 1. Load Improvements ✨ [recommended]')
+        print(' 2. Fix known bugs 🐛 [recommended]')
         print(' 3. Restore retroarch configurations 👾')
+        print(' 4. Reset emulationstation controls ⌨')
         print(' 9. Quit ❌')
         try:
             uinp = input('\n Enter your Selection: ')
@@ -499,6 +498,9 @@ def main_menu():
         elif uinp == '3':
             restore_retroarch_menu()
             break
+        elif uinp == '4':
+            reset_controls_menu()
+            break
         elif uinp == '9':
             break
             return
@@ -511,10 +513,11 @@ def check_drive():
        return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
     else:
         if len(sys.argv) > 1:
-            return str(sys.argv[1])
-        else:
-            print("You didnt provide a link to the mega drive.")
-            exit(1)
+            pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+            if pattern.match(str(sys.argv[1])):
+                return str(sys.argv[1])
+        print("You didnt provide a link to the mega drive.")
+        exit(1)
 
 
 def check_root(directory):
@@ -543,8 +546,13 @@ def improvements_menu():
         print("0. all")
         for i in range(len(available_updates)):
             print(str(i+1) + ". " + available_updates[i][0])
+        print(str(len(available_updates)+1) + ". back ")
         selection = input('\nSelect which update you want to apply: ')
         selected_updates = []
+        if int(selection) == len(available_updates) + 1:
+            os.removedirs(improvements_dir)
+            main_menu()
+            break
         if int(selection) in range(len(available_updates)+1):
             if int(selection) == 0:
                 print("Downloading all available updates...")
@@ -552,10 +560,10 @@ def improvements_menu():
             else:
                 print("Downloading: " + available_updates[int(selection)-1][0] + "...")
                 selected_updates.append(available_updates[int(selection)-1])
-            print(selected_updates)
             for update in selected_updates:
                 download_update(update[1], improvements_dir, megadrive)
         else:
+            os.removedirs(improvements_dir)
             print("Invalid selection.")
             break
         install_candidates = []
@@ -643,6 +651,9 @@ def restore_retroarch_menu():
         cls()
         print("All done!")
         break
+
+
+def reset_controls_menu():
 
 
 def check_hostname():
