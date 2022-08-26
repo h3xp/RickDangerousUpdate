@@ -654,7 +654,7 @@ def restore_retroarch_menu():
 
 
 def reset_controls_menu():
-
+    print("TODO")
 
 def check_hostname():
     if platform.uname()[1] == "retropie":
