@@ -517,6 +517,13 @@ def check_drive():
             exit(1)
 
 
+def check_root(directory):
+    for files in os.listdir(directory):
+        if os.path.exists(directory / "etc" / "emulationstation"):
+            return True
+    return False
+
+
 def improvements_menu():
     megadrive = check_drive()
     check_wrong_permissions()
@@ -562,9 +569,16 @@ def improvements_menu():
             f = os.path.join(improvements_dir, filename)
             with zipfile.ZipFile(f, 'r') as zip_ref:
                 zip_ref.extractall(extracted)
-            make_deletions(extracted)
-            merge_gamelist(extracted)
-            copydir(extracted, "/")
+            if check_root(extracted):
+                os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+                make_deletions(extracted)
+                merge_gamelist(extracted)
+                copydir(extracted, "/")
+                os.system("sudo chown -R root:root /etc/emulationstation/")
+            else:
+                make_deletions(extracted)
+                merge_gamelist(extracted)
+                copydir(extracted, "/")
             try:
                 shutil.rmtree(extracted)
             except OSError as e:
