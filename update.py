@@ -200,7 +200,6 @@ def download_update(ID, destdir, megadrive):
             print("Downloading: {}...".format(attrs["n"]))
             file_data = get_file_data(file_id, root_folder)
             download_file(file_id, key, file_data, str(destdir))
-            download_file(file_id, key, file_data, str(destdir))
             print("Processing: {}...".format(attrs["n"]))
 
 
