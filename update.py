@@ -50,7 +50,7 @@ def download_file(file_handle,
     file_size = file_data['s']
     attribs = base64_url_decode(file_data['at'])
     attribs = decrypt_attr(attribs, k)
-
+    print("\t{}% complete: [>{}]".format(0, " "*99), end = "\r")
     file_name = attribs['n']
 
     input_file = requests.get(file_url, stream=True).raw
@@ -74,6 +74,9 @@ def download_file(file_handle,
         iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
 
         for chunk_start, chunk_size in get_chunks(file_size):
+            percent_complete = round(((chunk_start + chunk_size) / file_size) * 100)
+            print("\t{}% complete: [{}>{}]".format(percent_complete if percent_complete < 100 else 99, "="*percent_complete, " "*(99 - percent_complete)), end = "\r")
+
             chunk = input_file.read(chunk_size)
             chunk = aes.decrypt(chunk)
             temp_output_file.write(chunk)
@@ -103,6 +106,7 @@ def download_file(file_handle,
                 file_mac[2] ^ file_mac[3]) != meta_mac:
             raise ValueError('Mismatched mac')
         output_path = Path(dest_path + file_name)
+    print("\t100% complete: [{}]".format("="*100))
     shutil.move(temp_output_file.name, output_path)
     return output_path
 
@@ -193,8 +197,11 @@ def download_update(ID, destdir, megadrive):
         attrs = decrypt_attr(base64_url_decode(node["a"]), k)
         file_id = node["h"]
         if file_id == ID:
+            print("Downloading: {}...".format(attrs["n"]))
             file_data = get_file_data(file_id, root_folder)
             download_file(file_id, key, file_data, str(destdir))
+            download_file(file_id, key, file_data, str(destdir))
+            print("Processing: {}...".format(attrs["n"]))
 
 
 class MySFTPClient(paramiko.SFTPClient):
@@ -558,7 +565,7 @@ def improvements_menu():
                 print("Downloading all available updates...")
                 selected_updates = available_updates
             else:
-                print("Downloading: " + available_updates[int(selection)-1][0] + "...")
+                #print("Downloading: " + available_updates[int(selection)-1][0] + "...")
                 selected_updates.append(available_updates[int(selection)-1])
             for update in selected_updates:
                 download_update(update[1], improvements_dir, megadrive)
