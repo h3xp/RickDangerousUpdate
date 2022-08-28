@@ -15,9 +15,10 @@ Join Ricks discord server to keep track on the latest changes.
 ```
  ===========[ MAIN MENU ]=============
 
- 1. Load Improvements ✨
- 2. Fix known bugs 🐛
+ 1. Load Improvements ✨ [recommended]
+ 2. Fix known bugs 🐛 [recommended]
  3. Restore retroarch configurations 👾
+ 4. Reset emulationstation configurations ⌨
  9. Quit ❌
 ```
 
