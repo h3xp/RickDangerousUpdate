@@ -489,7 +489,7 @@ def main_menu():
         print(' 1. Load Improvements ✨ [recommended]')
         print(' 2. Fix known bugs 🐛 [recommended]')
         print(' 3. Restore retroarch configurations 👾')
-        print(' 4. Reset emulationstation controls ⌨')
+        print(' 4. Reset emulationstation configurations ⌨')
         print(' 9. Quit ❌')
         try:
             uinp = input('\n Enter your Selection: ')
@@ -660,7 +660,36 @@ def restore_retroarch_menu():
 
 
 def reset_controls_menu():
-    print("TODO")
+    while True:
+        cls()
+        print('\n ===========[ RESTORE EMULATIONSTATION CONFIGS ]=============')
+        print('\nAre you sure you want to reset your emulationstation configs?:\n')
+        print(' 1. Yes')
+        print(' 2. No')
+        uinp = input("\nPlease select from the menu: ")
+        if uinp == "1":
+            if os.environ["RetroPieUpdaterRemote"] == "Yes":
+                localpath = Path.cwd().resolve()
+            else:
+                localpath = Path("/", "tmp")
+            urllib.request.urlretrieve(
+                "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/emulationstation_configs.zip",
+                localpath / "emulationstation_configs.zip")
+            f = os.path.join(localpath, "emulationstation_configs.zip")
+            if os.path.isfile(f):
+                with zipfile.ZipFile(f, 'r') as zip_ref:
+                    zip_ref.extractall(localpath / "emulationstation_configs")
+                copydir(localpath / "emulationstation_configs/", "/home/pi/.emulationstation/")
+                try:
+                    shutil.rmtree(localpath / "emulationstation_configs")
+                except OSError as e:
+                    print("Error: %s : %s" % (localpath / "emulationstation_configs", e.strerror))
+                os.remove(localpath / "emulationstation_configs.zip")
+        else:
+            break
+        cls()
+        print("All done!")
+        break
 
 def check_hostname():
     if platform.uname()[1] == "retropie":
