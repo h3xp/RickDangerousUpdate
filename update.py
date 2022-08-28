@@ -26,6 +26,7 @@ import datetime
 import shutil
 import sys
 
+
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
@@ -49,7 +50,7 @@ def download_file(file_handle,
     file_size = file_data['s']
     attribs = base64_url_decode(file_data['at'])
     attribs = decrypt_attr(attribs, k)
-
+    print("\t{}% complete: [>{}]".format(0, " "*99), end = "\r")
     file_name = attribs['n']
 
     input_file = requests.get(file_url, stream=True).raw
@@ -73,6 +74,9 @@ def download_file(file_handle,
         iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
 
         for chunk_start, chunk_size in get_chunks(file_size):
+            percent_complete = round(((chunk_start + chunk_size) / file_size) * 100)
+            print("\t{}% complete: [{}>{}]".format(percent_complete if percent_complete < 100 else 99, "="*percent_complete, " "*(99 - percent_complete)), end = "\r")
+
             chunk = input_file.read(chunk_size)
             chunk = aes.decrypt(chunk)
             temp_output_file.write(chunk)
@@ -102,6 +106,7 @@ def download_file(file_handle,
                 file_mac[2] ^ file_mac[3]) != meta_mac:
             raise ValueError('Mismatched mac')
         output_path = Path(dest_path + file_name)
+    print("\t100% complete: [{}]".format("="*100))
     shutil.move(temp_output_file.name, output_path)
     return output_path
 
@@ -192,8 +197,10 @@ def download_update(ID, destdir, megadrive):
         attrs = decrypt_attr(base64_url_decode(node["a"]), k)
         file_id = node["h"]
         if file_id == ID:
+            print("Downloading: {}...".format(attrs["n"]))
             file_data = get_file_data(file_id, root_folder)
             download_file(file_id, key, file_data, str(destdir))
+            print("Processing: {}...".format(attrs["n"]))
 
 
 class MySFTPClient(paramiko.SFTPClient):
@@ -342,16 +349,13 @@ def connect_pi():
         host = config.get('SSH', 'host')
         username = config.get('SSH', 'username')
         password = config.get('SSH', 'password')
-        print(username)
-        print(password)
-        print(host)
         return host, username, password
     else:
         while True:
             cls()
             print('\n ===========[ CONNECT RETROPIE ]=============')
             print("\nIn order to automatically apply updates/fixes \n"
-                  "to your Retropie you have to provide it's IP address.")
+                  "to your Retropie you have to provide its IP address.")
             print(' ')
             print(' 1. Enter IP')
             print(' 2. Where do I find the IP adress?')
@@ -369,7 +373,7 @@ def connect_pi():
                 break
                 return
             else:
-                print('\n  Please select from the Menu.')
+                print('\n  Please select from the menu.')
 
 
 def merge_gamelist(directory):
@@ -482,9 +486,10 @@ def main_menu():
         cls()
         print('\n ===========[ MAIN MENU ]=============')
         print('  ')
-        print(' 1. Load Improvements ✨')
-        print(' 2. Fix known bugs 🐛')
+        print(' 1. Load Improvements ✨ [recommended]')
+        print(' 2. Fix known bugs 🐛 [recommended]')
         print(' 3. Restore retroarch configurations 👾')
+        print(' 4. Reset emulationstation configurations ⌨')
         print(' 9. Quit ❌')
         try:
             uinp = input('\n Enter your Selection: ')
@@ -499,6 +504,9 @@ def main_menu():
         elif uinp == '3':
             restore_retroarch_menu()
             break
+        elif uinp == '4':
+            reset_controls_menu()
+            break
         elif uinp == '9':
             break
             return
@@ -511,10 +519,18 @@ def check_drive():
        return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
     else:
         if len(sys.argv) > 1:
-            return str(sys.argv[1])
-        else:
-            print("You didnt provide a link to the mega drive.")
-            exit(1)
+            pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+            if pattern.match(str(sys.argv[1])):
+                return str(sys.argv[1])
+        print("You didnt provide a link to the mega drive.")
+        exit(1)
+
+
+def check_root(directory):
+    for files in os.listdir(directory):
+        if os.path.exists(directory / "etc" / "emulationstation"):
+            return True
+    return False
 
 
 def improvements_menu():
@@ -536,19 +552,24 @@ def improvements_menu():
         print("0. all")
         for i in range(len(available_updates)):
             print(str(i+1) + ". " + available_updates[i][0])
+        print(str(len(available_updates)+1) + ". back ")
         selection = input('\nSelect which update you want to apply: ')
         selected_updates = []
+        if int(selection) == len(available_updates) + 1:
+            os.removedirs(improvements_dir)
+            main_menu()
+            break
         if int(selection) in range(len(available_updates)+1):
             if int(selection) == 0:
                 print("Downloading all available updates...")
                 selected_updates = available_updates
             else:
-                print("Downloading: " + available_updates[int(selection)-1][0] + "...")
+                #print("Downloading: " + available_updates[int(selection)-1][0] + "...")
                 selected_updates.append(available_updates[int(selection)-1])
-            print(selected_updates)
             for update in selected_updates:
                 download_update(update[1], improvements_dir, megadrive)
         else:
+            os.removedirs(improvements_dir)
             print("Invalid selection.")
             break
         install_candidates = []
@@ -562,9 +583,16 @@ def improvements_menu():
             f = os.path.join(improvements_dir, filename)
             with zipfile.ZipFile(f, 'r') as zip_ref:
                 zip_ref.extractall(extracted)
-            make_deletions(extracted)
-            merge_gamelist(extracted)
-            copydir(extracted, "/")
+            if check_root(extracted):
+                os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+                make_deletions(extracted)
+                merge_gamelist(extracted)
+                copydir(extracted, "/")
+                os.system("sudo chown -R root:root /etc/emulationstation/")
+            else:
+                make_deletions(extracted)
+                merge_gamelist(extracted)
+                copydir(extracted, "/")
             try:
                 shutil.rmtree(extracted)
             except OSError as e:
@@ -630,6 +658,38 @@ def restore_retroarch_menu():
         print("All done!")
         break
 
+
+def reset_controls_menu():
+    while True:
+        cls()
+        print('\n ===========[ RESTORE EMULATIONSTATION CONFIGS ]=============')
+        print('\nAre you sure you want to reset your emulationstation configs?:\n')
+        print(' 1. Yes')
+        print(' 2. No')
+        uinp = input("\nPlease select from the menu: ")
+        if uinp == "1":
+            if os.environ["RetroPieUpdaterRemote"] == "Yes":
+                localpath = Path.cwd().resolve()
+            else:
+                localpath = Path("/", "tmp")
+            urllib.request.urlretrieve(
+                "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/emulationstation_configs.zip",
+                localpath / "emulationstation_configs.zip")
+            f = os.path.join(localpath, "emulationstation_configs.zip")
+            if os.path.isfile(f):
+                with zipfile.ZipFile(f, 'r') as zip_ref:
+                    zip_ref.extractall(localpath / "emulationstation_configs")
+                copydir(localpath / "emulationstation_configs/", "/home/pi/.emulationstation/")
+                try:
+                    shutil.rmtree(localpath / "emulationstation_configs")
+                except OSError as e:
+                    print("Error: %s : %s" % (localpath / "emulationstation_configs", e.strerror))
+                os.remove(localpath / "emulationstation_configs.zip")
+        else:
+            break
+        cls()
+        print("All done!")
+        break
 
 def check_hostname():
     if platform.uname()[1] == "retropie":
