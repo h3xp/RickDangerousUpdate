@@ -25,8 +25,10 @@ import xml.etree.ElementTree as ET
 import datetime
 import shutil
 import sys
+from dialog import Dialog
 
-
+if platform.uname()[1] == "retropie":
+    d = Dialog()
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
@@ -481,6 +483,31 @@ def make_deletions(directory):
         os.remove(directory)
 
 
+def main_dialog():
+    code, tag = d.menu("Main Menu", 
+                    choices=[("1", "Load improvements"), 
+                             ("2", "Fix known bugs"), 
+                             ("3", "Restore Retroarch configurations"), 
+                             ("4", "Reset emulationstation configurations")], 
+                    cancel_label=" Exit ")
+    
+    if code == d.OK:
+        if tag == "1":
+            improvements_dialog()
+        elif tag == "2":
+            bugs_dialog()
+        elif tag == "3":
+            restore_retroarch_dialog()
+        elif tag == "4":
+            reset_controls_dialog()
+
+    if code == d.CANCEL:
+        print()
+        exit(0)
+
+    return
+
+
 def main_menu():
     while True:
         cls()
@@ -533,6 +560,86 @@ def check_root(directory):
     return False
 
 
+def improvements_dialog():
+    megadrive = check_drive()
+    check_wrong_permissions()
+    available_updates = get_available_updates(megadrive)
+    available_updates.sort()
+
+    menu_choices = []
+    for update in available_updates:
+        #TO DO: check if update has been installed from config and make True
+        menu_choices.append((update[0], "", False))
+
+    code, tags = d.checklist(text="Available Updates",
+                             choices=menu_choices,
+                             ok_label="Apply Selected", 
+                             extra_button=True, 
+                             extra_label="Apply All")
+
+    selected_updates = []
+    if code == d.OK:
+        for tag in tags:
+            for update in available_updates:
+                if update[0] == tag:
+                    selected_updates.append(update)
+                    break
+
+    if code == d.EXTRA:
+        selected_updates = available_updates
+
+    if len(selected_updates) > 0:
+        print()
+        do_improvements(selected_updates, megadrive)
+
+    return
+
+
+def do_improvements(selected_updates: list, megadrive: str):
+    localpath = Path.cwd().resolve()
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
+        improvements_dir = localpath / "improvements"
+    else:
+        improvements_dir = Path("/", "tmp", "improvements")
+    os.makedirs(improvements_dir, exist_ok=True)
+    extracted = improvements_dir / "extracted"
+
+    for update in selected_updates:
+        download_update(update[1], improvements_dir, megadrive)
+
+    install_candidates = []
+    for filename in os.listdir(improvements_dir):
+        f = os.path.join(improvements_dir, filename)
+        if os.path.isfile(f):
+            if f.endswith(".zip"):
+                install_candidates.append(filename)
+    install_candidates.sort()
+    for filename in install_candidates:
+        f = os.path.join(improvements_dir, filename)
+        with zipfile.ZipFile(f, 'r') as zip_ref:
+            zip_ref.extractall(extracted)
+        if check_root(extracted):
+            os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+            make_deletions(extracted)
+            merge_gamelist(extracted)
+            copydir(extracted, "/")
+            os.system("sudo chown -R root:root /etc/emulationstation/")
+        else:
+            make_deletions(extracted)
+            merge_gamelist(extracted)
+            copydir(extracted, "/")
+        try:
+            shutil.rmtree(extracted)
+        except OSError as e:
+            print("Error: %s : %s" % (extracted, e.strerror))
+    try:
+        shutil.rmtree(improvements_dir)
+    except OSError as e:
+        print("Error: %s : %s" % (improvements_dir, e.strerror))
+    
+    return
+
+
 def improvements_menu():
     megadrive = check_drive()
     check_wrong_permissions()
@@ -541,13 +648,6 @@ def improvements_menu():
         print('\n ===========[ AVAILABLE UPDATES ]=============')
         print('  ')
         available_updates = get_available_updates(megadrive)
-        localpath = Path.cwd().resolve()
-        if os.environ["RetroPieUpdaterRemote"] == "Yes":
-            improvements_dir = localpath / "improvements"
-        else:
-            improvements_dir = Path("/", "tmp", "improvements")
-        os.makedirs(improvements_dir, exist_ok=True)
-        extracted = improvements_dir / "extracted"
         available_updates.sort()
         print("0. all")
         for i in range(len(available_updates)):
@@ -556,7 +656,7 @@ def improvements_menu():
         selection = input('\nSelect which update you want to apply: ')
         selected_updates = []
         if int(selection) == len(available_updates) + 1:
-            os.removedirs(improvements_dir)
+            #os.removedirs(improvements_dir)
             main_menu()
             break
         if int(selection) in range(len(available_updates)+1):
@@ -566,45 +666,27 @@ def improvements_menu():
             else:
                 #print("Downloading: " + available_updates[int(selection)-1][0] + "...")
                 selected_updates.append(available_updates[int(selection)-1])
-            for update in selected_updates:
-                download_update(update[1], improvements_dir, megadrive)
         else:
-            os.removedirs(improvements_dir)
+            #os.removedirs(improvements_dir)
             print("Invalid selection.")
             break
-        install_candidates = []
-        for filename in os.listdir(improvements_dir):
-            f = os.path.join(improvements_dir, filename)
-            if os.path.isfile(f):
-                if f.endswith(".zip"):
-                    install_candidates.append(filename)
-        install_candidates.sort()
-        for filename in install_candidates:
-            f = os.path.join(improvements_dir, filename)
-            with zipfile.ZipFile(f, 'r') as zip_ref:
-                zip_ref.extractall(extracted)
-            if check_root(extracted):
-                os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
-                make_deletions(extracted)
-                merge_gamelist(extracted)
-                copydir(extracted, "/")
-                os.system("sudo chown -R root:root /etc/emulationstation/")
-            else:
-                make_deletions(extracted)
-                merge_gamelist(extracted)
-                copydir(extracted, "/")
-            try:
-                shutil.rmtree(extracted)
-            except OSError as e:
-                print("Error: %s : %s" % (extracted, e.strerror))
-        try:
-            shutil.rmtree(improvements_dir)
-        except OSError as e:
-            print("Error: %s : %s" % (improvements_dir, e.strerror))
+
+        do_improvements(selected_updates, megadrive)
 
         cls()
         print("All done!")
         break
+
+
+def bugs_dialog():
+    code, tag = d.menu("Bugs Menu", 
+                    choices=[("1", "Fix permissions")])
+    
+    if code == d.OK:
+        if tag == "1":
+            fix_permissions()
+
+    return
 
 
 def bugs_menu():
@@ -628,6 +710,35 @@ def bugs_menu():
             print('\n  Please select from the Menu. For more details check README.md.')
 
 
+def restore_retroarch_dialog():
+    code = d.yesno(text="Are you sure you want to reset all retroarch.cfgs?")
+
+    if code == d.OK:
+        do_retroarch_configs()
+
+    return
+
+
+def do_retroarch_configs():
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
+        localpath = Path.cwd().resolve()
+    else:
+        localpath = Path("/", "tmp")
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", localpath / "retroarch_configs.zip")
+    f = os.path.join(localpath, "retroarch_configs.zip")
+    if os.path.isfile(f):
+        with zipfile.ZipFile(f, 'r') as zip_ref:
+            zip_ref.extractall(localpath / "retroarch_configs")
+        copydir(localpath / "retroarch_configs/", "/opt/retropie/configs/")
+        try:
+            shutil.rmtree(localpath / "retroarch_configs")
+        except OSError as e:
+            print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
+        os.remove(localpath / "retroarch_configs.zip")
+
+    return
+
+
 def restore_retroarch_menu():
     while True:
         cls()
@@ -637,27 +748,43 @@ def restore_retroarch_menu():
         print(' 2. No')
         uinp = input("\nPlease select from the menu: ")
         if uinp == "1":
-            if os.environ["RetroPieUpdaterRemote"] == "Yes":
-                localpath = Path.cwd().resolve()
-            else:
-                localpath = Path("/", "tmp")
-            urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", localpath / "retroarch_configs.zip")
-            f = os.path.join(localpath, "retroarch_configs.zip")
-            if os.path.isfile(f):
-                with zipfile.ZipFile(f, 'r') as zip_ref:
-                    zip_ref.extractall(localpath / "retroarch_configs")
-                copydir(localpath / "retroarch_configs/", "/opt/retropie/configs/")
-                try:
-                    shutil.rmtree(localpath / "retroarch_configs")
-                except OSError as e:
-                    print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
-                os.remove(localpath / "retroarch_configs.zip")
+            do_retroarch_configs()
         else:
             break
         cls()
         print("All done!")
         break
 
+
+def reset_controls_dialog():
+    code = d.yesno(text="Are you sure you want to reset your emulationstation configs?")
+
+    if code == d.OK:
+        do_retroarch_configs()
+
+    return
+
+
+def do_emulationstation_configs():
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
+        localpath = Path.cwd().resolve()
+    else:
+        localpath = Path("/", "tmp")
+    urllib.request.urlretrieve(
+        "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/emulationstation_configs.zip",
+        localpath / "emulationstation_configs.zip")
+    f = os.path.join(localpath, "emulationstation_configs.zip")
+    if os.path.isfile(f):
+        with zipfile.ZipFile(f, 'r') as zip_ref:
+            zip_ref.extractall(localpath / "emulationstation_configs")
+        copydir(localpath / "emulationstation_configs/", "/home/pi/.emulationstation/")
+        try:
+            shutil.rmtree(localpath / "emulationstation_configs")
+        except OSError as e:
+            print("Error: %s : %s" % (localpath / "emulationstation_configs", e.strerror))
+        os.remove(localpath / "emulationstation_configs.zip")
+
+    return
 
 def reset_controls_menu():
     while True:
@@ -668,23 +795,7 @@ def reset_controls_menu():
         print(' 2. No')
         uinp = input("\nPlease select from the menu: ")
         if uinp == "1":
-            if os.environ["RetroPieUpdaterRemote"] == "Yes":
-                localpath = Path.cwd().resolve()
-            else:
-                localpath = Path("/", "tmp")
-            urllib.request.urlretrieve(
-                "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/emulationstation_configs.zip",
-                localpath / "emulationstation_configs.zip")
-            f = os.path.join(localpath, "emulationstation_configs.zip")
-            if os.path.isfile(f):
-                with zipfile.ZipFile(f, 'r') as zip_ref:
-                    zip_ref.extractall(localpath / "emulationstation_configs")
-                copydir(localpath / "emulationstation_configs/", "/home/pi/.emulationstation/")
-                try:
-                    shutil.rmtree(localpath / "emulationstation_configs")
-                except OSError as e:
-                    print("Error: %s : %s" % (localpath / "emulationstation_configs", e.strerror))
-                os.remove(localpath / "emulationstation_configs.zip")
+            do_emulationstation_configs()
         else:
             break
         cls()
@@ -699,7 +810,11 @@ def check_hostname():
 
 def main():
     check_hostname()
-    main_menu()
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
+        main_menu()
+    else:
+        while True:
+            main_dialog()
 
 
 main()
