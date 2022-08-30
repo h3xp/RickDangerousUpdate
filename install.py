@@ -103,12 +103,7 @@ if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
 if os.path.exists(tmp_dir) == False:
     os.mkdir(tmp_dir)
 
-print("Installing depencencies...")
-run_cmd("sudo apt-get -y install python3-pip")
-run_cmd("pip3 install -r <(curl \"{}requirements.txt\" -s -N)".format(git_repo))
-
 print("Downloading required files...")
-    
 #download update_tool.ini
 run_cmd("curl {}update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
 #download the menu image
