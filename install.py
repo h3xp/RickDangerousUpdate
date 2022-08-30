@@ -108,6 +108,7 @@ run_cmd("sudo apt-get -y install python3-pip")
 run_cmd("pip3 install -r <(curl \"{}requirements.txt\" -s -N)".format(git_repo))
 
 print("Downloading required files...")
+    
 #download update_tool.ini
 run_cmd("curl {}update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
 #download the menu image
@@ -161,7 +162,7 @@ if os.path.exists(new_config_path) == True:
 print("Writing bash script...")
 with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
     shellfile.write("#!/bin/bash\n")
-    shellfile.write("source <(grep = {}/config.ini | sed 's/ *= */=/g')\n".format(home_dir))
+    shellfile.write("source <(grep = {}/update_tool.ini | sed 's/ *= */=/g')\n".format(home_dir))
     shellfile.write("python3 <(curl $git_repo$git_command -s -N) $mega_dir")
 
 #merge gamelist entries
