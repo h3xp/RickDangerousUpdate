@@ -124,7 +124,7 @@ if os.path.exists(new_config_path) == True:
     new_config = configparser.ConfigParser()
     new_config.read(new_config_path)
     home_dir = new_config["CONFIG_ITEMS"]["home_path"]
-    old_config_path = "{}/config.ini".format(home_dir)
+    old_config_path = "{}/update_tool.ini".format(home_dir)
     if os.path.exists(home_dir) == False:
         os.mkdir(home_dir)
     if os.path.exists(old_config_path) == False:
