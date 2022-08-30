@@ -87,27 +87,37 @@ def merge_xml(src_xml: str, dest_xml: str):
 
 
 def run_cmd(command: str):
-    subprocess.call(["bash","-c",command])
+    code = subprocess.call(["bash","-c",command])
+    return code
 
-os.environ["RetroPieUpdaterDebug"] = "Yes"
 tmp_dir = Path("/", "tmp", "update_tool_install")
 home_dir = ""
+git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/"
+
+#check if already exists, this is useful for debugging
+if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    old_config = configparser.ConfigParser()
+    old_config.read("/home/pi/.update_tool/update_tool.ini")
+    git_repo = old_config["CONFIG_ITEMS"]["git_repo"]
+
+if os.path.exists(tmp_dir) == False:
+    os.mkdir(tmp_dir)
 
 print("Installing depencencies...")
 run_cmd("sudo apt-get -y install python3-pip")
-run_cmd("pip3 install -r <(curl \"https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/requirements.txt\" -s -N)")
+run_cmd("pip3 install -r <(curl \"{}requirements.txt\" -s -N)".format(git_repo))
 
 print("Downloading required files...")
-#download config.ini
-run_cmd("curl \"https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/config.ini\" -o {}/config.ini".format(tmp_dir))
+#download update_tool.ini
+run_cmd("curl {}update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
 #download the menu image
-run_cmd("curl \"https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/banner.png\" -o {}/banner.png".format(tmp_dir))
+run_cmd("curl {}banner.png -o {}/banner.png".format(git_repo, tmp_dir))
 #download the gamelist.xml
-run_cmd("curl \"https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/gamelist.xml\" -o {}/gamelist.xml".format(tmp_dir))
+run_cmd("curl {}gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
 
 print("Synching configs...")
 #synch config
-new_config_path = "{}/config.ini".format(tmp_dir)
+new_config_path = "{}/update_tool.ini".format(tmp_dir)
 if os.path.exists(new_config_path) == True:
     #write new items
     new_config = configparser.ConfigParser()
