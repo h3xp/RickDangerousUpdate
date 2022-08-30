@@ -152,7 +152,7 @@ print("Writing bash script...")
 with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
     shellfile.write("#!/bin/bash\n")
     shellfile.write("source <(grep = {}/config.ini | sed 's/ *= */=/g')\n".format(home_dir))
-    shellfile.write("python3 <(curl $git_repo$git_command -s -N) $mega_link")
+    shellfile.write("python3 <(curl $git_repo$git_command -s -N) $mega_dir")
 
 #merge gamelist entries
 print("Merging gamelist entries...")
