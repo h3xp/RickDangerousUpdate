@@ -25,17 +25,25 @@ Join Ricks discord server to keep track on the latest changes.
 # Easy Installation & Usage (recommended)
 The easiest way to run the updater is to install it on to your RetroPie directly, this will make it available via the Options menu.
 
-You can now install the updater onto your RetroPie directory using SSH on your personal computers, by running the following command on your personal computer:
+You can now install the updater onto your RetroPie directory using SSH from your personal computer, or directly on your RetroPie.
 (Replace [IP] with the IP address of your RetroPie)
 (Replace [link] with a URL to the mega storage containing the updates)
 
+From your personal computer using SSH:
+
 ```
-ssh pi@[IP] "python3 <(bash 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) '[link]'"
+ssh pi@[IP] "bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) '[link]'"
 ```
+
+Or directly from your RetroPie:
+
+```
+bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh" -s -N) [link]
+```
+
 
 If you do not want to install the updater on your RetroPie, you can still run the updater from the RetroPie directly by running the following command in the RetroPie terminal:
 (Replace [link] with a URL to the mega storage containing the updates)
-
 
 ```
 bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N) [link]
