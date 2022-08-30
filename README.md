@@ -30,7 +30,7 @@ You can now install the updater onto your RetroPie directory using SSH on your p
 (Replace [link] with a URL to the mega storage containing the updates)
 
 ```
-ssh pi@[IP] "python3 <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.py" -s -N) \"[link]\""
+ssh pi@[IP] "python3 <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.py' -s -N) '[link]'"
 ```
 
 If you do not want to install the updater on your RetroPie, you can still run the updater from the RetroPie directly by running the following command in the RetroPie terminal:
