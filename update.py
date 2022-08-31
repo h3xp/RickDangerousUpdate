@@ -38,6 +38,15 @@ logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
 
+def restart_es():
+    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+    if os.environ["RetroPieUpdaterRemote"] == "Yes":
+        runcmd("sudo systemctl restart autologin@tty1.service")
+    else:
+        runcmd("emulationstation")
+
+    return
+
 def is_update_applied(key: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
@@ -650,8 +659,7 @@ def main_dialog():
 
     if code == d.CANCEL:
         print()
-        runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
-        runcmd("sudo systemctl restart autologin@tty1.service")
+        #restart_es()
         exit(0)
 
     return
@@ -1038,6 +1046,7 @@ def main():
 
     if os.environ["RetroPieUpdaterRemote"] == "Yes":
         main_menu()
+        #restart_es()
     else:
         while True:
             main_dialog()
