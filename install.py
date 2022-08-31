@@ -208,8 +208,8 @@ def install(overwrite=True):
 
 def main():
     install()
-    #runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
-    #runcmd("sudo systemctl restart autologin@tty1.service")
+    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+    runcmd("sudo systemctl restart autologin@tty1.service")
 
     return
 
