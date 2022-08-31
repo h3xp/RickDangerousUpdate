@@ -40,6 +40,8 @@ config = configparser.ConfigParser()
 
 def restart_es():
     runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+    runcmd("sudo reboot")
+    return
     if os.environ["RetroPieUpdaterRemote"] == "Yes":
         runcmd("sudo systemctl restart autologin@tty1.service")
     else:
@@ -659,7 +661,7 @@ def main_dialog():
 
     if code == d.CANCEL:
         print()
-        #restart_es()
+        restart_es()
         exit(0)
 
     return
@@ -1046,7 +1048,7 @@ def main():
 
     if os.environ["RetroPieUpdaterRemote"] == "Yes":
         main_menu()
-        #restart_es()
+        restart_es()
     else:
         while True:
             main_dialog()
