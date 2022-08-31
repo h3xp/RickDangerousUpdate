@@ -2,6 +2,7 @@
 Update Script for Rick Dangerous' Minecraftium Edition
 https://github.com/h3xp/RickDangerousUpdate
 '''
+from importlib.resources import path
 import os
 import paramiko
 import pathlib
@@ -25,12 +26,143 @@ import xml.etree.ElementTree as ET
 import datetime
 import shutil
 import sys
+import configparser
+import subprocess
 from dialog import Dialog
 
 if platform.uname()[1] == "retropie":
     d = Dialog()
+    d.autowidgetsize = True
+
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
+
+
+def is_update_applied(key: str):
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
+        return False
+
+    config = configparser.ConfigParser()
+    config.read("/home/pi/.update_tool/update_tool.ini")
+    if config.has_option("INSTALLED_UPDATES", key):
+        return True
+
+    return False
+
+def runshell(command: str):
+    code = subprocess.call(["bash","-c",command])
+    return code
+
+
+def uninstall():
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+    if os.path.exists("/home/pi/.update_tool"):
+        shutil.rmtree("/home/pi/.update_tool")
+
+    if os.path.exists("/home/pi/RetroPie/retropiemenu/update_tool.sh"):
+        os.remove("/home/pi/RetroPie/retropiemenu/update_tool.sh")
+
+    if os.path.exists("/home/pi/RetroPie/retropiemenu/icons/update_tool.png"):
+        os.remove("/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
+
+    src_tree = ET.parse("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+    src_root = src_tree.getroot()
+
+    parents = src_tree.findall(".//game[path=\"./update_tool.sh\"]")
+    for parent in parents:
+        src_root.remove(parent)
+
+    shutil.copy2("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml", "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" + "." + file_time)
+    
+    # ET.indent(dest_tree, space="\t", level=0)
+    indent(src_root, space="\t", level=0)
+    with open("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml", "wb") as fh:
+        src_tree.write(fh, "utf-8")
+
+    if os.path.getsize("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml") > 0:
+        os.remove("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" + "." + file_time)
+
+    return    
+
+
+def install(overwrite=True):
+    no_overwrite=["git_branch", "mega_dir"]
+    home_dir = ""
+    new_config = configparser.ConfigParser()
+    old_config = configparser.ConfigParser()
+
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1"
+
+    if overwrite == True:
+        if os.path.exists("/home/pi/.update_tool"):
+            uninstall()
+    
+    if os.path.exists("/home/pi/.update_tool") == False:
+        os.mkdir("/home/pi/.update_tool")
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
+        os.mknod("/home/pi/.update_tool/update_tool.ini")
+
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        old_config.read("/home/pi/.update_tool/update_tool.ini")
+        if old_config.has_option("CONFIG_ITEMS", "git_repo") and old_config.has_option("CONFIG_ITEMS", "git_branch"):
+            git_repo = "{}/{}".format(old_config["CONFIG_ITEMS"]["git_repo"], old_config["CONFIG_ITEMS"]["git_branch"])
+
+    tmp_dir = Path("/", "tmp", "update_tool_install")
+    if os.path.exists(tmp_dir) == False:
+        os.mkdir(tmp_dir)
+        
+    #download update_tool.ini
+    runshell("curl {}/update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
+    #download the menu image
+    runshell("curl {}/banner.png -o {}/banner.png".format(git_repo, tmp_dir))
+    #download the gamelist.xml
+    runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
+
+    if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
+        new_config.read("{}/update_tool.ini".format(tmp_dir))
+    
+    for section in new_config.sections():
+        if len(new_config[section]) > 0:
+            for key, val in new_config.items(section):
+                if old_config.has_option(section, key):
+                    new_config[section][key] = str(old_config[section][key]).strip()
+        elif old_config.has_section(section):
+            for key, val in old_config.items(section):
+                new_config[section][key] = str(old_config[section][key]).strip()
+
+
+    if len(sys.argv) > 1:
+        pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+        if pattern.match(str(sys.argv[1])):
+            new_config["CONFIG_ITEMS"]["mega_dir"] = sys.argv[1]
+
+    with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+        new_config.write(configfile)
+
+    #write script
+    print("Writing bash script...")
+    with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
+        shellfile.write("#!/bin/bash\n")
+        shellfile.write("source <(grep = /home/pi/.update_tool/update_tool.ini | sed 's/ *= */=/g')\n")
+        shellfile.write("$git_exe <(curl $git_repo/$git_branch/$git_command -s -N) $mega_dir")
+    
+    runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
+
+    #merge gamelist
+    print("Merging gamelist entries...")
+    new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
+    if os.path.exists(new_gamelist_path) == True:
+        merge_xml(new_gamelist_path, "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+
+    #copy image file
+    print("Copying icon...")
+    new_banner_path = "{}/banner.png".format(tmp_dir)
+    shutil.copy(new_banner_path, "/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
+
+    shutil.rmtree(tmp_dir)
+
+    return
 
 
 def download_file(file_handle,
@@ -281,6 +413,14 @@ def copydir(source_path, target_path):
 def fix_permissions():
     runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
 
+def permissions_dialog():
+    code = d.yesno('Your permissions seem to be wrong, which is a known bug in this image.\nThis might prevent you from '
+            'saving configurations, gamestates and metadata.\nDo you want this script to fix this issue for you?\n')
+
+    if code == d.OK:
+        fix_permissions()
+
+    return
 
 def permissions_prompt():
     while True:
@@ -387,6 +527,8 @@ def merge_gamelist(directory):
         corr = Path("/", *corr)
         if os.path.isfile(corr):
             merge_xml(str(gamelist), str(corr))
+            os.remove(str(gamelist))
+
 
 
 def indent(tree, space="  ", level=0):
@@ -466,8 +608,7 @@ def merge_xml(src_xml: str, dest_xml: str):
     if os.path.getsize(dest_xml) > 0:
         os.remove(dest_xml + "." + file_time)
 
-    os.remove(src_xml)
-
+    return
 
 def make_deletions(directory):
     directory = directory / "read me do this first!.txt"
@@ -488,7 +629,9 @@ def main_dialog():
                     choices=[("1", "Load improvements"), 
                              ("2", "Fix known bugs"), 
                              ("3", "Restore Retroarch configurations"), 
-                             ("4", "Reset emulationstation configurations")], 
+                             ("4", "Reset emulationstation configurations"), 
+                             ("5", "Install"), 
+                             ("6", "Uninstall")], 
                     cancel_label=" Exit ")
     
     if code == d.OK:
@@ -500,9 +643,15 @@ def main_dialog():
             restore_retroarch_dialog()
         elif tag == "4":
             reset_controls_dialog()
+        elif tag == "5":
+            install_dialog()
+        elif tag == "6":
+            uninstall_dialog()
 
     if code == d.CANCEL:
         print()
+        runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+        runcmd("sudo systemctl restart autologin@tty1.service")
         exit(0)
 
     return
@@ -517,6 +666,8 @@ def main_menu():
         print(' 2. Fix known bugs 🐛 [recommended]')
         print(' 3. Restore retroarch configurations 👾')
         print(' 4. Reset emulationstation configurations ⌨')
+        print(' 5. Install' + ''  if os.path.exists("") == True else ' [recommended]')
+        print(' 6. Uninstall')
         print(' 9. Quit ❌')
         try:
             uinp = input('\n Enter your Selection: ')
@@ -534,6 +685,12 @@ def main_menu():
         elif uinp == '4':
             reset_controls_menu()
             break
+        elif uinp == '5':
+            reset_controls_menu()
+            break
+        elif uinp == '4':
+            reset_controls_menu()
+            break
         elif uinp == '9':
             break
             return
@@ -545,10 +702,17 @@ def check_drive():
     if os.environ.get('RickDangerousUpdateTests') is not None:
        return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
     else:
+        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            config = configparser.ConfigParser()
+            config.read("/home/pi/.update_tool/update_tool.ini")
+            if config.has_option("CONFIG_ITEMS", "mega_dir"):
+                return config["CONFIG_ITEMS"]["mega_dir"]
+
         if len(sys.argv) > 1:
             pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
             if pattern.match(str(sys.argv[1])):
                 return str(sys.argv[1])
+
         print("You didnt provide a link to the mega drive.")
         exit(1)
 
@@ -569,7 +733,7 @@ def improvements_dialog():
     menu_choices = []
     for update in available_updates:
         #TO DO: check if update has been installed from config and make True
-        menu_choices.append((update[0], "", False))
+        menu_choices.append((update[0], "", not is_update_applied(update[0])))
 
     code, tags = d.checklist(text="Available Updates",
                              choices=menu_choices,
@@ -628,6 +792,16 @@ def do_improvements(selected_updates: list, megadrive: str):
             make_deletions(extracted)
             merge_gamelist(extracted)
             copydir(extracted, "/")
+
+        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            config = configparser.ConfigParser()
+            config.read("/home/pi/.update_tool/update_tool.ini")
+            config["INSTALLED_UPDATES"][filename] = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+                config.write(configfile)
+
+
         try:
             shutil.rmtree(extracted)
         except OSError as e:
@@ -786,6 +960,55 @@ def do_emulationstation_configs():
 
     return
 
+def install_dialog():
+    code = d.yesno('Continue with installation?\n\nThis will add the tool to the Options menu, overwriting any previous installations.')
+
+    if code == d.OK:
+        install()
+
+    return
+
+def install_menu():
+    while True:
+        cls()
+        print('\n ===========[ INSTALL ]=============')
+        print('\nContinue with installation?:\nThis will add the tool to the Options menu, overwriting any previous installations.\n')
+        print(' 1. Yes')
+        print(' 2. No')
+        uinp = input("\nPlease select from the menu: ")
+        if uinp == "1":
+            install()
+        else:
+            break
+        cls()
+        print("All done!")
+        break
+
+def uninstall_dialog():
+    code = d.yesno('Continue with uninstall?\n\nThis will remove the tool from the Options menu.')
+
+    if code == d.OK:
+        uninstall()
+
+    return
+
+
+def uninstall_menu():
+    while True:
+        cls()
+        print('\n ===========[ UNINSTALL ]=============')
+        print('\nContinue with uninstall?:\nThis will remove the tool from the Options menu.\n')
+        print(' 1. Yes')
+        print(' 2. No')
+        uinp = input("\nPlease select from the menu: ")
+        if uinp == "1":
+            uninstall()
+        else:
+            break
+        cls()
+        print("All done!")
+        break
+
 def reset_controls_menu():
     while True:
         cls()
@@ -810,6 +1033,9 @@ def check_hostname():
 
 def main():
     check_hostname()
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        install(False)
+
     if os.environ["RetroPieUpdaterRemote"] == "Yes":
         main_menu()
     else:

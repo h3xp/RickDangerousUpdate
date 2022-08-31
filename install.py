@@ -4,8 +4,19 @@ import os
 import configparser
 import datetime
 import shutil
+import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
+
+
+def runcmd(command):
+    return os.popen(command).read()
+        
+
+def runshell(command: str):
+    code = subprocess.call(["bash","-c",command])
+    return code
+
 
 def indent(tree, space="  ", level=0):
     # Reduce the memory consumption by reusing indentation strings.
@@ -82,93 +93,124 @@ def merge_xml(src_xml: str, dest_xml: str):
 
     if os.path.getsize(dest_xml) > 0:
         os.remove(dest_xml + "." + file_time)
+        
 
-    os.remove(src_xml)
+def uninstall():
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
+    if os.path.exists("/home/pi/.update_tool"):
+        shutil.rmtree("/home/pi/.update_tool")
 
-def run_cmd(command: str):
-    code = subprocess.call(["bash","-c",command])
-    return code
+    if os.path.exists("/home/pi/RetroPie/retropiemenu/update_tool.sh"):
+        os.remove("/home/pi/RetroPie/retropiemenu/update_tool.sh")
 
-tmp_dir = Path("/", "tmp", "update_tool_install")
-home_dir = ""
-git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/"
+    if os.path.exists("/home/pi/RetroPie/retropiemenu/icons/update_tool.png"):
+        os.remove("/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
 
-#check if already exists, this is useful for debugging
-if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-    old_config = configparser.ConfigParser()
-    old_config.read("/home/pi/.update_tool/update_tool.ini")
-    git_repo = old_config["CONFIG_ITEMS"]["git_repo"]
+    src_tree = ET.parse("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+    src_root = src_tree.getroot()
 
-if os.path.exists(tmp_dir) == False:
-    os.mkdir(tmp_dir)
+    parents = src_tree.findall(".//game[path=\"./update_tool.sh\"]")
+    for parent in parents:
+        src_root.remove(parent)
 
-print("Downloading required files...")
-#download update_tool.ini
-run_cmd("curl {}update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
-#download the menu image
-run_cmd("curl {}banner.png -o {}/banner.png".format(git_repo, tmp_dir))
-#download the gamelist.xml
-run_cmd("curl {}gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
-
-print("Synching configs...")
-#synch config
-new_config_path = "{}/update_tool.ini".format(tmp_dir)
-if os.path.exists(new_config_path) == True:
-    #write new items
-    new_config = configparser.ConfigParser()
-    new_config.read(new_config_path)
-    home_dir = new_config["CONFIG_ITEMS"]["home_path"]
-    old_config_path = "{}/update_tool.ini".format(home_dir)
-    if os.path.exists(home_dir) == False:
-        os.mkdir(home_dir)
-    if os.path.exists(old_config_path) == False:
-        os.mknod(old_config_path)
-
-    old_config = configparser.ConfigParser()
-    old_config.read(old_config_path)
-    for section in new_config.sections():
-        if old_config.has_section(section) == False:
-            old_config[section] = {}
-        for key, val in new_config.items(section):
-            if old_config.has_option(section, key):
-                if val.strip() != "":
-                    old_config[section][key] = val.strip()
-            else:
-                old_config[section][key] = val.strip()
-
-    #delete deprecated items
-    for section in old_config.sections():
-        if section == "CONFIG_ITEMS":
-            for key, val in old_config.items(section):
-                if new_config.has_option(section, key) == False:
-                    old_config.remove_option(section, key)
-        if new_config.has_section(section) == False:
-            old_config.remove_section(section)
-
-    #write 
-    if len(sys.argv) > 1:
-        old_config["CONFIG_ITEMS"]["mega_dir"] = sys.argv[1]
-
-    with open(old_config_path, 'w') as configfile:
-        old_config.write(configfile)
+    shutil.copy2("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml", "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" + "." + file_time)
     
-#write script
-print("Writing bash script...")
-with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
-    shellfile.write("#!/bin/bash\n")
-    shellfile.write("source <(grep = {}/update_tool.ini | sed 's/ *= */=/g')\n".format(home_dir))
-    shellfile.write("python3 <(curl $git_repo$git_command -s -N) $mega_dir")
+    # ET.indent(dest_tree, space="\t", level=0)
+    indent(src_root, space="\t", level=0)
+    with open("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml", "wb") as fh:
+        src_tree.write(fh, "utf-8")
 
-#merge gamelist entries
-print("Merging gamelist entries...")
-new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
-if os.path.exists(new_gamelist_path) == True:
-    merge_xml(new_gamelist_path, "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+    if os.path.getsize("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml") > 0:
+        os.remove("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" + "." + file_time)
 
-#copy image file
-print("Copying icon...")
-new_banner_path = "{}/banner.png".format(tmp_dir)
-shutil.copy(new_banner_path, "/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
+    return    
 
-shutil.rmtree(tmp_dir)
+
+def install(overwrite=True):
+    no_overwrite=["git_branch", "mega_dir"]
+    home_dir = ""
+    new_config = configparser.ConfigParser()
+    old_config = configparser.ConfigParser()
+
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1"
+
+    if overwrite == True:
+        if os.path.exists("/home/pi/.update_tool"):
+            uninstall()
+    
+    if os.path.exists("/home/pi/.update_tool") == False:
+        os.mkdir("/home/pi/.update_tool")
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
+        os.mknod("/home/pi/.update_tool/update_tool.ini")
+
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        old_config.read("/home/pi/.update_tool/update_tool.ini")
+        if old_config.has_option("CONFIG_ITEMS", "git_repo") and old_config.has_option("CONFIG_ITEMS", "git_branch"):
+            git_repo = "{}/{}".format(old_config["CONFIG_ITEMS"]["git_repo"], old_config["CONFIG_ITEMS"]["git_branch"])
+
+    tmp_dir = Path("/", "tmp", "update_tool_install")
+    if os.path.exists(tmp_dir) == False:
+        os.mkdir(tmp_dir)
+        
+    #download update_tool.ini
+    runshell("curl {}/update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
+    #download the menu image
+    runshell("curl {}/banner.png -o {}/banner.png".format(git_repo, tmp_dir))
+    #download the gamelist.xml
+    runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
+
+    if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
+        new_config.read("{}/update_tool.ini".format(tmp_dir))
+    
+    for section in new_config.sections():
+        if len(new_config[section]) > 0:
+            for key, val in new_config.items(section):
+                if old_config.has_option(section, key):
+                    new_config[section][key] = str(old_config[section][key]).strip()
+        elif old_config.has_section(section):
+            for key, val in old_config.items(section):
+                new_config[section][key] = str(old_config[section][key]).strip()
+
+
+    if len(sys.argv) > 1:
+        pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+        if pattern.match(str(sys.argv[1])):
+            new_config["CONFIG_ITEMS"]["mega_dir"] = sys.argv[1]
+
+    with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+        new_config.write(configfile)
+
+    #write script
+    print("Writing bash script...")
+    with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
+        shellfile.write("#!/bin/bash\n")
+        shellfile.write("source <(grep = /home/pi/.update_tool/update_tool.ini | sed 's/ *= */=/g')\n")
+        shellfile.write("$git_exe <(curl $git_repo/$git_branch/$git_command -s -N) $mega_dir")
+
+    runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
+
+    #merge gamelist
+    print("Merging gamelist entries...")
+    new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
+    if os.path.exists(new_gamelist_path) == True:
+        merge_xml(new_gamelist_path, "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+
+    #copy image file
+    print("Copying icon...")
+    new_banner_path = "{}/banner.png".format(tmp_dir)
+    shutil.copy(new_banner_path, "/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
+
+    shutil.rmtree(tmp_dir)
+
+    return
+
+
+def main():
+    install()
+    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+    runcmd("sudo systemctl restart autologin@tty1.service")
+
+    return
+
+main()
