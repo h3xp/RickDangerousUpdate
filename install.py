@@ -17,9 +17,6 @@ gamelist_file = "/opt/retropie/configs/all/emulationstation/gamelists/retropie/g
 sh_file = "/home/pi/RetroPie/retropiemenu/update_tool.sh"
 mega_folder = ""
 
-def restart_es():
-    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
-    runcmd("sudo systemctl restart autologin@tty1.service")
 
 def runcmd(command):
     return os.popen(command).read()
@@ -141,6 +138,8 @@ def uninstall():
 
 
 def install(overwrite=True):
+    global git_repo
+
     new_config = configparser.ConfigParser()
     old_config = configparser.ConfigParser()
 
@@ -215,18 +214,18 @@ def install(overwrite=True):
 
 
 def main():
+    global mega_folder
     if len(sys.argv) > 1:
         for arg in sys.argv:
             if arg == "-remove":
                 uninstall()
-                restart_es()
+                exit(0)
             elif arg == "-update":
                 install(False)
-                restart_es()
+                exit(0)
             else:
                 mega_folder = arg
 
     install()
-    restart_es()
 
 main()
