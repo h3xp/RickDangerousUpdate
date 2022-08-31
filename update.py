@@ -50,6 +50,7 @@ def restart_es():
 
     return
 
+
 def is_update_applied(key: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
@@ -60,6 +61,7 @@ def is_update_applied(key: str):
         return True
 
     return False
+
 
 def runshell(command: str):
     code = subprocess.call(["bash","-c",command])

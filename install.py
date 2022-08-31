@@ -9,6 +9,18 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
+git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1"
+home_dir = "/home/pi/.update_tool"
+ini_file = "/home/pi/.update_tool/update_tool.ini"
+png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
+gamelist_file = "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml"
+sh_file = "/home/pi/RetroPie/retropiemenu/update_tool.sh"
+mega_folder = ""
+
+def restart_es():
+    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+    runcmd("sudo systemctl restart autologin@tty1.service")
+
 def runcmd(command):
     return os.popen(command).read()
         
@@ -98,54 +110,50 @@ def merge_xml(src_xml: str, dest_xml: str):
 def uninstall():
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
-    if os.path.exists("/home/pi/.update_tool"):
-        shutil.rmtree("/home/pi/.update_tool")
+    if os.path.exists(home_dir):
+        shutil.rmtree(home_dir)
 
-    if os.path.exists("/home/pi/RetroPie/retropiemenu/update_tool.sh"):
-        os.remove("/home/pi/RetroPie/retropiemenu/update_tool.sh")
+    if os.path.exists(sh_file):
+        os.remove(sh_file)
 
-    if os.path.exists("/home/pi/RetroPie/retropiemenu/icons/update_tool.png"):
-        os.remove("/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
+    if os.path.exists(png_file):
+        os.remove(png_file)
 
-    src_tree = ET.parse("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+    src_tree = ET.parse(gamelist_file)
     src_root = src_tree.getroot()
 
     parents = src_tree.findall(".//game[path=\"./update_tool.sh\"]")
     for parent in parents:
         src_root.remove(parent)
 
-    shutil.copy2("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml", "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" + "." + file_time)
+    shutil.copy2(gamelist_file, gamelist_file + "." + file_time)
     
     # ET.indent(dest_tree, space="\t", level=0)
     indent(src_root, space="\t", level=0)
-    with open("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml", "wb") as fh:
+    with open(gamelist_file, "wb") as fh:
         src_tree.write(fh, "utf-8")
 
-    if os.path.getsize("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml") > 0:
-        os.remove("/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml" + "." + file_time)
+    if os.path.getsize(gamelist_file) > 0:
+        if os.path.exists(gamelist_file + "." + file_time):
+            os.remove(gamelist_file + "." + file_time)
 
     return    
 
 
 def install(overwrite=True):
-    no_overwrite=["git_branch", "mega_dir"]
-    home_dir = ""
     new_config = configparser.ConfigParser()
     old_config = configparser.ConfigParser()
 
-    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1"
-
     if overwrite == True:
-        if os.path.exists("/home/pi/.update_tool"):
-            uninstall()
+        uninstall()
     
-    if os.path.exists("/home/pi/.update_tool") == False:
-        os.mkdir("/home/pi/.update_tool")
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
-        os.mknod("/home/pi/.update_tool/update_tool.ini")
+    if os.path.exists(home_dir) == False:
+        os.mkdir(home_dir)
+    if os.path.exists(ini_file) == False:
+        os.mknod(ini_file)
 
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        old_config.read("/home/pi/.update_tool/update_tool.ini")
+    if os.path.exists(ini_file):
+        old_config.read(ini_file)
         if old_config.has_option("CONFIG_ITEMS", "git_repo") and old_config.has_option("CONFIG_ITEMS", "git_branch"):
             git_repo = "{}/{}".format(old_config["CONFIG_ITEMS"]["git_repo"], old_config["CONFIG_ITEMS"]["git_branch"])
 
@@ -173,19 +181,19 @@ def install(overwrite=True):
                 new_config[section][key] = str(old_config[section][key]).strip()
 
 
-    if len(sys.argv) > 1:
+    if len(mega_folder) > 0:
         pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
-        if pattern.match(str(sys.argv[1])):
-            new_config["CONFIG_ITEMS"]["mega_dir"] = sys.argv[1]
+        if pattern.match(str(mega_folder)):
+            new_config["CONFIG_ITEMS"]["mega_dir"] = mega_folder
 
-    with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+    with open(ini_file, 'w') as configfile:
         new_config.write(configfile)
 
     #write script
     print("Writing bash script...")
     with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
-        shellfile.write("source <(grep = /home/pi/.update_tool/update_tool.ini | sed 's/ *= */=/g')\n")
+        shellfile.write("source <(grep = {} | sed 's/ *= */=/g')\n".format(ini_file))
         shellfile.write("$git_exe <(curl $git_repo/$git_branch/$git_command -s -N) $mega_dir")
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
@@ -194,12 +202,12 @@ def install(overwrite=True):
     print("Merging gamelist entries...")
     new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
     if os.path.exists(new_gamelist_path) == True:
-        merge_xml(new_gamelist_path, "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml")
+        merge_xml(new_gamelist_path, gamelist_file)
 
     #copy image file
     print("Copying icon...")
     new_banner_path = "{}/banner.png".format(tmp_dir)
-    shutil.copy(new_banner_path, "/home/pi/RetroPie/retropiemenu/icons/update_tool.png")
+    shutil.copy(new_banner_path, png_file)
 
     shutil.rmtree(tmp_dir)
 
@@ -207,10 +215,18 @@ def install(overwrite=True):
 
 
 def main():
-    install()
-    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
-    runcmd("sudo systemctl restart autologin@tty1.service")
+    if len(sys.argv) > 1:
+        for arg in sys.argv:
+            if arg == "-remove":
+                uninstall()
+                restart_es()
+            elif arg == "-update":
+                install(False)
+                restart_es()
+            else:
+                mega_folder = arg
 
-    return
+    install()
+    restart_es()
 
 main()
