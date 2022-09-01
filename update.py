@@ -1025,12 +1025,6 @@ def check_hostname():
 
 def main():
     check_hostname()
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        git_repo = get_config_value("CONFIG_ITEMS", "git_repo")
-        git_branch = get_config_value("CONFIG_ITEMS", "git_branch")
-        mega_dir = get_config_value("CONFIG_ITEMS", "mega_dir")
-        git_exe = get_config_value("CONFIG_ITEMS", "git_exe")
-        runshell("{} <(curl '{}/{}/install.sh' -s -N) {} -update".format(git_exe, git_repo, git_branch, mega_dir))
 
     if os.environ["RetroPieUpdaterRemote"] == "Yes":
         main_menu()
