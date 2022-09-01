@@ -166,6 +166,8 @@ def install(overwrite=True):
     runshell("curl {}/banner.png -o {}/banner.png".format(git_repo, tmp_dir))
     #download the gamelist.xml
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
+    #download the update.py
+    runshell("curl {}/update.py -o {}/update.py".format(git_repo, home_dir))
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
@@ -193,7 +195,7 @@ def install(overwrite=True):
     with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
         shellfile.write("source <(grep = {} | sed 's/ *= */=/g')\n".format(ini_file))
-        shellfile.write("$git_exe <(curl $git_repo/$git_branch/$git_command -s -N) $mega_dir")
+        shellfile.write("$home_exe $home_dir/$home_command $mega_dir")
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
 

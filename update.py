@@ -69,7 +69,14 @@ def runshell(command: str):
 
 
 def uninstall():
-    a = runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
+    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
+    return
+
+
+def update():
+    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
+    os.execv(sys.executable, ['python3'] + sys.argv)
+    print("Bye-Bye")
     return
 
 
@@ -544,8 +551,7 @@ def main_dialog():
                              ("2", "Fix known bugs"), 
                              ("3", "Restore Retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
-                             ("5", "Install"), 
-                             ("6", "Uninstall")], 
+                             ("5", "Installation")], 
                     cancel_label=" Exit ")
     
     if code == d.OK:
@@ -558,9 +564,7 @@ def main_dialog():
         elif tag == "4":
             reset_controls_dialog()
         elif tag == "5":
-            install_dialog()
-        elif tag == "6":
-            uninstall_dialog()
+            installation_dialog()
 
     if code == d.CANCEL:
         print()
@@ -579,8 +583,7 @@ def main_menu():
         print(' 2. Fix known bugs 🐛 [recommended]')
         print(' 3. Restore retroarch configurations 👾')
         print(' 4. Reset emulationstation configurations ⌨')
-        print(' 5. Install [recommended]')
-        print(' 6. Uninstall')
+        print(' 5. Installation [recommended]')
         print(' 9. Quit ❌')
         try:
             uinp = input('\n Enter your Selection: ')
@@ -599,10 +602,7 @@ def main_menu():
             reset_controls_menu()
             break
         elif uinp == '5':
-            install_menu()
-            break
-        elif uinp == '6':
-            uninstall_menu()
+            installation_menu()
             break
         elif uinp == '9':
             break
@@ -897,6 +897,33 @@ def install_menu():
         print("All done!")
         break
 
+
+def update_dialog():
+    code = d.yesno('Continue with update?')
+
+    if code == d.OK:
+        update()
+
+    return
+
+
+def update_menu():
+    while True:
+        cls()
+        print('\n ===========[ UPDATE ]=============')
+        print('\nContinue with update?\n')
+        print(' 1. Yes')
+        print(' 2. No')
+        uinp = input("\nPlease select from the menu: ")
+        if uinp == "1":
+            update()
+        else:
+            break
+        cls()
+        print("All done!")
+        break
+
+
 def uninstall_dialog():
     code = d.yesno('Continue with uninstall?\n\nThis will remove the tool from the Options menu.')
 
@@ -921,6 +948,58 @@ def uninstall_menu():
         cls()
         print("All done!")
         break
+
+
+def installation_dialog():
+    code, tag = d.menu("Installation", 
+                    choices=[("1", "Install"), 
+                             ("2", "Update"), 
+                             ("3", "Uninstall")], 
+                    cancel_label=" Exit ")
+    
+    if code == d.OK:
+        if tag == "1":
+            install_dialog()
+        elif tag == "2":
+            update_dialog()
+        elif tag == "3":
+            uninstall_dialog()
+
+    if code == d.CANCEL:
+        print()
+        restart_es()
+        exit(0)
+
+    return
+
+
+def installation_menu():
+    while True:
+        cls()
+        print('\n ===========[ INSTALLATION MENU ]=============')
+        print('  ')
+        print(' 1. Install')
+        print(' 2. Update')
+        print(' 3. Uninstall')
+        try:
+            uinp = input('\n Enter your Selection: ')
+        except EOFError:
+            break
+        if uinp == '1':
+            install_menu()
+            break
+        elif uinp == '2':
+            update_menu()
+            break
+        elif uinp == '3':
+            uninstall_menu()
+            break
+        elif uinp == '9':
+            break
+            return
+        else:
+            print('\n  Please select from the Menu.')
+
 
 def reset_controls_menu():
     while True:
