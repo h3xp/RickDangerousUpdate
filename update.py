@@ -51,6 +51,7 @@ def restart_es():
     runcmd("sudo reboot")
     #runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
     #runcmd("sudo systemctl restart autologin@tty1.service")
+    return
 
 
 def is_update_applied(key: str):
@@ -569,7 +570,6 @@ def main_dialog():
 
     if code == d.CANCEL:
         print()
-        restart_es()
         exit(0)
 
     return
@@ -641,6 +641,8 @@ def check_root(directory):
 def improvements_dialog():
     megadrive = check_drive()
     check_wrong_permissions()
+    reboot_msg = "Updates installed:"
+
     available_updates = get_available_updates(megadrive)
     available_updates.sort()
 
@@ -660,6 +662,7 @@ def improvements_dialog():
         for tag in tags:
             for update in available_updates:
                 if update[0] == tag:
+                    reboot_msg += "\n" + tag
                     selected_updates.append(update)
                     break
 
@@ -669,6 +672,9 @@ def improvements_dialog():
     if len(selected_updates) > 0:
         print()
         do_improvements(selected_updates, megadrive)
+        reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
+        d.pause(reboot_msg)
+        restart_es()
 
     return
 
@@ -968,7 +974,6 @@ def installation_dialog():
 
     if code == d.CANCEL:
         print()
-        restart_es()
         exit(0)
 
     return
@@ -1029,7 +1034,6 @@ def main():
 
     if os.environ["RetroPieUpdaterRemote"] == "Yes":
         main_menu()
-        restart_es()
     else:
         while True:
             main_dialog()
