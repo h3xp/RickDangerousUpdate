@@ -48,8 +48,9 @@ def get_config_value(section: str, key: str):
 
 
 def restart_es():
-    runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
-    runcmd("sudo systemctl restart autologin@tty1.service")
+    runcmd("sudo reboot")
+    #runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
+    #runcmd("sudo systemctl restart autologin@tty1.service")
 
 
 def is_update_applied(key: str):
