@@ -56,7 +56,7 @@ If you do not want to install the update tool on your RetroPie, you can still ru
 - (Replace [link] with a URL to the mega storage containing the updates)
 
 ```
-bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N) [link]
+bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
 ```
 
 ![A short gif showing a demo of the tool in use.](demo.gif)
