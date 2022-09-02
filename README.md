@@ -19,8 +19,18 @@ Join Ricks discord server to keep track on the latest changes.
  2. Fix known bugs 🐛 [recommended]
  3. Restore retroarch configurations 👾
  4. Reset emulationstation configurations ⌨
+ 5. Installtion
  9. Quit ❌
 ```
+
+The update tool has an "Installation" menu option.
+Installation will make the tool available from the "Options" tab in EmulationStation.
+
+The three options on the "Installation" menu are:
+- Install - this option will install fresh, overwriting any existing configuration.
+- Update - this option will update your version to the most current version available.
+- Uninstall - this option will remove the tool entirely from the "Options" tab in EmulationStation..
+
 
 # Easy Installation & Usage (recommended)
 The easiest way to run the updater is to install it on to your RetroPie directly, this will make it available via the Options menu.
