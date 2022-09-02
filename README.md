@@ -36,8 +36,8 @@ The three options on the "Installation" menu are:
 The easiest way to run the updater is to install it on to your RetroPie directly, this will make it available via the Options menu.
 
 You can now install the update tool onto your RetroPie directory using SSH from your personal computer, or directly on your RetroPie.
-(Replace [IP] with the IP address of your RetroPie)
-(Replace [link] with a URL to the mega storage containing the updates)
+- (Replace [IP] with the IP address of your RetroPie)
+- (Replace [link] with a URL to the mega storage containing the updates)
 
 From your personal computer using SSH:
 
@@ -53,7 +53,7 @@ bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/ins
 
 
 If you do not want to install the update tool on your RetroPie, you can still run the updater from the RetroPie directly by running the following command in the RetroPie terminal (you will still be able to install via the "Installation menu if you wish):
-(Replace [link] with a URL to the mega storage containing the updates)
+- (Replace [link] with a URL to the mega storage containing the updates)
 
 ```
 bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N) [link]
@@ -78,7 +78,8 @@ pip3 install -r requirements.txt
 
 
 The script is self-explanatory, it will guide you through the whole process, you make your choices by simple pressing numbers on your keyboard.
-Just run the script inside a terminal like this (replace [URL] with a URL to the mega storage containing the updates):
+Just run the script inside a terminal like this:
+- (Replace [URL] with a URL to the mega storage containing the updates):
 
 ```
 python3 update.py [link]
