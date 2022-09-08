@@ -25,11 +25,11 @@ Join Ricks discord server to keep track on the latest changes.
 # Easy Installation & Usage (recommended)
 
 The easiest way to run the updater is directly from the retropie. Just copy and paste the following command
-in a terminal on your raspberrypi (replace [URL] with a URL to the mega storage containing the updates):
+in a terminal on your raspberrypi (replace [URL] with a link to the mega storage containing the updates):
 
 
 ```
-bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N) [link]
+bash <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh" -s -N) [URL]
 ```
 
 ![A short gif showing a demo of the tool in use.](demo.gif)
