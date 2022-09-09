@@ -66,6 +66,7 @@ def is_update_applied(key: str):
     return False
 
 def runshell(command: str):
+    #this can be removed
     code = subprocess.call(["bash","-c",command])
     return code
 
