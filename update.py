@@ -310,7 +310,8 @@ def runcmd(command):
         client.close()
         return str(output, 'utf-8')
     else:
-        return subprocess.call(["bash","-c",command]).read()
+        code = subprocess.call(["bash","-c",command])
+        return code
         #return os.popen(command).read()
 
 
