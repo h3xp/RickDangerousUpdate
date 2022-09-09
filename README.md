@@ -42,13 +42,13 @@ You can now install the update tool onto your RetroPie directory using SSH from 
 From your personal computer using SSH:
 
 ```
-ssh pi@[IP] "bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) [link]"
+ssh pi@[IP] "bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) [link]"
 ```
 
 Or directly from your RetroPie:
 
 ```
-bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) [link]
+bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) [link]
 ```
 
 
