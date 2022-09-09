@@ -703,8 +703,8 @@ def improvements_dialog():
         print()
         do_improvements(selected_updates, megadrive)
         #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
-        reboot_msg = "Updates installed, rebooting in 5 seconds!"
-        d.pause(reboot_msg)
+        reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
+        d.pause(reboot_msg, height=10, width=60)
         restart_es()
 
     return
@@ -916,7 +916,9 @@ def install_dialog():
 
     if code == d.OK:
         install()
-
+        reboot_msg = "\nUpdate tool has been installed, rebooting in 5 seconds!\n"
+        d.pause(reboot_msg, height=10, width=60)
+        restart_es()
     return
 
 def install_menu():
@@ -941,6 +943,9 @@ def update_dialog():
 
     if code == d.OK:
         update()
+        reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
+        d.pause(reboot_msg, height=10, width=60)
+        restart_es()
 
     return
 
@@ -967,7 +972,9 @@ def uninstall_dialog():
 
     if code == d.OK:
         uninstall()
-
+        reboot_msg = "\nUpdate tool has been uninstalled, rebooting in 5 seconds!\n"
+        d.pause(reboot_msg, height=10, width=60)
+        restart_es()
     return
 
 
