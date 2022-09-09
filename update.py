@@ -683,7 +683,8 @@ def improvements_dialog():
     if len(selected_updates) > 0:
         print()
         do_improvements(selected_updates, megadrive)
-        reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
+        #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
+        reboot_msg = "Updates installed, rebooting in 5 seconds!"
         d.pause(reboot_msg)
         restart_es()
 
