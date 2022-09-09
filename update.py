@@ -71,20 +71,30 @@ def runshell(command: str):
 
 
 def uninstall():
-    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
+    #if os.environ["RetroPieUpdaterRemote"] == "Yes":
+    #    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
+    #else:
+    #    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
+    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
     return
 
-
 def update():
-    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
-    os.execv(sys.executable, ['python3'] + sys.argv)
-    print("Bye-Bye")
+    #if os.environ["RetroPieUpdaterRemote"] == "Yes":
+    #    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
+    #else:
+    #    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
+    #    os.execv(sys.executable, ['python3'] + sys.argv)
+    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
     return
 
 
 def install():
     megadrive = check_drive()
-    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
+    #if os.environ["RetroPieUpdaterRemote"] == "Yes":
+    #    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
+    #else:
+    #    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
+    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
     return
 
 
@@ -299,7 +309,8 @@ def runcmd(command):
         client.close()
         return str(output, 'utf-8')
     else:
-        return os.popen(command).read()
+        return subprocess.call(["bash","-c",command])
+        #return os.popen(command).read()
 
 
 def copyfile(localpath, filepath):
