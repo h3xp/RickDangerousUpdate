@@ -310,8 +310,8 @@ def runcmd(command):
         client.close()
         return str(output, 'utf-8')
     else:
-        code = subprocess.call(["bash","-c",command])
-        return code
+        code = subprocess.check_output(["bash","-c",command])
+        return str(code, "UTF-8")
         #return os.popen(command).read()
 
 
@@ -358,6 +358,17 @@ def permissions_dialog():
 
     return
 
+
+def restore_retroarch_dialog():
+    code = d.yesno(text="Your permissions seem to be wrong, which is a known bug in this image.\nThis might prevent you from "
+              "saving configurations, gamestates and metadata.\nDo you want this script to fix this issue for you?")
+
+    if code == d.OK:
+        fix_permissions()
+
+    return
+
+
 def permissions_prompt():
     while True:
         cls()
@@ -384,11 +395,17 @@ def permissions_prompt():
 def check_wrong_permissions():
     output = runcmd('ls -la /home/pi/RetroPie/ | grep roms | cut -d \' \' -f3,4')
     if output.rstrip() != 'pi pi':
-        permissions_prompt()
+            if os.environ["RetroPieUpdaterRemote"] == "Yes":
+                permissions_prompt()
+            else:
+                permissions_dialog()
     else:
         output = runcmd('ls -la /home/pi/ | grep .emulationstation | cut -d \' \' -f4,7')
         if output.rstrip() != 'pi pi':
-            permissions_prompt()
+            if os.environ["RetroPieUpdaterRemote"] == "Yes":
+                permissions_prompt()
+            else:
+                permissions_dialog()
 
 
 def ip_instructions():
