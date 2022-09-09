@@ -14,8 +14,10 @@ Join Ricks discord server to keep track on the latest changes.
 
 # Usage
 
+![demo of the main menu](demo.gif)
+
 Simply run the following command on your Retropie via SSH or access a terminal by connecting a keyboard and pressing F4
-(Replace [link] with an URL to the mega storage containing the updates):
+(Replace [link] with a URL to the mega storage containing the updates):
 
 ```
 bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/run.sh' -s -N) [link]

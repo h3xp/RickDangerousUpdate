@@ -1,14 +1,10 @@
-'''
+"""
 Update Script for Rick Dangerous' Minecraftium Edition
 https://github.com/h3xp/RickDangerousUpdate
-'''
-from importlib.resources import path
+"""
+
 import os
-import paramiko
-import pathlib
 import zipfile
-import shutil
-import configparser
 import platform
 from distutils.dir_util import copy_tree
 import json
@@ -21,7 +17,7 @@ import urllib.request
 from Crypto.Cipher import AES
 from Crypto.Util import Counter
 from mega.crypto import base64_to_a32, base64_url_decode, decrypt_attr, decrypt_key, a32_to_str, get_chunks, str_to_a32
-from mega.errors import ValidationError, RequestError
+from mega.errors import RequestError
 import xml.etree.ElementTree as ET
 import datetime
 import shutil
@@ -65,36 +61,18 @@ def is_update_applied(key: str):
 
     return False
 
-def runshell(command: str):
-    #this can be removed
-    code = subprocess.call(["bash","-c",command])
-    return code
-
 
 def uninstall():
-    #if os.environ["RetroPieUpdaterRemote"] == "Yes":
-    #    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
-    #else:
-    #    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
     runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
     return
 
 def update():
-    #if os.environ["RetroPieUpdaterRemote"] == "Yes":
-    #    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
-    #else:
-    #    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
-    #    os.execv(sys.executable, ['python3'] + sys.argv)
     runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
     return
 
 
 def install():
     megadrive = check_drive()
-    #if os.environ["RetroPieUpdaterRemote"] == "Yes":
-    #    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
-    #else:
-    #    a = runshell("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
     runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
     return
 
@@ -271,83 +249,27 @@ def download_update(ID, destdir, megadrive):
             print("Processing: {}...".format(attrs["n"]))
 
 
-class MySFTPClient(paramiko.SFTPClient):
-    def put_dir(self, source, target):
-        ''' Uploads the contents of the source directory to the target path. The
-            target directory needs to exists. All subdirectories in source are
-            created under target.
-        '''
-        for item in os.listdir(source):
-            if os.path.isfile(os.path.join(source, item)):
-                self.put(os.path.join(source, item), '%s/%s' % (target, item))
-            else:
-                self.mkdir('%s/%s' % (target, item), ignore_existing=True)
-                self.put_dir(os.path.join(source, item), '%s/%s' % (target, item))
-
-    def mkdir(self, path, mode=511, ignore_existing=False):
-        ''' Augments mkdir by adding an option to not fail if the folder exists  '''
-        try:
-            super(MySFTPClient, self).mkdir(path, mode)
-        except IOError:
-            if ignore_existing:
-                pass
-            else:
-                raise
-
-
 def cls():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 
 def runcmd(command):
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        host, username, password = connect_pi()
-        client = paramiko.client.SSHClient()
-        client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-        client.connect(host, username=username, password=password)
-        stdin, stdout, stderr = client.exec_command(command)
-        output = stdout.read()
-        client.close()
-        return str(output, 'utf-8')
-    else:
-        code = subprocess.check_output(["bash","-c",command])
-        return str(code, "UTF-8")
-        #return os.popen(command).read()
+    code = subprocess.check_output(["bash","-c",command])
+    return str(code, "UTF-8")
+    #return os.popen(command).read()
 
 
 def copyfile(localpath, filepath):
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        host, username, password = connect_pi()
-        transport = paramiko.Transport((host, 22))
-        transport.connect(None, username, password)
-
-        sftp = paramiko.SFTPClient.from_transport(transport)
-        sftp.put(localpath, filepath)
-
-        if sftp:
-            sftp.close()
-        if transport:
-            transport.close()
-    else:
-        shutil.copy(localpath, filepath)
+    shutil.copy(localpath, filepath)
 
 
 def copydir(source_path, target_path):
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        host, username, password = connect_pi()
-        transport = paramiko.Transport((host, 22))
-        transport.connect(None, username, password)
-
-        sftp = MySFTPClient.from_transport(transport)
-        sftp.mkdir(target_path, ignore_existing=True)
-        sftp.put_dir(source_path, target_path)
-        sftp.close()
-    else:
-        copy_tree(source_path, target_path)
+    copy_tree(source_path, target_path)
 
 
 def fix_permissions():
     runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
+
 
 def permissions_dialog():
     code = d.yesno('Your permissions seem to be wrong, which is a known bug in this image.\nThis might prevent you from '
@@ -359,116 +281,14 @@ def permissions_dialog():
     return
 
 
-def restore_retroarch_dialog():
-    code = d.yesno(text="Your permissions seem to be wrong, which is a known bug in this image.\nThis might prevent you from "
-              "saving configurations, gamestates and metadata.\nDo you want this script to fix this issue for you?")
-
-    if code == d.OK:
-        fix_permissions()
-
-    return
-
-
-def permissions_prompt():
-    while True:
-        cls()
-        print('\n ===========[ WRONG PERMISSIONS ]=============')
-        print('  ')
-        print('Your permissions seem to be wrong, which is a known bug in this image.\nThis might prevent you from '
-              'saving configurations, gamestates and metadata.\nDo you want this script to fix this issue for you?\n')
-        print('1. Yes')
-        print('9. No')
-        try:
-            uinp = input('\n Enter your Selection: ')
-        except EOFError:
-            break
-        if uinp == '1':
-            fix_permissions()
-            break
-        elif uinp == 'Y':
-            fix_permissions()
-            break
-        else:
-            break
-
-
 def check_wrong_permissions():
     output = runcmd('ls -la /home/pi/RetroPie/ | grep roms | cut -d \' \' -f3,4')
     if output.rstrip() != 'pi pi':
-            if os.environ["RetroPieUpdaterRemote"] == "Yes":
-                permissions_prompt()
-            else:
-                permissions_dialog()
+        permissions_dialog()
     else:
         output = runcmd('ls -la /home/pi/ | grep .emulationstation | cut -d \' \' -f4,7')
         if output.rstrip() != 'pi pi':
-            if os.environ["RetroPieUpdaterRemote"] == "Yes":
-                permissions_prompt()
-            else:
-                permissions_dialog()
-
-
-def ip_instructions():
-    while True:
-        cls()
-        print('\n ===========[ CONNECT RETROPIE INSTRUCTIONS ]=============')
-        print("\nMake sure your Retropie is connected to your local network via ethernet cable or WI-FI.\n"
-              "Boot it and navigate to Options.\nSelect Show IP address.\n"
-              "Alternatively look for \"retropie\" on your routers connected devices overview.")
-        print(' ')
-        input('\n Press any key to return.')
-        break
-
-
-def enter_connection():
-    while True:
-        cls()
-        ip = input('\n Enter IP: ')
-        username = input('\n Enter username, or press enter for default [pi]:')
-        password = input('\n Enter password, or press enter for default [raspberry]:')
-        if username == "":
-            username = "pi"
-        if password == "":
-            password = "raspberry"
-        if ip == "":
-            ip = "192.168.119.179"
-        config['SSH'] = {'host': ip, 'username': username, 'password': password}
-        with open('config.ini', 'w') as configfile:
-            config.write(configfile)
-        return ip, username, password
-
-
-def connect_pi():
-    if os.path.exists('config.ini'):
-        config.read("config.ini")
-        host = config.get('SSH', 'host')
-        username = config.get('SSH', 'username')
-        password = config.get('SSH', 'password')
-        return host, username, password
-    else:
-        while True:
-            cls()
-            print('\n ===========[ CONNECT RETROPIE ]=============')
-            print("\nIn order to automatically apply updates/fixes \n"
-                  "to your Retropie you have to provide its IP address.")
-            print(' ')
-            print(' 1. Enter IP')
-            print(' 2. Where do I find the IP adress?')
-            print(' 9. Quit ❌')
-
-            uinp = input('\n Enter your Selection: ')
-
-            if uinp == '1':
-                host, username, password = enter_connection()
-                return host, username, password
-                break
-            elif uinp == '2':
-                ip_instructions()
-            elif uinp == '9':
-                break
-                return
-            else:
-                print('\n  Please select from the menu.')
+            permissions_dialog()
 
 
 def merge_gamelist(directory):
@@ -481,7 +301,6 @@ def merge_gamelist(directory):
         if os.path.isfile(corr):
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
-
 
 
 def indent(tree, space="  ", level=0):
@@ -563,6 +382,7 @@ def merge_xml(src_xml: str, dest_xml: str):
 
     return
 
+
 def make_deletions(directory):
     directory = directory / "read me do this first!.txt"
     if os.path.isfile(directory):
@@ -599,47 +419,10 @@ def main_dialog():
             installation_dialog()
 
     if code == d.CANCEL:
-        print()
+        cls()
         exit(0)
 
     return
-
-
-def main_menu():
-    while True:
-        cls()
-        print('\n ===========[ MAIN MENU ]=============')
-        print('  ')
-        print(' 1. Load Improvements ✨ [recommended]')
-        print(' 2. Fix known bugs 🐛 [recommended]')
-        print(' 3. Restore retroarch configurations 👾')
-        print(' 4. Reset emulationstation configurations ⌨')
-        print(' 5. Installation [recommended]')
-        print(' 9. Quit ❌')
-        try:
-            uinp = input('\n Enter your Selection: ')
-        except EOFError:
-            break
-        if uinp == '1':
-            improvements_menu()
-            break
-        elif uinp == '2':
-            bugs_menu()
-            break
-        elif uinp == '3':
-            restore_retroarch_menu()
-            break
-        elif uinp == '4':
-            reset_controls_menu()
-            break
-        elif uinp == '5':
-            installation_menu()
-            break
-        elif uinp == '9':
-            break
-            return
-        else:
-            print('\n  Please select from the Menu.')
 
 
 def check_drive():
@@ -698,6 +481,10 @@ def improvements_dialog():
 
     if code == d.EXTRA:
         selected_updates = available_updates
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
 
     if len(selected_updates) > 0:
         print()
@@ -765,44 +552,6 @@ def do_improvements(selected_updates: list, megadrive: str):
     return
 
 
-def improvements_menu():
-    megadrive = check_drive()
-    check_wrong_permissions()
-    while True:
-        cls()
-        print('\n ===========[ AVAILABLE UPDATES ]=============')
-        print('  ')
-        available_updates = get_available_updates(megadrive)
-        available_updates.sort()
-        print("0. all")
-        for i in range(len(available_updates)):
-            print(str(i+1) + ". " + available_updates[i][0])
-        print(str(len(available_updates)+1) + ". back ")
-        selection = input('\nSelect which update you want to apply: ')
-        selected_updates = []
-        if int(selection) == len(available_updates) + 1:
-            #os.removedirs(improvements_dir)
-            main_menu()
-            break
-        if int(selection) in range(len(available_updates)+1):
-            if int(selection) == 0:
-                print("Downloading all available updates...")
-                selected_updates = available_updates
-            else:
-                #print("Downloading: " + available_updates[int(selection)-1][0] + "...")
-                selected_updates.append(available_updates[int(selection)-1])
-        else:
-            #os.removedirs(improvements_dir)
-            print("Invalid selection.")
-            break
-
-        do_improvements(selected_updates, megadrive)
-
-        cls()
-        print("All done!")
-        break
-
-
 def bugs_dialog():
     code, tag = d.menu("Bugs Menu", 
                     choices=[("1", "Fix permissions")])
@@ -811,28 +560,10 @@ def bugs_dialog():
         if tag == "1":
             fix_permissions()
 
+    if code == d.CANCEL:
+        main_dialog()
+
     return
-
-
-def bugs_menu():
-    while True:
-        cls()
-        print('\n ===========[ FIX BUGS ]=============')
-        print('  ')
-        print(' 1. Fix permissions')
-        print(' 9. Return ')
-        uinp = input('\n Enter your Selection: ')
-
-        if uinp == '1':
-            fix_permissions()
-            cls()
-            print("All done!")
-            break
-        elif uinp == '9':
-            break
-            main_menu()
-        else:
-            print('\n  Please select from the Menu. For more details check README.md.')
 
 
 def restore_retroarch_dialog():
@@ -840,6 +571,9 @@ def restore_retroarch_dialog():
 
     if code == d.OK:
         do_retroarch_configs()
+
+    if code == d.CANCEL:
+        main_dialog()
 
     return
 
@@ -864,28 +598,14 @@ def do_retroarch_configs():
     return
 
 
-def restore_retroarch_menu():
-    while True:
-        cls()
-        print('\n ===========[ RESTORE RETROARCH CONFIGS ]=============')
-        print('\nAre you sure you want to reset all retroarch.cfgs?:\n')
-        print(' 1. Yes')
-        print(' 2. No')
-        uinp = input("\nPlease select from the menu: ")
-        if uinp == "1":
-            do_retroarch_configs()
-        else:
-            break
-        cls()
-        print("All done!")
-        break
-
-
 def reset_controls_dialog():
     code = d.yesno(text="Are you sure you want to reset your emulationstation configs?")
 
     if code == d.OK:
         do_retroarch_configs()
+
+    if code == d.CANCEL:
+        main_dialog()
 
     return
 
@@ -911,6 +631,7 @@ def do_emulationstation_configs():
 
     return
 
+
 def install_dialog():
     code = d.yesno('Continue with installation?\n\nThis will add the tool to the Options menu, overwriting any previous installations.')
 
@@ -920,22 +641,6 @@ def install_dialog():
         d.pause(reboot_msg, height=10, width=60)
         restart_es()
     return
-
-def install_menu():
-    while True:
-        cls()
-        print('\n ===========[ INSTALL ]=============')
-        print('\nContinue with installation?:\nThis will add the tool to the Options menu, overwriting any previous installations.\n')
-        print(' 1. Yes')
-        print(' 2. No')
-        uinp = input("\nPlease select from the menu: ")
-        if uinp == "1":
-            install()
-        else:
-            break
-        cls()
-        print("All done!")
-        break
 
 
 def update_dialog():
@@ -950,23 +655,6 @@ def update_dialog():
     return
 
 
-def update_menu():
-    while True:
-        cls()
-        print('\n ===========[ UPDATE ]=============')
-        print('\nContinue with update?\n')
-        print(' 1. Yes')
-        print(' 2. No')
-        uinp = input("\nPlease select from the menu: ")
-        if uinp == "1":
-            update()
-        else:
-            break
-        cls()
-        print("All done!")
-        break
-
-
 def uninstall_dialog():
     code = d.yesno('Continue with uninstall?\n\nThis will remove the tool from the Options menu.')
 
@@ -978,29 +666,12 @@ def uninstall_dialog():
     return
 
 
-def uninstall_menu():
-    while True:
-        cls()
-        print('\n ===========[ UNINSTALL ]=============')
-        print('\nContinue with uninstall?:\nThis will remove the tool from the Options menu.\n')
-        print(' 1. Yes')
-        print(' 2. No')
-        uinp = input("\nPlease select from the menu: ")
-        if uinp == "1":
-            uninstall()
-        else:
-            break
-        cls()
-        print("All done!")
-        break
-
-
 def installation_dialog():
     code, tag = d.menu("Installation", 
-                    choices=[("1", "Install"), 
+                    choices=[("1", "Install/Reinstall"),
                              ("2", "Update"), 
-                             ("3", "Uninstall")], 
-                    cancel_label=" Exit ")
+                             ("3", "Uninstall/Remove")],
+                    cancel_label=" Cancel ")
     
     if code == d.OK:
         if tag == "1":
@@ -1011,70 +682,14 @@ def installation_dialog():
             uninstall_dialog()
 
     if code == d.CANCEL:
-        print()
-        exit(0)
+        cls()
+        main_dialog()
 
     return
 
 
-def installation_menu():
-    while True:
-        cls()
-        print('\n ===========[ INSTALLATION MENU ]=============')
-        print('  ')
-        print(' 1. Install')
-        print(' 2. Update')
-        print(' 3. Uninstall')
-        try:
-            uinp = input('\n Enter your Selection: ')
-        except EOFError:
-            break
-        if uinp == '1':
-            install_menu()
-            break
-        elif uinp == '2':
-            update_menu()
-            break
-        elif uinp == '3':
-            uninstall_menu()
-            break
-        elif uinp == '9':
-            break
-            return
-        else:
-            print('\n  Please select from the Menu.')
-
-
-def reset_controls_menu():
-    while True:
-        cls()
-        print('\n ===========[ RESTORE EMULATIONSTATION CONFIGS ]=============')
-        print('\nAre you sure you want to reset your emulationstation configs?:\n')
-        print(' 1. Yes')
-        print(' 2. No')
-        uinp = input("\nPlease select from the menu: ")
-        if uinp == "1":
-            do_emulationstation_configs()
-        else:
-            break
-        cls()
-        print("All done!")
-        break
-
-def check_hostname():
-    if platform.uname()[1] == "retropie":
-        os.environ["RetroPieUpdaterRemote"] = "No"
-    else:
-        os.environ["RetroPieUpdaterRemote"] = "Yes"
-
 def main():
-    check_hostname()
-
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        main_menu()
-    else:
-        while True:
-            main_dialog()
+    main_dialog()
 
 
 main()
