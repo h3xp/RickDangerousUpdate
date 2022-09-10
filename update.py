@@ -498,11 +498,7 @@ def improvements_dialog():
 
 
 def do_improvements(selected_updates: list, megadrive: str):
-    localpath = Path.cwd().resolve()
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        improvements_dir = localpath / "improvements"
-    else:
-        improvements_dir = Path("/", "tmp", "improvements")
+    improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
 
@@ -579,10 +575,7 @@ def restore_retroarch_dialog():
 
 
 def do_retroarch_configs():
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        localpath = Path.cwd().resolve()
-    else:
-        localpath = Path("/", "tmp")
+    localpath = Path("/", "tmp")
     urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", localpath / "retroarch_configs.zip")
     f = os.path.join(localpath, "retroarch_configs.zip")
     if os.path.isfile(f):
@@ -611,10 +604,7 @@ def reset_controls_dialog():
 
 
 def do_emulationstation_configs():
-    if os.environ["RetroPieUpdaterRemote"] == "Yes":
-        localpath = Path.cwd().resolve()
-    else:
-        localpath = Path("/", "tmp")
+    localpath = Path("/", "tmp")
     urllib.request.urlretrieve(
         "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/emulationstation_configs.zip",
         localpath / "emulationstation_configs.zip")
