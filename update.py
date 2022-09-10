@@ -286,7 +286,7 @@ def check_wrong_permissions():
     if output.rstrip() != 'pi pi':
         permissions_dialog()
     else:
-        output = runcmd('ls -la /home/pi/ | grep .emulationstation | cut -d \' \' -f4,7')
+        output = runcmd('ls -la /home/pi/.emulationstation/gamelists/retropie | grep gamelist.xml | cut -d \' \' -f3,4')
         if output.rstrip() != 'pi pi':
             permissions_dialog()
 
