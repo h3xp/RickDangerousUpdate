@@ -3,6 +3,7 @@ Update Script for Rick Dangerous' Minecraftium Edition
 https://github.com/h3xp/RickDangerousUpdate
 """
 
+from genericpath import isfile
 import os
 import zipfile
 import platform
@@ -32,6 +33,38 @@ if platform.uname()[1] == "retropie":
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
+
+
+def get_overlay_systems():
+    retval = [[], []]
+    path = "/opt/retropie/configs"
+
+    for file in os.listdir(path):
+        if file == "all":
+            continue
+
+        system = os.path.join(path, file)
+        if os.path.isdir(system):
+            if os.path.isfile(os.path.join(system, "retroarch.cfg")):
+                with open(os.path.join(system, "retroarch.cfg"), 'r') as configfile:
+                    system_overlay = False
+                    overlay_on = False
+
+                    lines = configfile.readlines()
+                    for line in lines:
+                        if "input_overlay" in line:
+                            pos = line.find("=")
+                            if pos > 0:
+                                if len(line[pos].strip()) > 0:
+                                    if file not in retval[0]:
+                                        retval[0].append(file)
+                                    if line.strip()[0:1] != "#":
+                                        if file not in retval[1]:
+                                            retval[1].append(file)
+
+    retval[0].sort()
+
+    return retval
 
 
 def get_config_value(section: str, key: str):
@@ -403,7 +436,8 @@ def main_dialog():
                              ("2", "Fix known bugs"), 
                              ("3", "Restore Retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
-                             ("5", "Installation")], 
+                             ("5", "System overlays"), 
+                             ("6", "Installation")], 
                     cancel_label=" Exit ")
     
     if code == d.OK:
@@ -416,6 +450,8 @@ def main_dialog():
         elif tag == "4":
             reset_controls_dialog()
         elif tag == "5":
+            overlays_dialog()
+        elif tag == "6":
             installation_dialog()
 
     if code == d.CANCEL:
@@ -545,6 +581,121 @@ def do_improvements(selected_updates: list, megadrive: str):
     except OSError as e:
         print("Error: %s : %s" % (improvements_dir, e.strerror))
     
+    return
+
+
+def do_system_overlay(system: str, enable_disable = "Enable"):
+    path = "/opt/retropie/configs"
+
+    system = os.path.join(path, system)
+    if os.path.isdir(system):
+        if os.path.isfile(os.path.join(system, "retroarch.cfg")):
+            lines_out = ""
+            with open(os.path.join(system, "retroarch.cfg"), 'r') as configfile:
+                lines_in = configfile.readlines()
+                for line in lines_in:
+                    if "input_overlay" in line:
+                        if enable_disable == "Enable":
+                            if line.strip()[0:1] == "#":
+                                line = line.strip()[1:] + "\n"
+                        else:
+                            line = "#" + line.strip() + "\n"
+
+                    lines_out += line
+
+            with open(os.path.join(system, "retroarch.cfg"), 'w') as configfile:
+                configfile.write(lines_out)
+
+    return
+
+
+def no_overlays_dialog(enable_disable = "Enable"):
+    d.msgbox("There are no system overlays to {}.".format(enable_disable.lower()))
+
+    overlays_dialog()
+    return
+
+
+def single_overlay_dialog(enable_disable = "Enable"):
+    menu_choices = []
+    system_overlays = get_overlay_systems()
+
+    for system in system_overlays[0]:
+        if enable_disable == "Enable":
+            if system not in system_overlays[1]:
+                menu_choices.append((system, "", False))
+        else:
+            if system in system_overlays[1]:
+                menu_choices.append((system, "", False))
+
+    if len(menu_choices) == 0:
+        no_overlays_dialog()
+
+    code, tag = d.radiolist(text="Available Systems",
+                             choices=menu_choices,
+                             ok_label="{} Selected".format(enable_disable))    
+
+    if code == d.OK:
+        do_system_overlay(tag, enable_disable)
+
+    cls()
+    overlays_dialog()
+
+    return
+
+
+def multiple_overlays_dialog(enable_disable = "Enable"):
+    menu_choices = []
+    system_overlays = get_overlay_systems()
+
+    for system in system_overlays[0]:
+        if enable_disable == "Enable":
+            if system not in system_overlays[1]:
+                menu_choices.append((system, "", False))
+        else:
+            if system in system_overlays[1]:
+                menu_choices.append((system, "", False))        
+
+    if len(menu_choices) == 0:
+        no_overlays_dialog()
+
+    code, tags = d.checklist(text="Available Systems",
+                             choices=menu_choices,
+                             ok_label="{} Selected".format(enable_disable), 
+                             extra_button=True, 
+                             extra_label="{} All".format(enable_disable))
+
+    if code == d.OK:
+        for system in tags:
+            do_system_overlay(system, enable_disable)
+
+
+    if code == d.EXTRA:
+        for system in menu_choices[0]:
+            do_system_overlay(system, enable_disable)
+
+    cls()
+    overlays_dialog()
+                
+    return
+
+
+def  overlays_dialog():
+    code, tag = d.menu("Sytem Overlays", 
+                    choices=[("1", "Enable System Overlays"),
+                             ("2", "Disable System Overlays")],
+                    cancel_label=" Cancel ")
+    
+    if code == d.OK:
+        if tag == "1":
+            multiple_overlays_dialog("Enable")
+        elif tag == "2":
+            multiple_overlays_dialog("Disable")
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
     return
 
 
