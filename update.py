@@ -439,8 +439,9 @@ def main_dialog():
                              ("2", "Fix known bugs"), 
                              ("3", "Restore Retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
-                             ("5", "System overlays"), 
-                             ("6", "Installation")], 
+                             ("5", "System overlays"),
+                             ("6", "Handheld mode"),
+                             ("7", "Installation")],
                     cancel_label=" Exit ")
     
     if code == d.OK:
@@ -455,6 +456,8 @@ def main_dialog():
         elif tag == "5":
             overlays_dialog()
         elif tag == "6":
+            handheld_dialog()
+        elif tag == "7":
             installation_dialog()
 
     if code == d.CANCEL:
@@ -587,6 +590,61 @@ def do_improvements(selected_updates: list, megadrive: str):
     return
 
 
+def handheld_dialog():
+    code, tag = d.menu("Handheld mode",
+                       choices=[("1", "Enable handheld mode"),
+                                ("2", "Disable handheld mode")],
+                       cancel_label=" Cancel ")
+
+    if code == d.OK:
+        if tag == "1":
+            handheld_confirm_dialog("enable")
+        elif tag == "2":
+            handheld_confirm_dialog("disable")
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    return
+
+
+def handheld_confirm_dialog(mode):
+    code = d.yesno(text="Are you sure you want to " + mode + "handheld mode?\nThis will make changes to the "
+                                                             "retroarch.cfgs of these systems:\n- atarylynx\n- "
+                                                             "gamegear\n- gb\n- gba\n- gbc\n- ngpc\n- "
+                                                             "wonderswancolor\n")
+
+    if code == d.OK:
+        do_handheld(mode)
+
+    if code == d.CANCEL:
+        main_dialog()
+
+    return
+
+
+def do_handheld(mode):
+    if mode == "Enable":
+        configzip = "handheld_configs.zip"
+    else:
+        configzip = "handheld_configs_reset.zip"
+    localpath = Path("/", "tmp")
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/" + configzip,
+                               localpath / configzip)
+    f = os.path.join(localpath, configzip)
+    if os.path.isfile(f):
+        with zipfile.ZipFile(f, 'r') as zip_ref:
+            zip_ref.extractall(localpath / "handheld_configs")
+        copydir(localpath / "handheld_configs/", "/opt/retropie/configs/")
+        try:
+            shutil.rmtree(localpath / "handheld_configs")
+        except OSError as e:
+            print("Error: %s : %s" % (localpath / "handheld_configs", e.strerror))
+        os.remove(localpath / configzip)
+    cls()
+
+
 def do_system_overlay(system: str, enable_disable = "Enable"):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     path = "/opt/retropie/configs"
@@ -691,7 +749,7 @@ def multiple_overlays_dialog(enable_disable = "Enable"):
     return
 
 
-def  overlays_dialog():
+def overlays_dialog():
     code, tag = d.menu("Sytem Overlays", 
                     choices=[("1", "Enable System Overlays"),
                              ("2", "Disable System Overlays")],
@@ -749,6 +807,7 @@ def do_retroarch_configs():
         except OSError as e:
             print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
         os.remove(localpath / "retroarch_configs.zip")
+    cls()
 
     return
 
