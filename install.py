@@ -9,7 +9,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
-git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1"
+git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
 home_dir = "/home/pi/.update_tool"
 ini_file = "/home/pi/.update_tool/update_tool.ini"
 png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
@@ -163,7 +163,7 @@ def install(overwrite=True):
     #download update_tool.ini
     runshell("curl {}/update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
     #download the menu image
-    runshell("curl {}/banner.png -o {}/banner.png".format(git_repo, tmp_dir))
+    runshell("curl {}/options_logo.png -o {}/options_logo.png".format(git_repo, tmp_dir))
     #download the gamelist.xml
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
     #download the update.py
@@ -208,7 +208,7 @@ def install(overwrite=True):
 
     #copy image file
     print("Copying icon...")
-    new_banner_path = "{}/banner.png".format(tmp_dir)
+    new_banner_path = "{}/options_logo.png".format(tmp_dir)
     shutil.copy(new_banner_path, png_file)
 
     shutil.rmtree(tmp_dir)

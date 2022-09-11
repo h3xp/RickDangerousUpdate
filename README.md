@@ -14,16 +14,16 @@ Join Ricks discord server to keep track on the latest changes.
 
 # Usage
 
-![demo of the main menu](demo.gif)
-
 Simply run the following command on your Retropie via SSH or access a terminal by connecting a keyboard and pressing F4
 (Replace [link] with a URL to the mega storage containing the updates):
 
 ```
-bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/run.sh' -s -N) [link]
+bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
 ```
 
 The script is self-explanatory, and it will guide you through the whole process.
+
+![demo of the main menu](demo.gif)
 
 ## It is recommended to install the tool.
 
@@ -35,6 +35,8 @@ The three options on the "Installation menu" are:
 - Update - this option will update your version to the most current version available.
 - Uninstall - this option will remove the tool entirely from the "Options" tab in EmulationStation..
 
+### After installation you will find a new "Update Tool" entry inside of EmulationStations "Options" tab:
+![screenshot of the tools options entry inside of emulationstation](screenshot_menu.png)
 
 # Attention
 

@@ -96,17 +96,17 @@ def is_update_applied(key: str):
 
 
 def uninstall():
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -remove")
+    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) -remove")
     return
 
 def update():
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) -update")
+    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) -update")
     return
 
 
 def install():
     megadrive = check_drive()
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/install.sh' -s -N) {}".format(megadrive))
+    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) {}".format(megadrive))
     return
 
 
@@ -630,7 +630,7 @@ def do_handheld(mode):
     else:
         configzip = "handheld_configs_reset.zip"
     localpath = Path("/", "tmp")
-    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v1.0.1/" + configzip,
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/" + configzip,
                                localpath / configzip)
     f = os.path.join(localpath, configzip)
     if os.path.isfile(f):
