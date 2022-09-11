@@ -625,7 +625,7 @@ def handheld_confirm_dialog(mode):
 
 
 def do_handheld(mode):
-    if mode == "Enable":
+    if mode == "enable":
         configzip = "handheld_configs.zip"
     else:
         configzip = "handheld_configs_reset.zip"
