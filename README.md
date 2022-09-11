@@ -11,7 +11,6 @@ Join Ricks discord server to keep track on the latest changes.
 
 ![RickDangerousDiscordBanner](https://discordapp.com/api/guilds/857515631422603286/widget.png?style=banner2)
 
-
 # Usage
 
 Simply run the following command on your Retropie via SSH or access a terminal by connecting a keyboard and pressing F4
