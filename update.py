@@ -412,6 +412,9 @@ def merge_xml(src_xml: str, dest_xml: str):
 
     if os.path.getsize(dest_xml) > 0:
         os.remove(dest_xml + "." + file_time)
+    else:
+        # this somehow failed badly
+        shutil.copy2(dest_xml + "." + file_time, dest_xml)
 
     return
 
@@ -585,6 +588,7 @@ def do_improvements(selected_updates: list, megadrive: str):
 
 
 def do_system_overlay(system: str, enable_disable = "Enable"):
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     path = "/opt/retropie/configs"
 
     system = os.path.join(path, system)
@@ -603,9 +607,16 @@ def do_system_overlay(system: str, enable_disable = "Enable"):
 
                     lines_out += line
 
+            shutil.copy2(os.path.join(system, "retroarch.cfg"), os.path.join(system, "retroarch.cfg") + "." + file_time)
+
             with open(os.path.join(system, "retroarch.cfg"), 'w') as configfile:
                 configfile.write(lines_out)
 
+            if os.path.getsize(os.path.join(system, "retroarch.cfg")) > 0:
+                os.remove(os.path.join(system, "retroarch.cfg") + "." + file_time)
+            else:
+                # this somehow failed badly
+                shutil.copy2(os.path.join(system, "retroarch.cfg") + "." + file_time, os.path.join(system, "retroarch.cfg"))
     return
 
 
