@@ -131,8 +131,10 @@ def uninstall():
         src_tree.write(fh, "utf-8")
 
     if os.path.getsize(gamelist_file) > 0:
-        if os.path.exists(gamelist_file + "." + file_time):
-            os.remove(gamelist_file + "." + file_time)
+        os.remove(gamelist_file + "." + file_time)
+    else:
+        # this somehow failed badly
+        shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
 
     return    
 
@@ -140,8 +142,10 @@ def uninstall():
 def install(overwrite=True):
     global git_repo
 
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     new_config = configparser.ConfigParser()
     old_config = configparser.ConfigParser()
+    new_version = ""
 
     if overwrite == True:
         uninstall()
@@ -171,6 +175,8 @@ def install(overwrite=True):
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
+        if new_config.has_option("CONFIG_ITEMS", "tool_ver"):
+            new_version = "[Version {}]: ".format(new_config["CONFIG_ITEMS"]["tool_ver"])
     
     for section in new_config.sections():
         if len(new_config[section]) > 0:
@@ -204,7 +210,28 @@ def install(overwrite=True):
     print("Merging gamelist entries...")
     new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
     if os.path.exists(new_gamelist_path) == True:
+        #update <desc>
+        src_tree = ET.parse(new_gamelist_path)
+        src_root = src_tree.getroot()
+        for element in src_root.findall("game"):
+            if element.find("desc"):
+                element.find("desc").text = "{}{}".format(new_version, element.find("desc").text)
+            
+        shutil.copy2(new_gamelist_path, new_gamelist_path + "." + file_time)
+
+        # ET.indent(dest_tree, space="\t", level=0)
+        indent(src_root, space="\t", level=0)
+        with open(gamelist_file, "wb") as fh:
+            src_tree.write(fh, "utf-8")
+
+        if os.path.getsize(gamelist_file) > 0:
+            os.remove(gamelist_file + "." + file_time)
+        else:
+            # this somehow failed badly
+            shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
+                
         merge_xml(new_gamelist_path, gamelist_file)
+
 
     #copy image file
     print("Copying icon...")
