@@ -851,16 +851,7 @@ def installation_dialog():
     return
 
 
-def user_dialog():
-    d.msgbox("This program needs to be run as 'pi' user.")
-
-    return
-
-
 def main():
-    if runcmd("id -u -n") == "pi":
-        main_dialog()
-    else:
-        user_dialog()
+    main_dialog()
 
 main()
