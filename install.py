@@ -48,8 +48,7 @@ def indent(tree, space="  ", level=0):
                 _indent_children(child, child_level)
             if not child.tail or not child.tail.strip():
                 child.tail = child_indentation
-            # Dedent after the last child by overwriting the previous indentation.
-            if not child.tail.strip():
+            if child == elem[len(elem) - 1]:
                 child.tail = indentations[level]
 
     _indent_children(tree, 0)
