@@ -34,6 +34,18 @@ if platform.uname()[1] == "retropie":
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
+def get_git_repo():
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
+    
+
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        if config.has_option("CONFIG_ITEMS", "git_repo") and config.has_option("CONFIG_ITEMS", "git_branch"):
+            git_repo = "{}/{}".format(config["CONFIG_ITEMS"]["git_repo"], config["CONFIG_ITEMS"]["git_branch"])    
+
+    return git_repo
+
+
 
 def get_overlay_systems():
     retval = [[], []]
@@ -96,17 +108,20 @@ def is_update_applied(key: str):
 
 
 def uninstall():
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) -remove")
+    git_repo = get_git_repo()
+    runcmd("bash <(curl '{}/install.sh' -s -N) -remove".format(git_repo))
     return
 
 def update():
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) -update")
+    git_repo = get_git_repo()
+    runcmd("bash <(curl '{}/install.sh' -s -N) -update".format(git_repo))
     return
 
 
 def install():
+    git_repo = get_git_repo()
     megadrive = check_drive()
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) {}".format(megadrive))
+    runcmd("bash <(curl '{}/install.sh' -s -N) {}".format(git_repo, megadrive))
     return
 
 
@@ -357,10 +372,9 @@ def indent(tree, space="  ", level=0):
                 _indent_children(child, child_level)
             if not child.tail or not child.tail.strip():
                 child.tail = child_indentation
-
-        # Dedent after the last child by overwriting the previous indentation.
-        if not child.tail.strip():
-            child.tail = indentations[level]
+            # Dedent after the last child by overwriting the previous indentation.
+            if not child.tail.strip():
+                child.tail = indentations[level]
 
     _indent_children(tree, 0)
 

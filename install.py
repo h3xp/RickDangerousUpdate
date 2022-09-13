@@ -9,7 +9,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
-git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
+git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v.2.1.0"
 home_dir = "/home/pi/.update_tool"
 ini_file = "/home/pi/.update_tool/update_tool.ini"
 png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
@@ -48,10 +48,9 @@ def indent(tree, space="  ", level=0):
                 _indent_children(child, child_level)
             if not child.tail or not child.tail.strip():
                 child.tail = child_indentation
-
-        # Dedent after the last child by overwriting the previous indentation.
-        if not child.tail.strip():
-            child.tail = indentations[level]
+            # Dedent after the last child by overwriting the previous indentation.
+            if not child.tail.strip():
+                child.tail = indentations[level]
 
     _indent_children(tree, 0)
 
@@ -90,7 +89,7 @@ def merge_xml(src_xml: str, dest_xml: str):
                                 child = ET.SubElement(parent, src_node.tag)
                                 child.text = src_node.text
                             else:
-                                dest_node.text
+                                dest_node.text = src_node.text
 
     shutil.copy2(dest_xml, dest_xml + "." + file_time)
     dest_tree = ET.ElementTree(dest_root)
@@ -213,22 +212,23 @@ def install(overwrite=True):
         #update <desc>
         src_tree = ET.parse(new_gamelist_path)
         src_root = src_tree.getroot()
-        for element in src_root.findall("game"):
-            if element.find("desc"):
-                element.find("desc").text = "{}{}".format(new_version, element.find("desc").text)
+        for game in src_root.findall("game"):
+            desc = game.find("desc")
+            if desc is not None:
+                desc.text = "{}{}".format(new_version, desc.text)
             
         shutil.copy2(new_gamelist_path, new_gamelist_path + "." + file_time)
 
         # ET.indent(dest_tree, space="\t", level=0)
         indent(src_root, space="\t", level=0)
-        with open(gamelist_file, "wb") as fh:
+        with open(new_gamelist_path, "wb") as fh:
             src_tree.write(fh, "utf-8")
 
-        if os.path.getsize(gamelist_file) > 0:
-            os.remove(gamelist_file + "." + file_time)
+        if os.path.getsize(new_gamelist_path) > 0:
+            os.remove(new_gamelist_path + "." + file_time)
         else:
             # this somehow failed badly
-            shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
+            shutil.copy2(new_gamelist_path + "." + file_time, gamelist_file)
                 
         merge_xml(new_gamelist_path, gamelist_file)
 
