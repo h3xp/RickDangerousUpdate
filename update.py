@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
 def get_git_repo():
-    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v.2.1.0"
     
 
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
@@ -464,9 +464,9 @@ def check_update():
     if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
         config = configparser.ConfigParser()
         config.read("/home/pi/.update_tool/update_tool.ini")
-        title = "Latest Version " + config["CONFIG_ITEMS"]["tool_ver"]
+        title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (latest)"
     else:
-        title = ""
+        title = "not installed"
     if update_available():
         title = "UPDATE AVAILABLE! Please update!"
     return title
@@ -889,7 +889,15 @@ def installation_dialog():
     return
 
 
+def user_dialog():
+    d.msgbox("This program needs to be run as 'pi' user.")
+    return
+
+
 def main():
-    main_dialog()
+    if runcmd("id -u -n") == "pi\n":
+        main_dialog()
+    else:
+        user_dialog()
 
 main()
