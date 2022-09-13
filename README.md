@@ -1,6 +1,7 @@
 ![Nice banner saying Insanium Edition Update Tool](banner.png)
 
 **Disclaimer:** This repository is only for educational purpose. Only use this with your own files/backups.
+=============================
 
 This script aims to help people adding improvements, fixing known bugs or resetting certain configurations.
 It can be run directly from the retropie and apply updates locally, or you can run it on a device in the same local network by providing ssh credentials.
@@ -10,6 +11,18 @@ Join Ricks discord server to keep track on the latest changes.
 
 
 ![RickDangerousDiscordBanner](https://discordapp.com/api/guilds/857515631422603286/widget.png?style=banner2)
+
+- [Usage](#usage)
+- [Warning](#attention)
+- [Features](#features)
+  - [Install Improvements](#improvements)
+  - [Fix known bugs](#fix-known-bugs)
+  - [Restore Retroarch configurations](#restore-retroarch-configurations)
+  - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
+  - [Enable/Disable System overlays](#system-overlay)
+  - [Enable/Disable Handheld mode](#handheld-mode)
+- [SSH Instructions](#ssh-usage)
+
 
 # Usage
 
@@ -41,6 +54,13 @@ The script has been tested, however we can't give a 100% guarantee that it might
 your retropie. Therefore, use this at your own risk.
 
 # Features
+
+1. [Install Improvements](#improvements)
+2. [Fix known bugs](#fix-known-bugs)
+3. [Restore Retroarch configurations](#restore-retroarch-configurations)
+4. [Reset Emulationstation configrations](#reset-emulationstation-configurations)
+5. [Enable/Disable System overlays](#system-overlay)
+6. [Enable/Disable Handheld mode](#handheld-mode)
 
 ## Improvements
 
