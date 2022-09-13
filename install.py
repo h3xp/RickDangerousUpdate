@@ -223,6 +223,9 @@ def install(overwrite=True):
         with open(new_gamelist_path, "wb") as fh:
             src_tree.write(fh, "utf-8")
 
+        with open(new_gamelist_path + "-new", "wb") as fh:
+            src_tree.write(fh, "utf-8")
+
         if os.path.getsize(new_gamelist_path) > 0:
             os.remove(new_gamelist_path + "." + file_time)
         else:
