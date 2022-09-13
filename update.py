@@ -95,14 +95,14 @@ def restart_es():
     return
 
 
-def is_update_applied(key: str):
+def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
 
     config = configparser.ConfigParser()
     config.read("/home/pi/.update_tool/update_tool.ini")
     if config.has_option("INSTALLED_UPDATES", key):
-        return True
+        return config["INSTALLED_UPDATES"][key] == str(modified_timestamp)
 
     return False
 
@@ -271,9 +271,10 @@ def get_available_updates(megadrive):
         attrs = decrypt_attr(base64_url_decode(node["a"]), k)
         file_name = attrs["n"]
         file_id = node["h"]
+        modified_date = node["ts"]
         if node["t"] == 0:
             #print("file_name: {}\tfile_id: {}".format(file_name, file_id))
-            available_updates.append([file_name, file_id])
+            available_updates.append([file_name, file_id, modified_date])
     return available_updates
 
 
@@ -541,7 +542,7 @@ def improvements_dialog():
     menu_choices = []
     for update in available_updates:
         #TO DO: check if update has been installed from config and make True
-        menu_choices.append((update[0], "", not is_update_applied(update[0])))
+        menu_choices.append((update[0], "", not is_update_applied(update[0], update[2])))
 
     code, tags = d.checklist(text="Available Updates",
                              choices=menu_choices,
@@ -589,10 +590,13 @@ def do_improvements(selected_updates: list, megadrive: str):
         f = os.path.join(improvements_dir, filename)
         if os.path.isfile(f):
             if f.endswith(".zip"):
-                install_candidates.append(filename)
-    install_candidates.sort()
-    for filename in install_candidates:
-        f = os.path.join(improvements_dir, filename)
+                for update in selected_updates:
+                    if update[0] == filename:
+                        install_candidates.append((update[0], update[2]))
+    #install_candidates.sort()
+    install_candidates.sort(key = lambda x: x[0])
+    for install_file in install_candidates:
+        f = os.path.join(improvements_dir, install_file[0])
         with zipfile.ZipFile(f, 'r') as zip_ref:
             zip_ref.extractall(extracted)
         if check_root(extracted):
@@ -609,7 +613,8 @@ def do_improvements(selected_updates: list, megadrive: str):
         if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
             config = configparser.ConfigParser()
             config.read("/home/pi/.update_tool/update_tool.ini")
-            config["INSTALLED_UPDATES"][filename] = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+            config["INSTALLED_UPDATES"][install_file[0]] = str(install_file[1])
+            #config["INSTALLED_UPDATES"][filename] = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
             with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
                 config.write(configfile)
