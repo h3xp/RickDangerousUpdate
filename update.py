@@ -448,16 +448,19 @@ def make_deletions(directory):
 
 def update_available():
     url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
-    resp = requests.get(url)
-    latest_tag = resp.json().get('tag_name').replace("v","")
+    try:
+        resp = requests.get(url)
+        latest_tag = resp.json().get('tag_name').replace("v","")
+    except requests.exceptions.RequestException as e:
+        return "no connection"
     if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
         config = configparser.ConfigParser()
         config.read("/home/pi/.update_tool/update_tool.ini")
         current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
         if version.parse(latest_tag) > version.parse(current_tag):
-            return True
+            return "update available"
         else:
-            return False
+            return "no update available"
     return False
 
 def check_update():
@@ -467,9 +470,67 @@ def check_update():
         title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (latest)"
     else:
         title = "not installed"
-    if update_available():
+    if update_available() == "update available":
         title = "UPDATE AVAILABLE! Please update!"
+    if update_available() == "no connection":
+        title = "no internet connection"
     return title
+
+
+def handheld_dialog():
+    code, tag = d.menu("Handheld mode",
+                       choices=[("1", "Enable handheld mode"),
+                                ("2", "Disable handheld mode")],
+                       cancel_label=" Cancel ")
+
+    if code == d.OK:
+        if tag == "1":
+            handheld_confirm_dialog("enable")
+        elif tag == "2":
+            handheld_confirm_dialog("disable")
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    return
+
+
+def handheld_confirm_dialog(mode):
+    code = d.yesno(text="Are you sure you want to " + mode + "handheld mode?\nThis will make changes to the "
+                                                             "retroarch.cfgs of these systems:\n- atarylynx\n- "
+                                                             "gamegear\n- gb\n- gba\n- gbc\n- ngpc\n- "
+                                                             "wonderswancolor\n")
+
+    if code == d.OK:
+        do_handheld(mode)
+
+    if code == d.CANCEL:
+        main_dialog()
+
+    return
+
+
+def do_handheld(mode):
+    if mode == "enable":
+        configzip = "handheld_configs.zip"
+    else:
+        configzip = "handheld_configs_reset.zip"
+    localpath = Path("/", "tmp")
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/" + configzip,
+                               localpath / configzip)
+    f = os.path.join(localpath, configzip)
+    if os.path.isfile(f):
+        with zipfile.ZipFile(f, 'r') as zip_ref:
+            zip_ref.extractall(localpath / "handheld_configs")
+        copydir(localpath / "handheld_configs/", "/opt/retropie/configs/")
+        try:
+            shutil.rmtree(localpath / "handheld_configs")
+        except OSError as e:
+            print("Error: %s : %s" % (localpath / "handheld_configs", e.strerror))
+        os.remove(localpath / configzip)
+    cls()
+
 
 
 def main_dialog():
@@ -478,25 +539,52 @@ def main_dialog():
                              ("2", "Fix known bugs"), 
                              ("3", "Restore Retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
-                             ("5", "System overlays"), 
-                             ("6", "Installation")],
+                             ("5", "System overlays"),
+                             ("6", "Handheld mode"),
+                             ("7", "Installation")],
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
                     cancel_label=" Exit ")
     
     if code == d.OK:
         if tag == "1":
-            improvements_dialog()
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
-            restore_retroarch_dialog()
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                restore_retroarch_dialog()
         elif tag == "4":
-            reset_controls_dialog()
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                reset_controls_dialog()
         elif tag == "5":
-            overlays_dialog()
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                overlays_dialog()
         elif tag == "6":
-            installation_dialog()
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                handheld_dialog()
+        elif tag == "7":
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                installation_dialog()
 
     if code == d.CANCEL:
         cls()
@@ -841,7 +929,7 @@ def install_dialog():
 
 
 def update_dialog():
-    if update_available():
+    if update_available() == "update available":
         code = d.yesno('Continue with update?')
 
         if code == d.OK:
@@ -849,8 +937,11 @@ def update_dialog():
             reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
             d.pause(reboot_msg, height=10, width=60)
             restart_es()
-    else:
+    elif update_available() == "no update available":
         d.msgbox("You are already running the latest version.")
+        main_dialog()
+    else:
+        d.msgbox("You are need to be connected to the internet for this.")
         main_dialog()
 
     return
