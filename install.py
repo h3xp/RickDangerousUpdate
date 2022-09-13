@@ -98,8 +98,10 @@ def merge_xml(src_xml: str, dest_xml: str):
     with open(dest_xml, "wb") as fh:
         dest_tree.write(fh, "utf-8")
 
-    if os.path.getsize(dest_xml) > 0:
-        os.remove(dest_xml + "." + file_time)
+    if os.path.getsize(dest_xml) == 0:
+        # this somehow failed badly
+        shutil.copy2(dest_xml + "." + file_time, dest_xml)
+    os.remove(dest_xml + "." + file_time)
         
 
 def uninstall():
@@ -129,11 +131,10 @@ def uninstall():
         src_tree.write(fh, "utf-8")
 
     if os.path.getsize(gamelist_file) > 0:
-        os.remove(gamelist_file + "." + file_time)
-    else:
         # this somehow failed badly
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
-
+    os.remove(gamelist_file + "." + file_time)
+        
     return    
 
 
@@ -223,17 +224,12 @@ def install(overwrite=True):
         with open(new_gamelist_path, "wb") as fh:
             src_tree.write(fh, "utf-8")
 
-        with open(gamelist_file + "-new", "wb") as fh:
-            src_tree.write(fh, "utf-8")
-
-        if os.path.getsize(new_gamelist_path) > 0:
-            os.remove(new_gamelist_path + "." + file_time)
-        else:
-            # this somehow failed badly
-            shutil.copy2(new_gamelist_path + "." + file_time, gamelist_file)
-                
         merge_xml(new_gamelist_path, gamelist_file)
 
+        if os.path.getsize(new_gamelist_path) == 0:
+            # this somehow failed badly
+            shutil.copy2(new_gamelist_path + "." + file_time, gamelist_file)
+        os.remove(new_gamelist_path + "." + file_time)
 
     #copy image file
     print("Copying icon...")
