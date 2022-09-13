@@ -48,6 +48,8 @@ Now hit "Install/Reinstall" and enjoy the comfort of having the tool directly in
 ### After installation you will find a new "Update Tool" entry inside of EmulationStations "Options" tab:
 ![screenshot of the tools options entry inside of emulationstation](screenshot_menu.png)
 
+The script will also install a new command "update_tool" with which you can easily run the script from the CLI.
+
 # Attention
 
 The script has been tested, however we can't give a 100% guarantee that it might not break something on
