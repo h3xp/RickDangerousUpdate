@@ -445,13 +445,20 @@ def make_deletions(directory):
 
 
 def main_dialog():
+    if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+        config = configparser.ConfigParser()
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        backtitle = "Rick Dangerous Insanium Edition Update Tool, Version " + config["CONFIG_ITEMS"]["tool_ver"]
+    else:
+        backtitle = "Rick Dangerous Insanium Edition Update Tool, portable Version"
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load improvements"), 
                              ("2", "Fix known bugs"), 
                              ("3", "Restore Retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
                              ("5", "System overlays"), 
-                             ("6", "Installation")], 
+                             ("6", "Installation")],
+                    backtitle=backtitle,
                     cancel_label=" Exit ")
     
     if code == d.OK:
