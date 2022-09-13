@@ -26,6 +26,7 @@ import sys
 import configparser
 import subprocess
 from dialog import Dialog
+from packaging import version
 
 if platform.uname()[1] == "retropie":
     d = Dialog()
@@ -444,13 +445,33 @@ def make_deletions(directory):
         os.remove(directory)
 
 
-def main_dialog():
+def update_available():
+    url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
+    resp = requests.get(url)
+    latest_tag = resp.json().get('tag_name').replace("v","")
     if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
         config = configparser.ConfigParser()
         config.read("/home/pi/.update_tool/update_tool.ini")
-        backtitle = "Rick Dangerous Insanium Edition Update Tool, Version " + config["CONFIG_ITEMS"]["tool_ver"]
+        current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
+        if version.parse(latest_tag) > version.parse(current_tag):
+            return True
+        else:
+            return False
+    return False
+
+def check_update():
+    if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+        config = configparser.ConfigParser()
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        title = "Latest Version " + config["CONFIG_ITEMS"]["tool_ver"]
     else:
-        backtitle = "Rick Dangerous Insanium Edition Update Tool, portable Version"
+        title = ""
+    if update_available():
+        title = "UPDATE AVAILABLE! Please update!"
+    return title
+
+
+def main_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load improvements"), 
                              ("2", "Fix known bugs"), 
@@ -458,7 +479,8 @@ def main_dialog():
                              ("4", "Reset emulationstation configurations"), 
                              ("5", "System overlays"), 
                              ("6", "Installation")],
-                    backtitle=backtitle,
+                    title=check_update(),
+                    backtitle="Rick Dangerous Insanium Edition Update Tool",
                     cancel_label=" Exit ")
     
     if code == d.OK:
@@ -814,13 +836,17 @@ def install_dialog():
 
 
 def update_dialog():
-    code = d.yesno('Continue with update?')
+    if update_available():
+        code = d.yesno('Continue with update?')
 
-    if code == d.OK:
-        update()
-        reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        if code == d.OK:
+            update()
+            reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
+            d.pause(reboot_msg, height=10, width=60)
+            restart_es()
+    else:
+        d.msgbox("You are already running the latest version.")
+        main_dialog()
 
     return
 
