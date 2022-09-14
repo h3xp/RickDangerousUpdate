@@ -28,9 +28,9 @@ import subprocess
 from dialog import Dialog
 from packaging import version
 
-if platform.uname()[1] == "retropie":
-    d = Dialog()
-    d.autowidgetsize = True
+
+d = Dialog()
+d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
@@ -985,9 +985,23 @@ def user_dialog():
     return
 
 
+def hostname_dialog():
+    if platform.uname()[1] == "retropie":
+        main_dialog()
+    else:
+        code = d.yesno(
+            'Your hostname is not retropie? Did you change your hostname? If so you can just '
+            'Continue. Do not continue if you are not running this on a retropie!')
+
+        if code == d.OK:
+            main_dialog()
+
+        return
+
+
 def main():
     if runcmd("id -u -n") == "pi\n":
-        main_dialog()
+        hostname_dialog()
     else:
         user_dialog()
 
