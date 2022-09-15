@@ -414,7 +414,7 @@ def merge_xml(src_xml: str, dest_xml: str):
                                 child = ET.SubElement(parent, src_node.tag)
                                 child.text = src_node.text
                             else:
-                                dest_node.text
+                                dest_node.text = src_node.text
 
     shutil.copy2(dest_xml, dest_xml + "." + file_time)
     dest_tree = ET.ElementTree(dest_root)
@@ -574,10 +574,6 @@ def main_dialog():
             else:
                 overlays_dialog()
         elif tag == "6":
-            if update_available() == "no connection":
-                d.msgbox("You need to be connected to the internet for this.")
-                main_dialog()
-            else:
                 handheld_dialog()
         elif tag == "7":
             if update_available() == "no connection":
