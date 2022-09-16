@@ -9,7 +9,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
-git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v.2.1.0"
+git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
 home_dir = "/home/pi/.update_tool"
 ini_file = "/home/pi/.update_tool/update_tool.ini"
 png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"

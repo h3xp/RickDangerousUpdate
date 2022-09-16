@@ -36,7 +36,7 @@ logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
 def get_git_repo():
-    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v.2.1.0"
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
     
 
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
