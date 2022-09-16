@@ -48,10 +48,8 @@ def indent(tree, space="  ", level=0):
                 _indent_children(child, child_level)
             if not child.tail or not child.tail.strip():
                 child.tail = child_indentation
-
-        # Dedent after the last child by overwriting the previous indentation.
-        if not child.tail.strip():
-            child.tail = indentations[level]
+            if child == elem[len(elem) - 1]:
+                child.tail = indentations[level]
 
     _indent_children(tree, 0)
 
@@ -90,7 +88,7 @@ def merge_xml(src_xml: str, dest_xml: str):
                                 child = ET.SubElement(parent, src_node.tag)
                                 child.text = src_node.text
                             else:
-                                dest_node.text
+                                dest_node.text = src_node.text
 
     shutil.copy2(dest_xml, dest_xml + "." + file_time)
     dest_tree = ET.ElementTree(dest_root)
@@ -100,8 +98,10 @@ def merge_xml(src_xml: str, dest_xml: str):
     with open(dest_xml, "wb") as fh:
         dest_tree.write(fh, "utf-8")
 
-    if os.path.getsize(dest_xml) > 0:
-        os.remove(dest_xml + "." + file_time)
+    if os.path.getsize(dest_xml) == 0:
+        # this somehow failed badly
+        shutil.copy2(dest_xml + "." + file_time, dest_xml)
+    os.remove(dest_xml + "." + file_time)
         
 
 def uninstall():
@@ -131,17 +131,21 @@ def uninstall():
         src_tree.write(fh, "utf-8")
 
     if os.path.getsize(gamelist_file) > 0:
-        if os.path.exists(gamelist_file + "." + file_time):
-            os.remove(gamelist_file + "." + file_time)
-
+        # this somehow failed badly
+        shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
+    os.remove(gamelist_file + "." + file_time)
+    runcmd("sudo rm /usr/bin/update_tool")
+        
     return    
 
 
 def install(overwrite=True):
     global git_repo
 
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     new_config = configparser.ConfigParser()
     old_config = configparser.ConfigParser()
+    new_version = ""
 
     if overwrite == True:
         uninstall()
@@ -171,6 +175,8 @@ def install(overwrite=True):
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
+        if new_config.has_option("CONFIG_ITEMS", "tool_ver"):
+            new_version = "[Version {}]: ".format(new_config["CONFIG_ITEMS"]["tool_ver"])
     
     for section in new_config.sections():
         if len(new_config[section]) > 0:
@@ -199,12 +205,33 @@ def install(overwrite=True):
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
     runcmd("chmod +x /home/pi/.update_tool/update.py")
+    runcmd("sudo ln -s /home/pi/RetroPie/retropiemenu/update_tool.sh /usr/bin/update_tool")
     
     #merge gamelist
     print("Merging gamelist entries...")
     new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
     if os.path.exists(new_gamelist_path) == True:
+        #update <desc>
+        src_tree = ET.parse(new_gamelist_path)
+        src_root = src_tree.getroot()
+        for game in src_root.findall("game"):
+            desc = game.find("desc")
+            if desc is not None:
+                desc.text = "{}{}".format(new_version, desc.text)
+            
+        shutil.copy2(new_gamelist_path, new_gamelist_path + "." + file_time)
+
+        # ET.indent(dest_tree, space="\t", level=0)
+        indent(src_root, space="\t", level=0)
+        with open(new_gamelist_path, "wb") as fh:
+            src_tree.write(fh, "utf-8")
+
         merge_xml(new_gamelist_path, gamelist_file)
+
+        if os.path.getsize(new_gamelist_path) == 0:
+            # this somehow failed badly
+            shutil.copy2(new_gamelist_path + "." + file_time, gamelist_file)
+        os.remove(new_gamelist_path + "." + file_time)
 
     #copy image file
     print("Copying icon...")

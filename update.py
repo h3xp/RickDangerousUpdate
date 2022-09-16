@@ -26,13 +26,25 @@ import sys
 import configparser
 import subprocess
 from dialog import Dialog
+from packaging import version
 
-if platform.uname()[1] == "retropie":
-    d = Dialog()
-    d.autowidgetsize = True
+
+d = Dialog()
+d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
+
+def get_git_repo():
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
+    
+
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        if config.has_option("CONFIG_ITEMS", "git_repo") and config.has_option("CONFIG_ITEMS", "git_branch"):
+            git_repo = "{}/{}".format(config["CONFIG_ITEMS"]["git_repo"], config["CONFIG_ITEMS"]["git_branch"])    
+
+    return git_repo
 
 
 def get_overlay_systems():
@@ -83,30 +95,33 @@ def restart_es():
     return
 
 
-def is_update_applied(key: str):
+def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
 
     config = configparser.ConfigParser()
     config.read("/home/pi/.update_tool/update_tool.ini")
     if config.has_option("INSTALLED_UPDATES", key):
-        return True
+        return config["INSTALLED_UPDATES"][key] == str(modified_timestamp)
 
     return False
 
 
 def uninstall():
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) -remove")
+    git_repo = get_git_repo()
+    runcmd("bash <(curl '{}/install.sh' -s -N) -remove".format(git_repo))
     return
 
 def update():
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) -update")
+    git_repo = get_git_repo()
+    runcmd("bash <(curl '{}/install.sh' -s -N) -update".format(git_repo))
     return
 
 
 def install():
+    git_repo = get_git_repo()
     megadrive = check_drive()
-    runcmd("bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) {}".format(megadrive))
+    runcmd("bash <(curl '{}/install.sh' -s -N) {}".format(git_repo, megadrive))
     return
 
 
@@ -256,9 +271,10 @@ def get_available_updates(megadrive):
         attrs = decrypt_attr(base64_url_decode(node["a"]), k)
         file_name = attrs["n"]
         file_id = node["h"]
+        modified_date = node["ts"]
         if node["t"] == 0:
             #print("file_name: {}\tfile_id: {}".format(file_name, file_id))
-            available_updates.append([file_name, file_id])
+            available_updates.append([file_name, file_id, modified_date])
     return available_updates
 
 
@@ -319,7 +335,7 @@ def check_wrong_permissions():
     if output.rstrip() != 'pi pi':
         permissions_dialog()
     else:
-        output = runcmd('ls -la /home/pi/.emulationstation/gamelists/retropie | grep gamelist.xml | cut -d \' \' -f3,4')
+        output = runcmd('ls -la /home/pi/.emulationstation/gamelists/retropie | grep " gamelist.xml$" | cut -d \' \' -f3,4')
         if output.rstrip() != 'pi pi':
             permissions_dialog()
 
@@ -357,13 +373,11 @@ def indent(tree, space="  ", level=0):
                 _indent_children(child, child_level)
             if not child.tail or not child.tail.strip():
                 child.tail = child_indentation
-
-        # Dedent after the last child by overwriting the previous indentation.
-        if not child.tail.strip():
-            child.tail = indentations[level]
+            if child == elem[len(elem) - 1]:
+                child.tail = indentations[level]
 
     _indent_children(tree, 0)
-
+    
 
 def merge_xml(src_xml: str, dest_xml: str):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
@@ -400,7 +414,7 @@ def merge_xml(src_xml: str, dest_xml: str):
                                 child = ET.SubElement(parent, src_node.tag)
                                 child.text = src_node.text
                             else:
-                                dest_node.text
+                                dest_node.text = src_node.text
 
     shutil.copy2(dest_xml, dest_xml + "." + file_time)
     dest_tree = ET.ElementTree(dest_root)
@@ -410,11 +424,10 @@ def merge_xml(src_xml: str, dest_xml: str):
     with open(dest_xml, "wb") as fh:
         dest_tree.write(fh, "utf-8")
 
-    if os.path.getsize(dest_xml) > 0:
-        os.remove(dest_xml + "." + file_time)
-    else:
+    if os.path.getsize(dest_xml) == 0:
         # this somehow failed badly
         shutil.copy2(dest_xml + "." + file_time, dest_xml)
+    os.remove(dest_xml + "." + file_time)
 
     return
 
@@ -433,161 +446,35 @@ def make_deletions(directory):
         os.remove(directory)
 
 
-def main_dialog():
-    code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Load improvements"), 
-                             ("2", "Fix known bugs"), 
-                             ("3", "Restore Retroarch configurations"), 
-                             ("4", "Reset emulationstation configurations"), 
-                             ("5", "System overlays"),
-                             ("6", "Handheld mode"),
-                             ("7", "Installation")],
-                    cancel_label=" Exit ")
-    
-    if code == d.OK:
-        if tag == "1":
-            improvements_dialog()
-        elif tag == "2":
-            bugs_dialog()
-        elif tag == "3":
-            restore_retroarch_dialog()
-        elif tag == "4":
-            reset_controls_dialog()
-        elif tag == "5":
-            overlays_dialog()
-        elif tag == "6":
-            handheld_dialog()
-        elif tag == "7":
-            installation_dialog()
-
-    if code == d.CANCEL:
-        cls()
-        exit(0)
-
-    return
-
-
-def check_drive():
-    if os.environ.get('RickDangerousUpdateTests') is not None:
-       return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
-    else:
-        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-            config = configparser.ConfigParser()
-            config.read("/home/pi/.update_tool/update_tool.ini")
-            if config.has_option("CONFIG_ITEMS", "mega_dir"):
-                return config["CONFIG_ITEMS"]["mega_dir"]
-
-        if len(sys.argv) > 1:
-            pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
-            if pattern.match(str(sys.argv[1])):
-                return str(sys.argv[1])
-
-        print("You didnt provide a link to the mega drive.")
-        exit(1)
-
-
-def check_root(directory):
-    for files in os.listdir(directory):
-        if os.path.exists(directory / "etc" / "emulationstation"):
-            return True
+def update_available():
+    url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
+    try:
+        resp = requests.get(url)
+        latest_tag = resp.json().get('tag_name').replace("v","")
+    except requests.exceptions.RequestException as e:
+        return "no connection"
+    if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+        config = configparser.ConfigParser()
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
+        if version.parse(latest_tag) > version.parse(current_tag):
+            return "update available"
+        else:
+            return "no update available"
     return False
 
-
-def improvements_dialog():
-    megadrive = check_drive()
-    check_wrong_permissions()
-    reboot_msg = "Updates installed:"
-
-    available_updates = get_available_updates(megadrive)
-    available_updates.sort()
-
-    menu_choices = []
-    for update in available_updates:
-        #TO DO: check if update has been installed from config and make True
-        menu_choices.append((update[0], "", not is_update_applied(update[0])))
-
-    code, tags = d.checklist(text="Available Updates",
-                             choices=menu_choices,
-                             ok_label="Apply Selected", 
-                             extra_button=True, 
-                             extra_label="Apply All")
-
-    selected_updates = []
-    if code == d.OK:
-        for tag in tags:
-            for update in available_updates:
-                if update[0] == tag:
-                    reboot_msg += "\n" + tag
-                    selected_updates.append(update)
-                    break
-
-    if code == d.EXTRA:
-        selected_updates = available_updates
-
-    if code == d.CANCEL:
-        cls()
-        main_dialog()
-
-    if len(selected_updates) > 0:
-        print()
-        do_improvements(selected_updates, megadrive)
-        #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
-        reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
-
-    return
-
-
-def do_improvements(selected_updates: list, megadrive: str):
-    improvements_dir = Path("/", "tmp", "improvements")
-    os.makedirs(improvements_dir, exist_ok=True)
-    extracted = improvements_dir / "extracted"
-
-    for update in selected_updates:
-        download_update(update[1], improvements_dir, megadrive)
-
-    install_candidates = []
-    for filename in os.listdir(improvements_dir):
-        f = os.path.join(improvements_dir, filename)
-        if os.path.isfile(f):
-            if f.endswith(".zip"):
-                install_candidates.append(filename)
-    install_candidates.sort()
-    for filename in install_candidates:
-        f = os.path.join(improvements_dir, filename)
-        with zipfile.ZipFile(f, 'r') as zip_ref:
-            zip_ref.extractall(extracted)
-        if check_root(extracted):
-            os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
-            make_deletions(extracted)
-            merge_gamelist(extracted)
-            copydir(extracted, "/")
-            os.system("sudo chown -R root:root /etc/emulationstation/")
-        else:
-            make_deletions(extracted)
-            merge_gamelist(extracted)
-            copydir(extracted, "/")
-
-        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-            config = configparser.ConfigParser()
-            config.read("/home/pi/.update_tool/update_tool.ini")
-            config["INSTALLED_UPDATES"][filename] = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-
-            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                config.write(configfile)
-
-
-        try:
-            shutil.rmtree(extracted)
-        except OSError as e:
-            print("Error: %s : %s" % (extracted, e.strerror))
-    try:
-        shutil.rmtree(improvements_dir)
-    except OSError as e:
-        print("Error: %s : %s" % (improvements_dir, e.strerror))
-    
-    return
+def check_update():
+    if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+        config = configparser.ConfigParser()
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (latest)"
+    else:
+        title = "not installed"
+    if update_available() == "update available":
+        title = "UPDATE AVAILABLE! Please update!"
+    if update_available() == "no connection":
+        title = "no internet connection"
+    return title
 
 
 def handheld_dialog():
@@ -645,6 +532,190 @@ def do_handheld(mode):
     cls()
 
 
+
+def main_dialog():
+    code, tag = d.menu("Main Menu", 
+                    choices=[("1", "Load improvements"), 
+                             ("2", "Fix known bugs"), 
+                             ("3", "Restore Retroarch configurations"), 
+                             ("4", "Reset emulationstation configurations"), 
+                             ("5", "System overlays"),
+                             ("6", "Handheld mode"),
+                             ("7", "Installation")],
+                    title=check_update(),
+                    backtitle="Rick Dangerous Insanium Edition Update Tool",
+                    cancel_label=" Exit ")
+    
+    if code == d.OK:
+        if tag == "1":
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                improvements_dialog()
+        elif tag == "2":
+            bugs_dialog()
+        elif tag == "3":
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                restore_retroarch_dialog()
+        elif tag == "4":
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                reset_controls_dialog()
+        elif tag == "5":
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                overlays_dialog()
+        elif tag == "6":
+                handheld_dialog()
+        elif tag == "7":
+            if update_available() == "no connection":
+                d.msgbox("You need to be connected to the internet for this.")
+                main_dialog()
+            else:
+                installation_dialog()
+
+    if code == d.CANCEL:
+        cls()
+        exit(0)
+
+    return
+
+
+def check_drive():
+    if os.environ.get('RickDangerousUpdateTests') is not None:
+       return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
+    else:
+        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            config = configparser.ConfigParser()
+            config.read("/home/pi/.update_tool/update_tool.ini")
+            if config.has_option("CONFIG_ITEMS", "mega_dir"):
+                return config["CONFIG_ITEMS"]["mega_dir"]
+
+        if len(sys.argv) > 1:
+            pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+            if pattern.match(str(sys.argv[1])):
+                return str(sys.argv[1])
+
+        print("You didnt provide a link to the mega drive.")
+        exit(1)
+
+
+def check_root(directory):
+    for files in os.listdir(directory):
+        if os.path.exists(directory / "etc" / "emulationstation"):
+            return True
+    return False
+
+
+def improvements_dialog():
+    megadrive = check_drive()
+    check_wrong_permissions()
+    reboot_msg = "Updates installed:"
+
+    available_updates = get_available_updates(megadrive)
+    available_updates.sort()
+
+    menu_choices = []
+    for update in available_updates:
+        #TO DO: check if update has been installed from config and make True
+        menu_choices.append((update[0], "", not is_update_applied(update[0], update[2])))
+
+    code, tags = d.checklist(text="Available Updates",
+                             choices=menu_choices,
+                             ok_label="Apply Selected", 
+                             extra_button=True, 
+                             extra_label="Apply All")
+
+    selected_updates = []
+    if code == d.OK:
+        for tag in tags:
+            for update in available_updates:
+                if update[0] == tag:
+                    reboot_msg += "\n" + tag
+                    selected_updates.append(update)
+                    break
+
+    if code == d.EXTRA:
+        selected_updates = available_updates
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    if len(selected_updates) > 0:
+        print()
+        do_improvements(selected_updates, megadrive)
+        #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
+        reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
+        d.pause(reboot_msg, height=10, width=60)
+        restart_es()
+
+    return
+
+
+def do_improvements(selected_updates: list, megadrive: str):
+    improvements_dir = Path("/", "tmp", "improvements")
+    os.makedirs(improvements_dir, exist_ok=True)
+    extracted = improvements_dir / "extracted"
+
+    for update in selected_updates:
+        download_update(update[1], improvements_dir, megadrive)
+
+    install_candidates = []
+    for filename in os.listdir(improvements_dir):
+        f = os.path.join(improvements_dir, filename)
+        if os.path.isfile(f):
+            if f.endswith(".zip"):
+                for update in selected_updates:
+                    if update[0] == filename:
+                        install_candidates.append((update[0], update[2]))
+    #install_candidates.sort()
+    install_candidates.sort(key = lambda x: x[0])
+    for install_file in install_candidates:
+        f = os.path.join(improvements_dir, install_file[0])
+        with zipfile.ZipFile(f, 'r') as zip_ref:
+            zip_ref.extractall(extracted)
+        if check_root(extracted):
+            os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+            make_deletions(extracted)
+            merge_gamelist(extracted)
+            copydir(extracted, "/")
+            os.system("sudo chown -R root:root /etc/emulationstation/")
+        else:
+            make_deletions(extracted)
+            merge_gamelist(extracted)
+            copydir(extracted, "/")
+
+        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            config = configparser.ConfigParser()
+            config.read("/home/pi/.update_tool/update_tool.ini")
+            config["INSTALLED_UPDATES"][install_file[0]] = str(install_file[1])
+            #config["INSTALLED_UPDATES"][filename] = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
+            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+                config.write(configfile)
+
+
+        try:
+            shutil.rmtree(extracted)
+        except OSError as e:
+            print("Error: %s : %s" % (extracted, e.strerror))
+    try:
+        shutil.rmtree(improvements_dir)
+    except OSError as e:
+        print("Error: %s : %s" % (improvements_dir, e.strerror))
+    
+    return
+
+
 def do_system_overlay(system: str, enable_disable = "Enable"):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     path = "/opt/retropie/configs"
@@ -670,11 +741,11 @@ def do_system_overlay(system: str, enable_disable = "Enable"):
             with open(os.path.join(system, "retroarch.cfg"), 'w') as configfile:
                 configfile.write(lines_out)
 
-            if os.path.getsize(os.path.join(system, "retroarch.cfg")) > 0:
-                os.remove(os.path.join(system, "retroarch.cfg") + "." + file_time)
-            else:
+            if os.path.getsize(os.path.join(system, "retroarch.cfg")) == 0:
                 # this somehow failed badly
                 shutil.copy2(os.path.join(system, "retroarch.cfg") + "." + file_time, os.path.join(system, "retroarch.cfg"))
+            os.remove(os.path.join(system, "retroarch.cfg") + "." + file_time)
+
     return
 
 
@@ -749,7 +820,7 @@ def multiple_overlays_dialog(enable_disable = "Enable"):
     return
 
 
-def overlays_dialog():
+def  overlays_dialog():
     code, tag = d.menu("Sytem Overlays", 
                     choices=[("1", "Enable System Overlays"),
                              ("2", "Disable System Overlays")],
@@ -807,7 +878,6 @@ def do_retroarch_configs():
         except OSError as e:
             print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
         os.remove(localpath / "retroarch_configs.zip")
-    cls()
 
     return
 
@@ -855,13 +925,20 @@ def install_dialog():
 
 
 def update_dialog():
-    code = d.yesno('Continue with update?')
+    if update_available() == "update available":
+        code = d.yesno('Continue with update?')
 
-    if code == d.OK:
-        update()
-        reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        if code == d.OK:
+            update()
+            reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
+            d.pause(reboot_msg, height=10, width=60)
+            restart_es()
+    elif update_available() == "no update available":
+        d.msgbox("You are already running the latest version.")
+        main_dialog()
+    else:
+        d.msgbox("You are need to be connected to the internet for this.")
+        main_dialog()
 
     return
 
@@ -899,8 +976,29 @@ def installation_dialog():
     return
 
 
-def main():
-    main_dialog()
+def user_dialog():
+    d.msgbox("This program needs to be run as 'pi' user.")
+    return
 
+
+def hostname_dialog():
+    if platform.uname()[1] == "retropie":
+        main_dialog()
+    else:
+        code = d.yesno(
+            'Your hostname is not retropie? Did you change your hostname? If so you can just '
+            'Continue. Do not continue if you are not running this on a retropie!')
+
+        if code == d.OK:
+            main_dialog()
+
+        return
+
+
+def main():
+    if runcmd("id -u -n") == "pi\n":
+        hostname_dialog()
+    else:
+        user_dialog()
 
 main()
