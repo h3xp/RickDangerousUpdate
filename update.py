@@ -752,7 +752,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             if not os.path.isfile(path):
                 log_this(log_file, "-{} file \"{}\" does not exist for rom \"{}\" ({})".format(subelement_name, file, rom_file, src_name))
                 file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
-                if file is not None:
+                if file == True:
                     log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
                 src_node.text = file
             else:
@@ -762,7 +762,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
                         del supporting_files[index]
         else:
             file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
-            if file is not None:
+            if file == True:
                 child = ET.SubElement(src_game, subelement_name)
                 child.text = "./{}/{}".format(supporting_files_dir, file)
                 log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
@@ -814,8 +814,8 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
         return
 
     process = "cleaning" if clean == True else "checking"
-    log_this(log_file, "now {}: {}".format(process, system))
-    print("now {}: {}".format(process, system))
+    log_this(log_file, "now {}: {} for rom extensions {}".format(process, system, extensions))
+    print("now {}: {} for rom extensions {}".format(process, system, extensions))
     
     # get rom files
     for item in os.scandir(system_roms):
