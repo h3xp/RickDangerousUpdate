@@ -35,9 +35,25 @@ d.autowidgetsize = True
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
+def safe_write_backup(file_path: str, file_time: str):
+    shutil.copy2(file_path, file_path + "--" + file_time)
+
+    return
+
+
+def safe_write_check(file_path: str, file_time: str):
+    if os.path.getsize(file_path) == 0:
+        # this somehow failed badly
+        shutil.copy2(file_path + "--" + file_time, file_path)
+        return False
+
+    os.remove(file_path + "--" + file_time)
+
+    return True
+
+
 def get_git_repo():
-    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
-    
+    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"    
 
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         config.read("/home/pi/.update_tool/update_tool.ini")
@@ -416,7 +432,7 @@ def merge_xml(src_xml: str, dest_xml: str):
                             else:
                                 dest_node.text = src_node.text
 
-    shutil.copy2(dest_xml, dest_xml + "." + file_time)
+    safe_write_backup(src_xml, file_time)
     dest_tree = ET.ElementTree(dest_root)
     
     # ET.indent(dest_tree, space="\t", level=0)
@@ -424,10 +440,7 @@ def merge_xml(src_xml: str, dest_xml: str):
     with open(dest_xml, "wb") as fh:
         dest_tree.write(fh, "utf-8")
 
-    if os.path.getsize(dest_xml) == 0:
-        # this somehow failed badly
-        shutil.copy2(dest_xml + "." + file_time, dest_xml)
-    os.remove(dest_xml + "." + file_time)
+    safe_write_check(src_xml, file_time)
 
     return
 
@@ -736,15 +749,12 @@ def do_system_overlay(system: str, enable_disable = "Enable"):
 
                     lines_out += line
 
-            shutil.copy2(os.path.join(system, "retroarch.cfg"), os.path.join(system, "retroarch.cfg") + "." + file_time)
+            safe_write_backup(os.path.join(system, "retroarch.cfg"), os.path.join(system, "retroarch.cfg"), file_time)
 
             with open(os.path.join(system, "retroarch.cfg"), 'w') as configfile:
                 configfile.write(lines_out)
 
-            if os.path.getsize(os.path.join(system, "retroarch.cfg")) == 0:
-                # this somehow failed badly
-                shutil.copy2(os.path.join(system, "retroarch.cfg") + "." + file_time, os.path.join(system, "retroarch.cfg"))
-            os.remove(os.path.join(system, "retroarch.cfg") + "." + file_time)
+            safe_write_check(os.path.join(system, "retroarch.cfg"), file_time)
 
     return
 
