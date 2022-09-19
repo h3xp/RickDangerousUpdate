@@ -143,7 +143,9 @@ def install(overwrite=True):
 
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     new_config = configparser.ConfigParser()
+    new_config.optionxform = str
     old_config = configparser.ConfigParser()
+    old_config.optionxform = str
     new_version = ""
 
     if overwrite == True:
