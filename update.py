@@ -472,11 +472,14 @@ def update_available():
     if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
         config = configparser.ConfigParser()
         config.read("/home/pi/.update_tool/update_tool.ini")
-        current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
-        if version.parse(latest_tag) > version.parse(current_tag):
-            return "update available"
+        if config["THEME_HACKS"]["git_branch"] == "main":
+            current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
+            if version.parse(latest_tag) > version.parse(current_tag):
+                return "update available"
+            else:
+                return "no update available"
         else:
-            return "no update available"
+            return "update available"
     return False
 
 def check_update():
@@ -1117,8 +1120,8 @@ def theme_hacks_dialog():
         config = configparser.ConfigParser()
         config.optionxform = str
         config.read("/home/pi/.update_tool/update_tool.ini")
-        if config.has_section("THEME HACKS"):
-            for key, val in config.items("THEME HACKS"):
+        if config.has_section("THEME_HACKS"):
+            for key, val in config.items("THEME_HACKS"):
                 theme = key[0:key.rfind("-")]
                 if is_theme_available(theme):
                     menu_choices.append((key, val, False))
@@ -1143,7 +1146,7 @@ def main_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load improvements"), 
                              ("2", "Fix known bugs"), 
-                             ("3", "Restore Retroarch configurations"), 
+                             ("3", "Restore retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
                              ("5", "System overlays"),
                              ("6", "Handheld mode"),
