@@ -9,7 +9,7 @@ from pathlib import Path
 import xml.etree.ElementTree as ET
 
 
-git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
+git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v.2.1.0"
 home_dir = "/home/pi/.update_tool"
 ini_file = "/home/pi/.update_tool/update_tool.ini"
 png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
@@ -134,7 +134,6 @@ def uninstall():
         # this somehow failed badly
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
     os.remove(gamelist_file + "." + file_time)
-    runcmd("sudo rm /usr/bin/update_tool")
         
     return    
 
@@ -180,9 +179,10 @@ def install(overwrite=True):
     
     for section in new_config.sections():
         if len(new_config[section]) > 0:
-            for key, val in new_config.items(section):
-                if old_config.has_option(section, key):
-                    new_config[section][key] = str(old_config[section][key]).strip()
+            if section == "CONFIG_ITEMS":
+                for key, val in new_config.items(section):
+                    if old_config.has_option(section, key):
+                        new_config[section][key] = str(old_config[section][key]).strip()
         elif old_config.has_section(section):
             for key, val in old_config.items(section):
                 new_config[section][key] = str(old_config[section][key]).strip()
@@ -205,7 +205,6 @@ def install(overwrite=True):
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
     runcmd("chmod +x /home/pi/.update_tool/update.py")
-    runcmd("sudo ln -s /home/pi/RetroPie/retropiemenu/update_tool.sh /usr/bin/update_tool")
     
     #merge gamelist
     print("Merging gamelist entries...")
