@@ -35,10 +35,13 @@ d.autowidgetsize = True
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 
-def safe_write_backup(file_path: str, file_time: str):
+def safe_write_backup(file_path: str, file_time=""):
+    if file_time == "":
+        file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+
     shutil.copy2(file_path, file_path + "--" + file_time)
 
-    return
+    return file_time
 
 
 def safe_write_check(file_path: str, file_time: str):
@@ -1040,6 +1043,102 @@ def gamelist_utilities_dialog():
     return
 
 
+def is_theme_available(theme: str):
+    themes_dir = "/etc/emulationstation/themes"
+    if os.path.exists(os.path.join(themes_dir, theme)):
+        if os.path.isdir(os.path.join(themes_dir, theme)):
+            return True
+
+    return False
+
+
+def do_theme_hack(theme_hack):
+    themes_dir = "/etc/emulationstation/themes"
+    get_theme_hack(theme_hack)
+    theme_dir = os.path.join(themes_dir, get_theme_from_hack(theme_hack))
+
+    if os.path.exists(os.path.join(theme_dir, theme_hack)):
+        os.system("sudo cp {} {}".format(os.path.join(theme_dir, theme_hack), os.path.join(theme_dir, "theme.xml")))
+
+    # make the new theme the running one
+    lines_out = ""
+    with open("/opt/retropie/configs/all/emulationstation/es_settings.cfg", 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            if "<string name=\"ThemeSet\"" in line:
+                line = "<string name=\"ThemeSet\" value=\"{}\" />".format(get_theme_from_hack(theme_hack))
+            lines_out += line
+
+    file_time = safe_write_backup("/opt/retropie/configs/all/emulationstation/es_settings.cfg")
+
+    with open(os.path.join("/opt/retropie/configs/all/emulationstation/es_settings.cfg"), 'w') as file:
+        file.write(lines_out)
+
+    safe_write_check("/opt/retropie/configs/all/emulationstation/es_settings.cfg", file_time)
+
+    restart_es()    
+    
+    return True
+
+
+def get_theme_hack(theme_hack: str):
+    themes_dir = "/etc/emulationstation/themes"
+    theme = theme_hack[0:theme_hack.rfind("-")]
+    theme_path = os.path.join(themes_dir, theme)
+
+    if os.path.exists(theme_path):
+        if os.path.isdir(theme_path):
+            if not os.path.exists(os.path.join(theme_path, theme_hack)):
+                if not os.path.isfile(os.path.join(theme_path, theme_hack)):
+                    localpath = Path("/", "tmp", "theme_hacks")
+                    if os.path.exists(localpath):
+                        if os.path.isdir(localpath):
+                            shutil.rmtree(localpath)
+                    os.mkdir(localpath)
+                    urllib.request.urlretrieve("{}/{}/{}/{}".format(get_config_value("CONFIG_ITEMS", "git_repo"), get_config_value("CONFIG_ITEMS", "git_branch"), get_config_value("CONFIG_ITEMS", "themes_dir"), theme_hack), localpath / theme_hack)
+                    f = os.path.join(localpath, theme_hack)
+                    if os.path.isfile(f):
+                        os.system("sudo mv {} {}".format(os.path.join(localpath, theme_hack), theme_path))
+                        os.system("sudo chown root:root {}".format(os.path.join(theme_path, theme_hack)))
+                        shutil.rmtree(localpath)
+                        return True
+    
+    return False
+
+
+def get_theme_from_hack(theme_hack: str):
+    return theme_hack[0:theme_hack.rfind("-")]
+
+def theme_hacks_dialog():
+    # can also use: svn ls "https://github.com/h3xp/RickDangerousUpdate/branches/v2.2.0/theme_hacks"
+    menu_choices =[]
+
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read("/home/pi/.update_tool/update_tool.ini")
+        if config.has_section("THEME HACKS"):
+            for key, val in config.items("THEME HACKS"):
+                theme = key[0:key.rfind("-")]
+                if is_theme_available(theme):
+                    menu_choices.append((key, val, False))
+
+    code, tag = d.radiolist(text="Available Theme Hacks",
+                             choices=menu_choices)    
+
+    if code == d.OK:
+        do_theme_hack(tag)
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    cls()
+    theme_hacks_dialog()
+
+    return
+
+
 def main_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load improvements"), 
@@ -1049,7 +1148,8 @@ def main_dialog():
                              ("5", "System overlays"),
                              ("6", "Handheld mode"),
                              ("7", "Game list utilities"),
-                             ("8", "Installation")],
+                             ("8", "Theme hacks"),
+                             ("9", "Installation")],
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
                     cancel_label=" Exit ")
@@ -1090,6 +1190,8 @@ def main_dialog():
         elif tag == "7":
             gamelist_utilities_dialog()
         elif tag == "8":
+            theme_hacks_dialog()
+        elif tag == "9":
             if update_available() == "no connection":
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
