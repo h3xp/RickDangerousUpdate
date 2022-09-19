@@ -179,13 +179,13 @@ def install(overwrite=True):
     
     for section in new_config.sections():
         if len(new_config[section]) > 0:
-            if section == "CONFIG_ITEMS":
-                for key, val in new_config.items(section):
-                    if old_config.has_option(section, key):
-                        new_config[section][key] = str(old_config[section][key]).strip()
+            for key, val in new_config.items(section):
+                if old_config.has_option(section, key):
+                    new_config[section][key] = str(old_config[section][key]).strip()
         elif old_config.has_section(section):
-            for key, val in old_config.items(section):
-                new_config[section][key] = str(old_config[section][key]).strip()
+            if section == "CONFIG_ITEMS":
+                for key, val in old_config.items(section):
+                    new_config[section][key] = str(old_config[section][key]).strip()
 
 
     if len(mega_folder) > 0:
