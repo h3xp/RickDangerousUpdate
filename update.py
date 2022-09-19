@@ -1125,8 +1125,8 @@ def theme_hacks_dialog():
         config = configparser.ConfigParser()
         config.optionxform = str
         config.read("/home/pi/.update_tool/update_tool.ini")
-        if config.has_section("THEME HACKS"):
-            for key, val in config.items("THEME HACKS"):
+        if config.has_section("THEME_HACKS"):
+            for key, val in config.items("THEME_HACKS"):
                 theme = key[0:key.rfind("-")]
                 if is_theme_available(theme):
                     menu_choices.append((key, val, False))
