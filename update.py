@@ -472,14 +472,15 @@ def update_available():
     if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
         config = configparser.ConfigParser()
         config.read("/home/pi/.update_tool/update_tool.ini")
-        if config["THEME_HACKS"]["git_branch"] == "main":
+        git_branch = config["CONFIG_ITEMS"]["git_branch"]
+        if git_branch == "main":
             current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
             if version.parse(latest_tag) > version.parse(current_tag):
                 return "update available"
             else:
                 return "no update available"
         else:
-            return "update available"
+            return "alt branch"
     return False
 
 def check_update():
@@ -493,6 +494,8 @@ def check_update():
         title = "UPDATE AVAILABLE! Please update!"
     if update_available() == "no connection":
         title = "no internet connection"
+    if update_available() == "alt branch":
+        title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (pointing to " + config["CONFIG_ITEMS"]["git_branch"] + ")"
     return title
 
 
@@ -1079,6 +1082,8 @@ def do_theme_hack(theme_hack):
 
     safe_write_check("/opt/retropie/configs/all/emulationstation/es_settings.cfg", file_time)
 
+    reboot_msg = "\nTheme hacks has been installed, rebooting in 5 seconds!\n"
+    d.pause(reboot_msg, height=10, width=60)
     restart_es()    
     
     return True
@@ -1120,8 +1125,8 @@ def theme_hacks_dialog():
         config = configparser.ConfigParser()
         config.optionxform = str
         config.read("/home/pi/.update_tool/update_tool.ini")
-        if config.has_section("THEME_HACKS"):
-            for key, val in config.items("THEME_HACKS"):
+        if config.has_section("THEME HACKS"):
+            for key, val in config.items("THEME HACKS"):
                 theme = key[0:key.rfind("-")]
                 if is_theme_available(theme):
                     menu_choices.append((key, val, False))
@@ -1146,7 +1151,7 @@ def main_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load improvements"), 
                              ("2", "Fix known bugs"), 
-                             ("3", "Restore retroarch configurations"), 
+                             ("3", "Restore Retroarch configurations"), 
                              ("4", "Reset emulationstation configurations"), 
                              ("5", "System overlays"),
                              ("6", "Handheld mode"),
@@ -1540,7 +1545,7 @@ def install_dialog():
 
 
 def update_dialog():
-    if update_available() == "update available":
+    if update_available() == "update available" or update_available() == "alt branch":
         code = d.yesno('Continue with update?')
 
         if code == d.OK:
