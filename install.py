@@ -1,3 +1,4 @@
+from genericpath import isfile
 import subprocess
 import sys
 import os
@@ -7,7 +8,7 @@ import shutil
 import re
 from pathlib import Path
 import xml.etree.ElementTree as ET
-
+import requests
 
 git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/v.2.1.0"
 home_dir = "/home/pi/.update_tool"
@@ -16,6 +17,21 @@ png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
 gamelist_file = "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml"
 sh_file = "/home/pi/RetroPie/retropiemenu/update_tool.sh"
 mega_folder = ""
+
+
+def get_version(version):
+    latest_tag = version
+    if os.path.exists(ini_file):
+        if os.path.isfile(ini_file):
+            config = configparser.ConfigParser()
+            config.read(ini_file)
+            if config.has_option("CONFIG_ITEMS", "git_branch"):
+                if config["CONFIG_ITEMS"]["git_branch"] != "main":
+                    url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
+                    resp = requests.get(url)
+                    latest_tag = resp.json().get('tag_name').replace("v","")
+
+    return latest_tag
 
 
 def runcmd(command):
@@ -146,7 +162,8 @@ def install(overwrite=True):
     new_config.optionxform = str
     old_config = configparser.ConfigParser()
     old_config.optionxform = str
-    new_version = ""
+    new_version_label = ""
+    git_branch = "main"
 
     if overwrite == True:
         uninstall()
@@ -160,6 +177,7 @@ def install(overwrite=True):
         old_config.read(ini_file)
         if old_config.has_option("CONFIG_ITEMS", "git_repo") and old_config.has_option("CONFIG_ITEMS", "git_branch"):
             git_repo = "{}/{}".format(old_config["CONFIG_ITEMS"]["git_repo"], old_config["CONFIG_ITEMS"]["git_branch"])
+            git_branch = old_config["CONFIG_ITEMS"]["git_branch"]
 
     tmp_dir = Path("/", "tmp", "update_tool_install")
     if os.path.exists(tmp_dir) == False:
@@ -177,14 +195,20 @@ def install(overwrite=True):
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
         if new_config.has_option("CONFIG_ITEMS", "tool_ver"):
-            new_version = "[Version {}]: ".format(new_config["CONFIG_ITEMS"]["tool_ver"])
+            new_version = new_config["CONFIG_ITEMS"]["tool_ver"]
+            new_version_label = "[Version {}]: ".format(new_version)
+            if new_version != get_version(new_version):
+                new_version_label = "[Version {} (running from version {} on branch {})]: ".format(get_version(new_version), new_version, git_branch)
+                new_config["CONFIG_ITEMS"]["tool_ver"] = get_version(new_version)
+
     
     for section in new_config.sections():
         if len(new_config[section]) > 0:
             if section == "CONFIG_ITEMS":
                 for key, val in new_config.items(section):
-                    if old_config.has_option(section, key):
-                        new_config[section][key] = str(old_config[section][key]).strip()
+                    if key != "tool_ver":
+                        if old_config.has_option(section, key):
+                            new_config[section][key] = str(old_config[section][key]).strip()
         elif old_config.has_section(section):
             for key, val in old_config.items(section):
                 new_config[section][key] = str(old_config[section][key]).strip()
@@ -218,7 +242,7 @@ def install(overwrite=True):
         for game in src_root.findall("game"):
             desc = game.find("desc")
             if desc is not None:
-                desc.text = "{}{}".format(new_version, desc.text)
+                desc.text = "{}{}".format(new_version_label, desc.text)
             
         shutil.copy2(new_gamelist_path, new_gamelist_path + "." + file_time)
 
@@ -255,7 +279,9 @@ def main():
                 install(False)
                 exit(0)
             else:
-                mega_folder = arg
+                pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+                if pattern.match(str(arg)):
+                    mega_folder = arg
 
     install()
 
