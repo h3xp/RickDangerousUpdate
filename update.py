@@ -34,6 +34,7 @@ d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
+genres = ["Action", "Action-Adventure", "Adventure", "Beat'em up", "Fighting", "Platform", "Puzzle", "Racing", "Role Playing Games", "Shoot'em up", "Simulation", "Sports", "Strategy"]
 
 def safe_write_backup(file_path: str, file_time=""):
     if file_time == "":
@@ -995,12 +996,116 @@ def gamelists_orphan_dialog(systems, clean: bool):
     return
 
 
-def gamelists_dialog(clean: bool):
+def gamelist_genres_dialog(system: str, game: dict, elem: ET.Element):
+    global genres
+    dialog_text = ""
+    menu_choices = []
+
+    genres.sort()
+    for genre in genres:
+        menu_choices.append((genre, "", False if len(menu_choices) > 0 else True))
+
+    dialog_text = "System:\t{}".format(system)
+
+    if "name" in game.keys():
+        dialog_text += "\n\nGame:\t{}".format(game["name"])
+
+    if "genre" in game.keys():
+        dialog_text += "\n\nGenre:\t{}".format(game["genre"])
+
+    if "path" in game.keys():
+        dialog_text += "\n\nRom:\t{}".format(game["path"].replace("./", ""))
+
+    if "desc" in game.keys():
+        dialog_text += "\n\n" if len(dialog_text) > 0 else ""
+        dialog_text += "Description:\t{}".format(game["desc"])
+
+    dialog_text += "\n\nSelect Genre:"
+
+    code, tag = d.radiolist(text=dialog_text,
+                             choices=menu_choices, 
+                             title="Manually Select Genres")
+
+    if code == d.OK:
+        genre = elem.find("genre")
+        if genre is not None:
+            genre.text = tag
+        else:
+            elem.append(ET.fromstring("<genre>{}</genre>".format(tag)))
+
+    if code == d.CANCEL:
+        return False
+
+    return True
+
+
+def do_gamelist_genres(systems: list):
+    def _process_entry(elem: ET.Element):
+        genre = elem.find("genre")
+        if genre is not None:
+            if genre.text is not None:
+                return genre.text not in genres
+
+        return True
+
+    continue_processing = True
+    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
+    rom_dir = "/home/pi/RetroPie/roms"
+    fields = ["name", "path", "desc", "genre"]
+
+    for system in systems:
+        if not continue_processing:
+            break
+
+        for single_system in system.split("/"):
+            system_roms = os.path.join(rom_dir, single_system)
+
+            # start scanning gamelist.xml
+            src_xml = os.path.join(system_roms, "gamelist.xml")
+            src_tree = ET.parse(src_xml)
+            src_root = src_tree.getroot()
+
+            for src_game in src_root.iter("game"):
+                src_fields = {}
+
+                if _process_entry(src_game) == False:
+                    continue
+
+                for item in src_game:
+                    if item.tag in fields:
+                        src_fields[item.tag] = item.text if item.text else ""
+
+                continue_processing = gamelist_genres_dialog(single_system, src_fields, src_game)
+                if continue_processing:
+                    file_time = safe_write_backup(src_xml)
+                    
+                    # ET.indent(dest_tree, space="\t", level=0)
+                    indent(src_root, space="\t", level=0)
+                    with open(src_xml, "wb") as fh:
+                        src_tree.write(fh, "utf-8")
+
+                    safe_write_check(src_xml, file_time)
+                else:
+                    break
+
+    cls()
+    gamelists_dialog("Genre")
+
+    return
+
+
+def gamelists_dialog(function: str):
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
     snaps_dir = "snaps"
 
-    work_type = "Clean" if clean == True else "Check"
+    dialog_title = ""
+    if function == "Check":
+        dialog_title = "Check Game Lists"
+    elif function == "Clean":
+        dialog_title = "Clean Game Lists"
+    elif function == "Genre":
+        dialog_title = "Manually Select Genres"
 
     systems = get_all_systems_from_dirs()
     menu_choices = []
@@ -1008,24 +1113,32 @@ def gamelists_dialog(clean: bool):
     for system in systems:
         menu_choices.append((system, "", False))
 
+    button_text = "Process" if function == "Genre" else function
     code, tags = d.checklist(text="Available Systems",
                             choices=menu_choices,
-                            ok_label="{} Selected".format(work_type), 
+                            ok_label="{} Selected".format(button_text), 
                             extra_button=True, 
-                            extra_label="{} All".format(work_type))
+                            extra_label="{} All".format(button_text), 
+                            title=dialog_title)
 
     if code == d.OK:
-        gamelists_orphan_dialog(tags, clean)
+        if function == "Genre":
+            do_gamelist_genres(tags)
+        else:
+            gamelists_orphan_dialog(tags, function)
 
     if code == d.EXTRA:
-        gamelists_orphan_dialog(systems, clean)
+        if function == "Genre":
+            do_gamelist_genres(systems)
+        else:
+            gamelists_orphan_dialog(systems, function)        
 
     if code == d.CANCEL:
         cls()
         gamelist_utilities_dialog()
 
     cls()
-    gamelists_dialog(clean)
+    gamelists_dialog(function)
 
     return
 
@@ -1033,116 +1146,21 @@ def gamelists_dialog(clean: bool):
 def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
-                             ("2", "Clean Game Lists")],
+                             ("2", "Clean Game Lists"), 
+                             ("3", "Manually Select Genres")],
                     title="Game List Utilities")
     
     if code == d.OK:
         if tag == "1":
-            gamelists_dialog(False)
+            gamelists_dialog("Check")
         elif tag == "2":
-            gamelists_dialog(True)
+            gamelists_dialog("Clean")
+        elif tag == "3":
+            gamelists_dialog("Genre")
 
     if code == d.CANCEL:
         cls()
         main_dialog()
-
-    return
-
-
-def is_theme_available(theme: str):
-    themes_dir = "/etc/emulationstation/themes"
-    if os.path.exists(os.path.join(themes_dir, theme)):
-        if os.path.isdir(os.path.join(themes_dir, theme)):
-            return True
-
-    return False
-
-
-def do_theme_hack(theme_hack):
-    themes_dir = "/etc/emulationstation/themes"
-    get_theme_hack(theme_hack)
-    theme_dir = os.path.join(themes_dir, get_theme_from_hack(theme_hack))
-
-    if os.path.exists(os.path.join(theme_dir, theme_hack)):
-        os.system("sudo cp {} {}".format(os.path.join(theme_dir, theme_hack), os.path.join(theme_dir, "theme.xml")))
-
-    # make the new theme the running one
-    lines_out = ""
-    with open("/opt/retropie/configs/all/emulationstation/es_settings.cfg", 'r') as configfile:
-        lines_in = configfile.readlines()
-        for line in lines_in:
-            if "<string name=\"ThemeSet\"" in line:
-                line = "<string name=\"ThemeSet\" value=\"{}\" />".format(get_theme_from_hack(theme_hack))
-            lines_out += line
-
-    file_time = safe_write_backup("/opt/retropie/configs/all/emulationstation/es_settings.cfg")
-
-    with open(os.path.join("/opt/retropie/configs/all/emulationstation/es_settings.cfg"), 'w') as file:
-        file.write(lines_out)
-
-    safe_write_check("/opt/retropie/configs/all/emulationstation/es_settings.cfg", file_time)
-
-    reboot_msg = "\nTheme hacks has been installed, rebooting in 5 seconds!\n"
-    d.pause(reboot_msg, height=10, width=60)
-    restart_es()    
-    
-    return True
-
-
-def get_theme_hack(theme_hack: str):
-    themes_dir = "/etc/emulationstation/themes"
-    theme = theme_hack[0:theme_hack.rfind("-")]
-    theme_path = os.path.join(themes_dir, theme)
-
-    if os.path.exists(theme_path):
-        if os.path.isdir(theme_path):
-            if not os.path.exists(os.path.join(theme_path, theme_hack)):
-                if not os.path.isfile(os.path.join(theme_path, theme_hack)):
-                    localpath = Path("/", "tmp", "theme_hacks")
-                    if os.path.exists(localpath):
-                        if os.path.isdir(localpath):
-                            shutil.rmtree(localpath)
-                    os.mkdir(localpath)
-                    urllib.request.urlretrieve("{}/{}/{}/{}".format(get_config_value("CONFIG_ITEMS", "git_repo"), get_config_value("CONFIG_ITEMS", "git_branch"), get_config_value("CONFIG_ITEMS", "themes_dir"), theme_hack), localpath / theme_hack)
-                    f = os.path.join(localpath, theme_hack)
-                    if os.path.isfile(f):
-                        os.system("sudo mv {} {}".format(os.path.join(localpath, theme_hack), theme_path))
-                        os.system("sudo chown root:root {}".format(os.path.join(theme_path, theme_hack)))
-                        shutil.rmtree(localpath)
-                        return True
-    
-    return False
-
-
-def get_theme_from_hack(theme_hack: str):
-    return theme_hack[0:theme_hack.rfind("-")]
-
-def theme_hacks_dialog():
-    # can also use: svn ls "https://github.com/h3xp/RickDangerousUpdate/branches/v2.2.0/theme_hacks"
-    menu_choices =[]
-
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        config = configparser.ConfigParser()
-        config.optionxform = str
-        config.read("/home/pi/.update_tool/update_tool.ini")
-        if config.has_section("THEME_HACKS"):
-            for key, val in config.items("THEME_HACKS"):
-                theme = key[0:key.rfind("-")]
-                if is_theme_available(theme):
-                    menu_choices.append((key, val, False))
-
-    code, tag = d.radiolist(text="Available Theme Hacks",
-                             choices=menu_choices)    
-
-    if code == d.OK:
-        do_theme_hack(tag)
-
-    if code == d.CANCEL:
-        cls()
-        main_dialog()
-
-    cls()
-    theme_hacks_dialog()
 
     return
 
@@ -1156,8 +1174,7 @@ def main_dialog():
                              ("5", "System overlays"),
                              ("6", "Handheld mode"),
                              ("7", "Game list utilities"),
-                             ("8", "Theme hacks"),
-                             ("9", "Installation")],
+                             ("8", "Installation")],
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
                     cancel_label=" Exit ")
@@ -1198,8 +1215,6 @@ def main_dialog():
         elif tag == "7":
             gamelist_utilities_dialog()
         elif tag == "8":
-            theme_hacks_dialog()
-        elif tag == "9":
             if update_available() == "no connection":
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
@@ -1256,7 +1271,8 @@ def improvements_dialog():
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
-                             extra_label="Apply All")
+                             extra_label="Apply All", 
+                             title="Load Improvements")
 
     selected_updates = []
     if code == d.OK:
@@ -1461,7 +1477,8 @@ def overlays_dialog():
 
 def bugs_dialog():
     code, tag = d.menu("Bugs Menu", 
-                    choices=[("1", "Fix permissions")])
+                    choices=[("1", "Fix permissions")], 
+                    title="Fix Known Bugs")
     
     if code == d.OK:
         if tag == "1":
