@@ -338,6 +338,8 @@ def copydir(source_path, target_path):
 
 def fix_permissions():
     runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
+    d.msgbox("Done! The permissions bug has been fixed!")
+    main_dialog()
 
 
 def permissions_dialog():
