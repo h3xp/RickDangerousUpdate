@@ -1,4 +1,4 @@
-![Nice banner saying Insanium Edition Update Tool](banner.png)
+![Nice banner saying Insanium Edition Update Tool](docs/banner.png)
 
 **Disclaimer:** This repository is only for educational purpose. Only use this with your own files/backups.
 =============================
@@ -35,7 +35,7 @@ bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run
 
 The script is self-explanatory, and it will guide you through the whole process.
 
-![demo of the main menu](demo.gif)
+![demo of the main menu](docs/demo.gif)
 
 ## It is recommended to install the tool.
 
@@ -46,7 +46,7 @@ Now hit "Install/Reinstall" and enjoy the comfort of having the tool directly in
 
 
 ### After installation you will find a new "Update Tool" entry inside of EmulationStations "Options" tab:
-![screenshot of the tools options entry inside of emulationstation](screenshot_menu.png)
+![screenshot of the tools options entry inside of emulationstation](docs/screenshot_menu.png)
 
 The script will also install a new command "update_tool" with which you can easily run the script from the CLI.
 

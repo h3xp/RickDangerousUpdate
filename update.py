@@ -542,7 +542,7 @@ def do_handheld(mode):
     else:
         configzip = "handheld_configs_reset.zip"
     localpath = Path("/", "tmp")
-    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/" + configzip,
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/" + configzip,
                                localpath / configzip)
     f = os.path.join(localpath, configzip)
     if os.path.isfile(f):
@@ -1506,7 +1506,7 @@ def restore_retroarch_dialog():
 
 def do_retroarch_configs():
     localpath = Path("/", "tmp")
-    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/retroarch_configs.zip", localpath / "retroarch_configs.zip")
+    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/retroarch_configs.zip", localpath / "retroarch_configs.zip")
     f = os.path.join(localpath, "retroarch_configs.zip")
     if os.path.isfile(f):
         with zipfile.ZipFile(f, 'r') as zip_ref:
@@ -1536,7 +1536,7 @@ def reset_controls_dialog():
 def do_emulationstation_configs():
     localpath = Path("/", "tmp")
     urllib.request.urlretrieve(
-        "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/emulationstation_configs.zip",
+        "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/emulationstation_configs.zip",
         localpath / "emulationstation_configs.zip")
     f = os.path.join(localpath, "emulationstation_configs.zip")
     if os.path.isfile(f):
