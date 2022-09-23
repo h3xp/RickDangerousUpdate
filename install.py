@@ -186,7 +186,7 @@ def install(overwrite=True):
     #download update_tool.ini
     runshell("curl {}/update_tool.ini -o {}/update_tool.ini".format(git_repo, tmp_dir))
     #download the menu image
-    runshell("curl {}/options_logo.png -o {}/options_logo.png".format(git_repo, tmp_dir))
+    runshell("curl {}/docs/options_logo.png -o {}/options_logo.png".format(git_repo, tmp_dir))
     #download the gamelist.xml
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
     #download the update.py
