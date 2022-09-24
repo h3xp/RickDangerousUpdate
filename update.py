@@ -4,6 +4,7 @@ https://github.com/h3xp/RickDangerousUpdate
 """
 
 from genericpath import isdir, isfile
+from http.client import OK
 import os
 import zipfile
 import platform
@@ -27,7 +28,7 @@ import configparser
 import subprocess
 from dialog import Dialog
 from packaging import version
-
+import copy
 
 d = Dialog()
 d.autowidgetsize = True
@@ -57,16 +58,23 @@ def safe_write_check(file_path: str, file_time: str):
 
 
 def get_git_repo():
-    git_repo = "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main"
-
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        config.read("/home/pi/.update_tool/update_tool.ini")
-        if config.has_option("CONFIG_ITEMS", "git_repo") and config.has_option("CONFIG_ITEMS", "git_branch"):
-            git_repo = "{}/{}".format(config["CONFIG_ITEMS"]["git_repo"], config["CONFIG_ITEMS"]["git_branch"])    
+        git_repo = get_config_value("CONFIG_ITEMS", "git_repo")
+        if git_repo is not None:
+            return git_repo
 
-    return git_repo
+    return "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate"
 
 
+def get_git_branch():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        git_branch = get_config_value("CONFIG_ITEMS", "git_branch")
+        if git_branch is not None:
+            return git_branch
+
+    return "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate"
+    
+    
 def get_overlay_systems():
     retval = [[], []]
     path = "/opt/retropie/configs"
@@ -129,19 +137,22 @@ def is_update_applied(key: str, modified_timestamp: str):
 
 def uninstall():
     git_repo = get_git_repo()
-    runcmd("bash <(curl '{}/install.sh' -s -N) -remove".format(git_repo))
+    git_branch = get_git_branch()
+    runcmd("bash <(curl '{}/{}/install.sh' -s -N) {} -remove".format(git_repo, git_branch, git_branch))
     return
 
 def update():
     git_repo = get_git_repo()
-    runcmd("bash <(curl '{}/install.sh' -s -N) -update".format(git_repo))
+    git_branch = get_git_branch()
+    runcmd("bash <(curl '{}/{}/install.sh' -s -N) {} -update".format(git_repo, git_branch, git_branch))
     return
 
 
 def install():
     git_repo = get_git_repo()
+    git_branch = get_git_branch()
     megadrive = check_drive()
-    runcmd("bash <(curl '{}/install.sh' -s -N) {}".format(git_repo, megadrive))
+    runcmd("bash <(curl '{}/{}/install.sh' -s -N) {} {}".format(git_repo, git_branch, git_branch, megadrive))
     return
 
 
@@ -656,19 +667,16 @@ def get_all_systems_from_dirs():
 
 
 def look_for_supporting_files(rom_file: str, dir: str, file_types: str):
-    retval = None
-
     for file_type in file_types:
         file_name = os.path.splitext(rom_file)[0] + file_type
         if os.path.exists(os.path.join(dir, file_name)):
             return file_name
 
-    return retval == 0
+    return ""
 
 
-def process_cue_file(cue_file: str, src_game: ET.Element, src_tree: ET.ElementTree, system_rom_directory: str, cue_files: list, log_file: str, m3u_file=""):
-    bad_files = []
-    good_files = []
+def parse_cue_file(cue_file: str):
+    cue_files = []
 
     base_path = os.path.dirname(cue_file)
     with open(cue_file, 'r') as cuefile:
@@ -679,11 +687,22 @@ def process_cue_file(cue_file: str, src_game: ET.Element, src_tree: ET.ElementTr
             if match:
                 cue_base = match.group(1)
                 if cue_base is not None:
-                    cue_path = os.path.join(base_path, cue_base)
-                    if not os.path.exists(cue_path):
-                        bad_files.append(cue_base)
-                    else:
-                        good_files.append(cue_base)
+                    cue_files.append(os.path.join(base_path, cue_base))
+
+    return cue_files
+
+    
+def process_cue_file(cue_file: str, src_game: ET.Element, src_tree: ET.ElementTree, system_rom_directory: str, cue_files: list, log_file: str, m3u_file=""):
+    bad_files = []
+    good_files = []
+
+    cue_entries = parse_cue_file(cue_file)
+    for cue_path in cue_entries:
+        cue_base = os.path.basename(cue_path)
+        if not os.path.exists(cue_path):
+            bad_files.append(cue_base)
+        else:
+            good_files.append(cue_base)
 
     if len(bad_files) > 0:
         bad_files.sort()
@@ -692,13 +711,6 @@ def process_cue_file(cue_file: str, src_game: ET.Element, src_tree: ET.ElementTr
                 log_this(log_file, "-cue entry \"{}\" not found for cue file \"{}\" from within m3u file \"{}\"".format(file, os.path.basename(cue_file), m3u_file))
             else:
                 log_this(log_file, "-cue entry \"{}\" not found for cue file \"{}\"".format(file, os.path.basename(cue_file)))
-
-        # clean out bad rom from gamelist
-        parents = src_tree.findall(".//game[path=\"./{}\"]".format(os.path.basename(cue_file)))
-        for parent in parents:
-            log_this(log_file, "-removing gamelist.xml entry for {}".format(os.path.basename(cue_file)))
-            src_root = src_tree.getroot()
-            src_root.remove(parent)
 
         return False
     else:
@@ -709,39 +721,41 @@ def process_cue_file(cue_file: str, src_game: ET.Element, src_tree: ET.ElementTr
 
     return True
 
-def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTree, system_rom_directory: str, m3u_files: list, log_file: str):
-    bad_files = []
-    good_files = []
 
+def parse_m3u_file(m3u_file: str, system_rom_directory: str):
+    files = []
     with open(m3u_file, 'r') as m3ufile:
         for line in m3ufile:
             if len(line.strip()) == 0:
                 continue
-            m3u_disk = os.path.join(system_rom_directory, line.strip())
-            m3u_base = os.path.basename(m3u_disk)
+            files.append(os.path.join(system_rom_directory, line.strip()))
 
-            if not os.path.exists(m3u_disk):
-                bad_files.append(m3u_base)
+    return files
+
+
+def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTree, system_rom_directory: str, m3u_files: list, log_file: str):
+    bad_files = []
+    good_files = []
+
+    m3u_entries = parse_m3u_file(m3u_file, system_rom_directory)
+    for m3u_entry in m3u_entries:
+        m3u_disk = os.path.join(system_rom_directory, m3u_entry.strip())
+        m3u_base = os.path.basename(m3u_disk)        
+        if not os.path.exists(m3u_disk):
+            bad_files.append(m3u_base)
+        else:
+            keep_rom = True
+            if os.path.splitext(m3u_disk)[1] == ".cue":
+                keep_rom = process_cue_file(m3u_disk, src_game, src_tree, system_rom_directory, m3u_files, log_file, m3u_base)
+            if keep_rom == True:
+                good_files.append(m3u_base)
             else:
-                keep_rom = True
-                if os.path.splitext(m3u_disk)[1] == ".cue":
-                    keep_rom = process_cue_file(m3u_disk, src_game, src_tree, system_rom_directory, m3u_files, log_file, m3u_base)
-                if keep_rom == True:
-                    good_files.append(m3u_base)
-                else:
-                    bad_files.append(m3u_base)
+                bad_files.append(m3u_base)
 
     if len(bad_files) > 0:
         bad_files.sort()
         for file in bad_files:
             log_this(log_file, "-m3u entry \"{}\" not found for m3u file \"{}\"".format(file, os.path.basename(m3u_file)))
-
-        # clean out bad rom from gamelist
-        parents = src_tree.findall(".//game[path=\"./{}\"]".format(os.path.basename(m3u_file)))
-        for parent in parents:
-            log_this(log_file, "-removing gamelist.xml entry for {}".format(os.path.basename(m3u_file)))
-            src_root = src_tree.getroot()
-            src_root.remove(parent)
 
         return False
     else:
@@ -754,30 +768,52 @@ def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTr
 
 
 def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, log_file: str):
+    def _new_element(src_game: ET.Element, subelement_name: str, log_file: str):
+        indent(src_game, "\t")
+        log_this(log_file, "-{} element will now be:".format(subelement_name))
+        log_this(log_file, ET.tostring(src_game).decode())
+
+    file = ""
     # check if subelement exists
     src_node = src_game.find(subelement_name)
     if src_node is not None:
         if src_node.text is not None:
+            # validate file exists
             relative_file = src_node.text.replace("./", "")
             file = relative_file.replace("{}/".format(supporting_files_dir_name), "")
             path = os.path.join(system_roms, relative_file)
             if not os.path.isfile(path):
+                # look for file based on rom name
                 log_this(log_file, "-{} file \"{}\" does not exist for rom \"{}\" ({})".format(subelement_name, file, rom_file, src_name))
                 file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
-                if file == True:
+                if len(file) > 0:
                     log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
-                src_node.text = file
-            else:
-                if file in supporting_files:
-                    if file in supporting_files:
-                        index = supporting_files.index(file)
-                        del supporting_files[index]
+                    src_node.text = file
+                    _new_element(src_node)
         else:
+            # look for file based on rom name
+            log_this(log_file, "-no {} defined for rom \"{}\" ({})".format(subelement_name, rom_file, src_name))
             file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
-            if file == True:
-                child = ET.SubElement(src_game, subelement_name)
-                child.text = "./{}/{}".format(supporting_files_dir, file)
+            if len(file) > 0:
                 log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
+                src_node.text = file
+                _new_element(src_node)
+    else:
+        # look for file based on rom name and add to element tree if it exists
+        log_this(log_file, "-no {} element defined in gamelist.xml for rom \"{}\"".format(subelement_name, rom_file))
+        file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
+        if len(file) > 0:
+            child = ET.SubElement(src_game, subelement_name)
+            child.text = "./{}/{}".format(supporting_files_dir, file)
+            log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
+            _new_element(child)
+
+    # delete validated files
+    if len(file) > 0:
+        if file in supporting_files:
+            if file in supporting_files:
+                index = supporting_files.index(file)
+                del supporting_files[index]
 
     return
 
@@ -795,6 +831,96 @@ def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, file_t
     return
 
 
+def delete_gamelist_entry_dialog(rom: str):
+    code = d.yesno("Gamelist entry for {} has invalid rom entries, would you like to remove it from your gamelist.xml?".format(rom))
+
+    if code == d.OK:
+        return True
+
+    return False
+
+
+def remove_validated_file(file_name: str, files_list: list):
+    if file_name in files_list:
+        index = files_list.index(os.path.basename(file_name))
+        del files_list[index]
+
+    return
+
+
+def override_bad_rom(src_game: ET.Element, src_tree: ET.ElementTree, system_rom_directory: str, art_files: list, snap_files: list, rom_files: list, m3u_files: list):
+    cue_files = []
+    src_path = src_game.find("path")
+    if src_path is not None:
+        src_path = os.path.basename(src_path)
+        remove_validated_file(src_path, rom_files)
+
+        if os.path.splitext(src_path)[1] == ".cue":
+            remove_validated_file(src_path, rom_files)
+            files = parse_cue_file(src_path, system_rom_directory)
+            for file in files:
+                remove_validated_file(file, rom_files)
+        if os.path.splitext(src_path)[1] == ".m3u":
+            files = parse_m3u_file(src_path, system_rom_directory)
+            for file in files:
+                remove_validated_file(file, m3u_files)
+                if os.path.splitext(file)[1] == ".cue":
+                    cue_files = parse_cue_file(file)
+                    if cue_files is not None:
+                        if len(cue_files) > 0:
+                            files.extend(cue_files)
+
+        parents = src_tree.findall(".//game[path=\"./{}\"]".format(os.path.basename(src_path)))
+        for parent in parents:
+            file = parent.find("video")
+            if file is not None:
+                remove_validated_file(file, snap_files)
+            
+            file = parent.find("image")
+            if file is not None:
+                remove_validated_file(file, art_files)
+
+    return
+
+
+def remove_duplicate_gamelist_entries(src_xml: str, log_file: str):
+    # i assume the 1st entry in gamelist .xml is the good one, because it should be Rick's original
+    roms = []
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        path = src_game.find("path")
+        if path is not None:
+            if path.text is not None:
+                if path.text not in roms:
+                    roms.append(path.text)
+
+    for rom in roms:
+        parents = src_tree.findall(".//game[path=\"{}\"]".format(rom))
+        if parents is not None:
+            done = False
+            for parent in parents:
+                if done == True:
+                    indent(parent)
+                    log_this(log_file, "-removing duplicate gamelist.xml entry for {}".format(os.path.basename(rom)))
+                    log_this(log_file, ET.tostring(parent).decode())
+                    src_root.remove(parent)
+                done = True
+
+    # write file
+    file_time = safe_write_backup(src_xml)
+    
+    indent(src_root, space="\t", level=0)
+    with open(src_xml, "wb") as fh:
+        src_tree.write(fh, "utf-8")
+
+    if safe_write_check(src_xml, file_time) == False:
+        log_this(log_file, "-writing to {} FAILED".format(src_xml))
+
+    return
+
+
 def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
@@ -804,7 +930,7 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
     art_types = [".png", ".jpg"]
     snaps_types = [".mp4"]
     do_not_delete = ["neogeo.zip"]
-
+    no_m3u_spport = ["atari800"]
 
     system_roms = os.path.join(rom_dir, system)
     system_art = os.path.join(system_roms, art_dir)
@@ -854,8 +980,14 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
                 if os.path.isfile(item.path):
                     m3u_files.append(item.name)
 
-    # start scanning gamelist.xml
     src_xml = os.path.join(system_roms, "gamelist.xml")
+
+    # remove duplicate gamelist entries
+    #if clean == True:
+    #    remove_duplicate_gamelist_entries(src_xml, log_file)
+    remove_duplicate_gamelist_entries(src_xml, log_file)
+
+    # start scanning gamelist.xml
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
 
@@ -884,6 +1016,8 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
                             if rom_file in rom_files:
                                 index = rom_files.index(rom_file)
                                 del rom_files[index]
+                        else:
+                            bad_roms.append(rom_file)
                 else:
                     log_this(log_file, "-rom \"{}\" does not exist".format(rom_path))
                     if rom_file not in bad_roms:
@@ -900,9 +1034,19 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
     for rom_file in bad_roms:
         parents = src_tree.findall(".//game[path=\"./{}\"]".format(rom_file))
         for parent in parents:
-            log_this(log_file, "-removing gamelist.xml entry for {}".format(rom_file))
-            src_root.remove(parent)
-
+            if clean == True:
+                if delete_gamelist_entry_dialog(rom_file) == True:
+                    log_this(log_file, "-removing gamelist.xml entry for {}".format(rom_file))
+                    log_this(log_file, ET.tostring(parent).decode())
+                    src_root.remove(parent)
+                else:
+                    log_this(log_file, "-overridden: removing gamelist.xml entry for {}".format(rom_file))
+                    log_this(log_file, ET.tostring(parent).decode())
+            else:
+                indent(parent, "\t")
+                log_this(log_file, "-clean would potentially (unless overridden) remove gamelist.xml entry for {}".format(rom_file))
+                log_this(log_file, ET.tostring(parent).decode())
+                
     if clean == True:
         safe_write_backup(src_xml, file_time)
         
@@ -929,7 +1073,10 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
 
     # clean m3u
     if del_m3u == True:
-        process_orphaned_files(m3u_files, system_m3u, log_file, "m3u disk", clean=clean)
+        if system not in no_m3u_spport:
+            process_orphaned_files(m3u_files, system_m3u, log_file, "m3u disk", clean=clean)
+        else:
+            log_this(log_file, "-cannot clean orphaned files from {} directory because m3u file is not supported for {}".format(m3u_dir, system))
     
     return
 
@@ -963,6 +1110,11 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
 
     log_this(log_file, "\n")
     log_this(log_file, "{}ING GAMELISTS: ended at {}".format(process_type.upper(), datetime.datetime.utcnow()))
+    cls()
+    d.textbox(log_file, title="Contents of {0}".format(log_file))
+
+    cls()
+    main_dialog()
 
     return
 
@@ -993,7 +1145,7 @@ def gamelists_orphan_dialog(systems, clean: bool):
         do_process_gamelists(systems, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
 
     cls()
-    gamelists_dialog(clean)
+    gamelists_dialog("Clean" if clean == True else "Check")
 
     return
 
@@ -1127,13 +1279,13 @@ def gamelists_dialog(function: str):
         if function == "Genre":
             do_gamelist_genres(tags)
         else:
-            gamelists_orphan_dialog(tags, function)
+            gamelists_orphan_dialog(tags, function == "Clean")
 
     if code == d.EXTRA:
         if function == "Genre":
             do_gamelist_genres(systems)
         else:
-            gamelists_orphan_dialog(systems, function)        
+            gamelists_orphan_dialog(systems, function == "Clean")        
 
     if code == d.CANCEL:
         cls()
