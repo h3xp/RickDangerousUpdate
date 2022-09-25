@@ -840,7 +840,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             child = ET.SubElement(src_game, subelement_name)
             child.text = "./{}/{}".format(supporting_files_dir, file)
             log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
-            _new_element(chile, subelement_name, log_file)
+            _new_element(child, subelement_name, log_file)
 
     # delete validated files
     if len(file) > 0:
