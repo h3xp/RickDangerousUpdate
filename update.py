@@ -125,10 +125,10 @@ def set_config_value(section: str, key: str, value: str):
             config_file = configparser.ConfigParser()
             config_file.read("/home/pi/.update_tool/update_tool.ini")
             if config_file.has_section(section):
-                config[section][key] = value
+                config_file[section][key] = value
 
                 with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                    config.write(configfile)
+                    config_file.write(configfile)
 
                     return True
     return False
@@ -818,7 +818,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
 
             if not os.path.isfile(path):
                 # look for file based on rom name
-                log_this(log_file, "-{} file \"{}\" does not exist for rom \"{}\" ({})".format(subelement_name, file, rom_file, src_name))
+                log_this(log_file, "-{} file \"{}\" (full path \"{}\") does not exist for rom \"{}\" ({})".format(subelement_name, file, path, rom_file, src_name))
                 file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
                 if len(file) > 0:
                     log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
@@ -1040,9 +1040,11 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
         if src_node is not None:
             if src_node.text is not None:
                 found_files = []
-                rom_file = src_node.text.replace("./", "")
+                rom_file = os.path.basename(src_node.text)
                 rom_path = os.path.join(system_roms, rom_file)
-
+                if src_node.text[0:1] == "/":
+                    rom_path = src_node.text
+                
                 if os.path.exists(rom_path):
                     found_files.append(rom_file)
                     if rom_file in rom_files:
@@ -1058,7 +1060,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
                         else:
                             bad_roms.append(rom_file)
                 else:
-                    log_this(log_file, "-rom \"{}\" does not exist".format(rom_path))
+                    log_this(log_file, "-rom \"{}\" (full path \"{}\") does not exist".format(rom_file, rom_path))
                     if rom_file not in bad_roms:
                         bad_roms.append(rom_file)
                     #continue
@@ -1411,6 +1413,8 @@ def process_manual_updates(path: str, delete: bool):
                 if process_improvement(file, extracted) == True:
                     if delete == True:
                         os.remove(file)
+
+                    set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
                 break
 
     if os.path.isdir(path):
