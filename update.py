@@ -108,12 +108,29 @@ def get_overlay_systems():
 
 
 def get_config_value(section: str, key: str):
-    config_file = configparser.ConfigParser()
-    config_file.read("/home/pi/.update_tool/update_tool.ini")
-    if config_file.has_option(section, key):
-        return config_file[section][key]
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+            config_file = configparser.ConfigParser()
+            config_file.read("/home/pi/.update_tool/update_tool.ini")
+            if config_file.has_option(section, key):
+                return config_file[section][key]
 
     return None
+
+
+def set_config_value(section: str, key: str, value: str):
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+            config_file = configparser.ConfigParser()
+            config_file.read("/home/pi/.update_tool/update_tool.ini")
+            if config_file.has_section(section):
+                config[section][key] = value
+
+                with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+                    config.write(configfile)
+
+                    return True
+    return False
 
 
 def restart_es():
@@ -1319,15 +1336,117 @@ def gamelist_utilities_dialog():
     return
 
 
+def process_manual_updates(path: str, delete: bool):
+    files = []
+    megadrive = check_drive()
+    available_updates = get_available_updates(megadrive)
+    extracted = Path("/", "tmp", "extracted")
+
+    if os.path.isfile(path) == True:
+        if os.path.splitext(path)[1] == ".zip":
+            files.append(path)
+
+    if os.path.isdir(path):
+        for file in os.listdir(path):
+            if os.path.splitext(file)[1] == ".zip":
+                files.append(os.path.join(path, file))
+
+    files.sort()
+    for file in files:
+        for update in available_updates:
+            if update[0] == os.path.basename(file):
+                if process_improvement(file, extracted) == True:
+                    if delete == True:
+                        os.remove(file)
+                break
+
+    if os.path.isdir(path):
+        if delete == True:
+            if len(os.listdir(path)) == 0:
+                shutil.rmtree(path)
+
+    return
+
+
+def get_valid_path_portion(path: str):
+    path = ""
+    parts = path.split("/")
+    for part in parts:
+        if os.path.isdir(part) == True or os.path.isfile(part) == True:
+            path += "/" + part
+
+    return path
+
+
+def manual_updates_dialog(init_path: str, delete: bool):
+    help_text = ("Use [Tab] or [Left] or [Right] keys to switch between windows."
+                  "\nWithin the \"Directories\" or \"Files\" windows, us [Up] or [Down], use [Space] to copy the path into the text entry window."
+                  "\n\nYou can type the path to directory or file directly into the text entry window.")
+    code, path = d.fselect(init_path, height=10, width=60, help_button=True)
+
+    if code == d.OK:
+        if os.path.isdir(path) or os.path.isfile(path):
+            process_manual_updates(path, delete)
+        else:
+            d.msgbox("Invalid path!")
+            path = get_valid_path_portion(path)
+            path = "/" if len(path) == 0 else path
+            cls()
+            manual_updates_dialog(path, delete)
+    elif code == d.HELP:
+        d.msgbox(help_text)
+        path = get_valid_path_portion(path)
+        path = "/" if len(path) == 0 else path
+        cls()
+        manual_updates_dialog(path, delete)
+    elif code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    return
+
+
+def downloaded_update_question_dialog():
+    code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
+                         "\nThis will process the .zip file(s)?"
+                         "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
+                         "\nIf not this process will only add roms, artwork, and videos to the proper locations then update the gamelist.xml accordingly."
+                         "\n\nSelecting \"Yes\" will delete the .zip files and directories once the process is complete."
+                         "\nSelecting \"No\" will leave the .zip files and directories once the process is complete."
+                         "\n\nWould you like to remove .zip files and directories?")
+
+    if code == d.OK:
+        manual_updates_dialog("/home/pi", True)
+
+    if code == d.CANCEL:
+        manual_updates_dialog("/home/pi", False)
+
+    return
+
+def improvements_dialog():
+    code, tag = d.menu("Load Improvements", 
+                    choices=[("1", "Download and Install Official Updates"), 
+                             ("2", "Install Downloaded Updates")],
+                    title="Load Improvements")
+
+    if code == d.OK:
+        if tag == "1":
+            official_improvements_dialog()
+        elif tag == "2":
+            downloaded_update_question_dialog()
+
+    return
+
+
 def main_dialog():
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Load improvements"), 
-                             ("2", "Fix known bugs"), 
-                             ("3", "Restore Retroarch configurations"), 
-                             ("4", "Reset emulationstation configurations"), 
-                             ("5", "System overlays"),
-                             ("6", "Handheld mode"),
-                             ("7", "Game list utilities"),
+                    choices=[("1", "Load Improvements"), 
+                             ("2", "Fix Known Bugs"), 
+                             ("3", "Restore Retroarch Configurations"), 
+                             ("4", "Reset EmulationStation Configurations"), 
+                             ("5", "System Overlays"),
+                             ("6", "Handheld Mode"),
+                             ("7", "Gamelist Utilities"),
                              ("8", "Installation")],
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
@@ -1408,7 +1527,7 @@ def check_root(directory):
     return False
 
 
-def improvements_dialog():
+def official_improvements_dialog():
     megadrive = check_drive()
     check_wrong_permissions()
     reboot_msg = "Updates installed:"
@@ -1426,7 +1545,7 @@ def improvements_dialog():
                              ok_label="Apply Selected", 
                              extra_button=True, 
                              extra_label="Apply All", 
-                             title="Load Improvements")
+                             title="Download and Install Official Updates")
 
     selected_updates = []
     if code == d.OK:
@@ -1455,6 +1574,30 @@ def improvements_dialog():
     return
 
 
+def process_improvement(file: str, extracted: str):
+    with zipfile.ZipFile(file, 'r') as zip_ref:
+        zip_ref.extractall(extracted)
+
+    if check_root(extracted):
+        os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+        make_deletions(extracted)
+        merge_gamelist(extracted)
+        copydir(extracted, "/")
+        os.system("sudo chown -R root:root /etc/emulationstation/")
+    else:
+        make_deletions(extracted)
+        merge_gamelist(extracted)
+        copydir(extracted, "/")
+
+    try:
+        shutil.rmtree(extracted)
+    except OSError as e:
+        print("Error: %s : %s" % (extracted, e.strerror))
+        return False
+
+    return True
+
+
 def do_improvements(selected_updates: list, megadrive: str):
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
@@ -1473,39 +1616,25 @@ def do_improvements(selected_updates: list, megadrive: str):
                         install_candidates.append((update[0], update[2]))
     #install_candidates.sort()
     install_candidates.sort(key = lambda x: x[0])
+    remove_improvements = True
     for install_file in install_candidates:
         f = os.path.join(improvements_dir, install_file[0])
-        with zipfile.ZipFile(f, 'r') as zip_ref:
-            zip_ref.extractall(extracted)
-        if check_root(extracted):
-            os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
-            make_deletions(extracted)
-            merge_gamelist(extracted)
-            copydir(extracted, "/")
-            os.system("sudo chown -R root:root /etc/emulationstation/")
-        else:
-            make_deletions(extracted)
-            merge_gamelist(extracted)
-            copydir(extracted, "/")
+        improvement_passed = process_improvement(f, extracted)
+        if improvement_passed == True:
+            set_config_value("INSTALLED_UPDATES", install_file[0], str(install_file[1]))
 
-        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-            config = configparser.ConfigParser()
-            config.read("/home/pi/.update_tool/update_tool.ini")
-            config["INSTALLED_UPDATES"][install_file[0]] = str(install_file[1])
-            #config["INSTALLED_UPDATES"][filename] = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
-
-            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                config.write(configfile)
-
+        remove_improvements = remove_improvements & improvement_passed
 
         try:
             shutil.rmtree(extracted)
         except OSError as e:
             print("Error: %s : %s" % (extracted, e.strerror))
-    try:
-        shutil.rmtree(improvements_dir)
-    except OSError as e:
-        print("Error: %s : %s" % (improvements_dir, e.strerror))
+
+    if remove_improvements == True:
+        try:
+            shutil.rmtree(improvements_dir)
+        except OSError as e:
+            print("Error: %s : %s" % (improvements_dir, e.strerror))
     
     return
 
