@@ -809,9 +809,13 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
     if src_node is not None:
         if src_node.text is not None:
             # validate file exists
-            relative_file = src_node.text.replace("./", "")
-            file = relative_file.replace("{}/".format(supporting_files_dir_name), "")
-            path = os.path.join(system_roms, relative_file)
+            #relative_file = src_node.text.replace("./", "")
+            #file = relative_file.replace("{}/".format(supporting_files_dir_name), "")
+            file = os.path.basename(src_node.text)
+            path = os.path.join(supporting_files_dir, file)
+            if src_node.text[0:1] == "/":
+                path = src_node.text
+
             if not os.path.isfile(path):
                 # look for file based on rom name
                 log_this(log_file, "-{} file \"{}\" does not exist for rom \"{}\" ({})".format(subelement_name, file, rom_file, src_name))
@@ -819,7 +823,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
                 if len(file) > 0:
                     log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
                     src_node.text = file
-                    _new_element(src_node)
+                    _new_element(src_node, subelement_name, log_file)
         else:
             # look for file based on rom name
             log_this(log_file, "-no {} defined for rom \"{}\" ({})".format(subelement_name, rom_file, src_name))
@@ -827,7 +831,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             if len(file) > 0:
                 log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
                 src_node.text = file
-                _new_element(src_node)
+                _new_element(src_node, subelement_name, log_file)
     else:
         # look for file based on rom name and add to element tree if it exists
         log_this(log_file, "-no {} element defined in gamelist.xml for rom \"{}\"".format(subelement_name, rom_file))
@@ -836,7 +840,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             child = ET.SubElement(src_game, subelement_name)
             child.text = "./{}/{}".format(supporting_files_dir, file)
             log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
-            _new_element(child)
+            _new_element(chile, subelement_name, log_file)
 
     # delete validated files
     if len(file) > 0:
@@ -952,7 +956,7 @@ def remove_duplicate_gamelist_entries(src_xml: str, log_file: str):
     return
 
 
-def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -963,6 +967,7 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
     do_not_delete = ["neogeo.zip"]
     no_m3u_spport = ["atari800"]
 
+    system_gamelists = os.path.join(gamelist_roms_dir, system)
     system_roms = os.path.join(rom_dir, system)
     system_art = os.path.join(system_roms, art_dir)
     system_snaps = os.path.join(system_roms, snaps_dir)
@@ -1012,7 +1017,7 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
                 if os.path.isfile(item.path):
                     m3u_files.append(item.name)
 
-    src_xml = os.path.join(system_roms, "gamelist.xml")
+    src_xml = os.path.join(system_gamelists, "gamelist.xml")
 
     # remove duplicate gamelist entries
     #if clean == True:
@@ -1136,7 +1141,7 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
         if system not in no_m3u_spport:
             process_orphaned_files(m3u_files, system_m3u, log_file, "m3u disk", clean=clean)
         else:
-            log_this(log_file, "-cannot clean orphaned files from {} directory because m3u file is not supported for {}".format(m3u_dir, system))
+            log_this(log_file, "-cannot process orphaned files from {} directory because m3u file is not supported for {}".format(m3u_dir, system))
     
     return
 
@@ -1144,13 +1149,18 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
 def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
     file_time = datetime.datetime.utcnow()
     process_type = "clean" if clean == True else "check"
+    gamelist_roms_dir = "/home/pi/RetroPie/roms"
+    check_gamelist_roms_dir = get_config_value("CONFIG_ITEMS", "check_gamelists_roms_dir")
+    if check_gamelist_roms_dir is not None:
+        gamelist_roms_dir = check_gamelist_roms_dir
 
     log_file = "/home/pi/.update_tool/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
-
 
     with open(log_file, 'w', encoding='utf-8') as logfile:
         logfile.write("{}ING GAMELISTS: started at {}".format(process_type.upper(), file_time))
 
+    log_this(log_file, "")
+    log_this(log_file, "RUNNING: gamelist.xml files from {}".format(gamelist_roms_dir))
     if clean == True:
         if del_roms == True:
             log_this(log_file, "WARNING: deleting roms")
@@ -1166,7 +1176,7 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
     for system in systems:
         for single_system in system.split("/"):
             print("")
-            process_gamelist(single_system, log_file, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
+            process_gamelist(single_system, gamelist_roms_dir, log_file, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
 
     log_this(log_file, "\n")
     log_this(log_file, "{}ING GAMELISTS: ended at {}".format(process_type.upper(), datetime.datetime.utcnow()))
