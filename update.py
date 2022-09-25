@@ -36,6 +36,7 @@ d.autowidgetsize = True
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
 genres = ["Action", "Action-Adventure", "Adventure", "Beat'em up", "Fighting", "Platform", "Puzzle", "Racing", "Role Playing Games", "Shoot'em up", "Simulation", "Sports", "Strategy"]
+update_available_result = "no connection"
 
 def safe_write_backup(file_path: str, file_time=""):
     if file_time == "":
@@ -343,7 +344,6 @@ def download_update(ID, destdir, megadrive):
             print("Downloading: {}...".format(attrs["n"]))
             file_data = get_file_data(file_id, root_folder)
             download_file(file_id, key, file_data, str(destdir))
-            print("Processing: {}...".format(attrs["n"]))
 
 
 def cls():
@@ -493,6 +493,15 @@ def make_deletions(directory):
         os.remove(directory)
 
 
+def check_internet():
+    url = "http://www.google.com/"
+    try:
+        resp = requests.get(url)
+    except requests.exceptions.RequestException as e:
+        return False
+
+    return True
+
 def update_available():
     url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
     try:
@@ -512,21 +521,25 @@ def update_available():
                 return "no update available"
         else:
             return "alt branch"
+            
     return False
 
 def check_update():
+    title = ""
+
     if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
         config = configparser.ConfigParser()
         config.read("/home/pi/.update_tool/update_tool.ini")
         title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (latest)"
     else:
         title = "not installed"
-    if update_available() == "update available":
+    if update_available_result == "update available":
         title = "UPDATE AVAILABLE! Please update!"
-    if update_available() == "no connection":
+    if update_available_result == "no connection":
         title = "no internet connection"
-    if update_available() == "alt branch":
+    if update_available_result == "alt branch":
         title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (pointing to " + config["CONFIG_ITEMS"]["git_branch"] + ")"
+
     return title
 
 
@@ -1399,13 +1412,17 @@ def process_manual_updates(path: str, delete: bool):
 
 
 def get_valid_path_portion(path: str):
-    path = ""
+    return_path = ""
     parts = path.split("/")
     for part in parts:
-        if os.path.isdir(part) == True or os.path.isfile(part) == True:
-            path += "/" + part
+        if len(part) > 0:
+            if os.path.isdir(os.path.join(return_path, "/" + part)) == True or os.path.isfile(os.path.join(return_path, "/" + part)) == True:
+                return_path += "/" + part
 
-    return path
+    if os.path.isdir(return_path):
+        return_path += "/"
+
+    return return_path
 
 
 def manual_updates_dialog(init_path: str, delete: bool):
@@ -1446,10 +1463,10 @@ def downloaded_update_question_dialog():
                          "\n\nWould you like to remove .zip files and directories?")
 
     if code == d.OK:
-        manual_updates_dialog("/home/pi", True)
+        manual_updates_dialog("/", True)
 
     if code == d.CANCEL:
-        manual_updates_dialog("/home/pi", False)
+        manual_updates_dialog("/", False)
 
     return
 
@@ -1461,7 +1478,11 @@ def improvements_dialog():
 
     if code == d.OK:
         if tag == "1":
-            official_improvements_dialog()
+            if not check_internet():
+                d.msgbox("You need to be connected to the internet for this.")
+                improvements_dialog()
+            else:
+                official_improvements_dialog()
         elif tag == "2":
             downloaded_update_question_dialog()
 
@@ -1469,6 +1490,10 @@ def improvements_dialog():
 
 
 def main_dialog():
+    global update_available_result
+    if update_available_result == "no connection":
+        update_available_result - update_available()
+
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load Improvements"), 
                              ("2", "Fix Known Bugs"), 
@@ -1484,33 +1509,29 @@ def main_dialog():
     
     if code == d.OK:
         if tag == "1":
-            if update_available() == "no connection":
-                d.msgbox("You need to be connected to the internet for this.")
-                main_dialog()
-            else:
-                improvements_dialog()
+            improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
-            if update_available() == "no connection":
+            if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
                 restore_retroarch_dialog()
         elif tag == "4":
-            if update_available() == "no connection":
+            if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
                 reset_controls_dialog()
         elif tag == "5":
-            if update_available() == "no connection":
+            if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
                 overlays_dialog()
         elif tag == "6":
-            if update_available() == "no connection":
+            if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
@@ -1518,7 +1539,7 @@ def main_dialog():
         elif tag == "7":
             gamelist_utilities_dialog()
         elif tag == "8":
-            if update_available() == "no connection":
+            if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
@@ -1605,19 +1626,19 @@ def official_improvements_dialog():
 
 
 def process_improvement(file: str, extracted: str):
+    print("Processing official update: {}...".format(os.path.basename(file)))
     with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(extracted)
 
     if check_root(extracted):
         os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
-        make_deletions(extracted)
-        merge_gamelist(extracted)
-        copydir(extracted, "/")
+
+    make_deletions(extracted)
+    merge_gamelist(extracted)
+    copydir(extracted, "/")
+
+    if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
-    else:
-        make_deletions(extracted)
-        merge_gamelist(extracted)
-        copydir(extracted, "/")
 
     try:
         shutil.rmtree(extracted)
@@ -1875,7 +1896,10 @@ def install_dialog():
 
 
 def update_dialog():
-    if update_available() == "update available" or update_available() == "alt branch":
+    global update_available_result
+    update_available_result = update_available()
+
+    if update_available_result == "update available" or update_available_result == "alt branch":
         code = d.yesno('Continue with update?')
 
         if code == d.OK:
@@ -1883,7 +1907,7 @@ def update_dialog():
             reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
             d.pause(reboot_msg, height=10, width=60)
             restart_es()
-    elif update_available() == "no update available":
+    elif update_available_result == "no update available":
         d.msgbox("You are already running the latest version.")
         main_dialog()
     else:
@@ -1946,6 +1970,9 @@ def hostname_dialog():
 
 
 def main():
+    global update_available_result
+    update_available_result = update_available()
+
     if runcmd("id -u -n") == "pi\n":
         hostname_dialog()
     else:
