@@ -784,7 +784,7 @@ def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTr
     return True
 
 
-def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, log_file: str):
+def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, found_files: list, log_file: str):
     def _new_element(src_game: ET.Element, subelement_name: str, log_file: str):
         indent(src_game, "\t")
         log_this(log_file, "-{} element will now be:".format(subelement_name))
@@ -828,9 +828,10 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
     # delete validated files
     if len(file) > 0:
         if file in supporting_files:
-            if file in supporting_files:
-                index = supporting_files.index(file)
-                del supporting_files[index]
+            if file not in found_files:
+                found_files.append(file)
+            index = supporting_files.index(file)
+            del supporting_files[index]
 
     return
 
@@ -960,6 +961,7 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
     rom_files = []
     m3u_files = []
     bad_roms = []
+    remove_entries = []
 
     # if len(extensions) == 0 then directory is not in es_systems.cfg
     # when there is a link to a directory which name is in the es_systems.cfg?
@@ -1019,10 +1021,12 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
         src_node = src_game.find("path")
         if src_node is not None:
             if src_node.text is not None:
+                found_files = []
                 rom_file = src_node.text.replace("./", "")
                 rom_path = os.path.join(system_roms, rom_file)
 
                 if os.path.exists(rom_path):
+                    found_files.append(rom_file)
                     if rom_file in rom_files:
                         keep_rom = True
                         if os.path.splitext(rom_file)[1] == ".m3u":
@@ -1039,13 +1043,39 @@ def process_gamelist(system: str, log_file: str, del_roms=False, del_art=False, 
                     log_this(log_file, "-rom \"{}\" does not exist".format(rom_path))
                     if rom_file not in bad_roms:
                         bad_roms.append(rom_file)
-                    continue
+                    #continue
 
-        # check if art exists
-        process_supporting_files(src_game, src_name, "image", system_roms, rom_file, art_dir, system_art, art_types, art_files, log_file)
+                # check if art exists
+                process_supporting_files(src_game, src_name, "image", system_roms, rom_file, art_dir, system_art, art_types, art_files, found_files, log_file)
 
-        # check if snap exists
-        process_supporting_files(src_game, src_name, "video", system_roms, rom_file, snaps_dir, system_snaps, snaps_types, snaps_files, log_file)
+                # check if snap exists
+                process_supporting_files(src_game, src_name, "video", system_roms, rom_file, snaps_dir, system_snaps, snaps_types, snaps_files, found_files, log_file)
+
+            # check for auto gamelist removal
+            if len(found_files) == 0:
+                if rom_file not in remove_entries:
+                    remove_entries.append(rom_file)
+
+    # remove entry that shouldn't be there
+    for entry in remove_entries:
+        parents = src_tree.findall(".//game[path=\"./{}\"]".format(entry))
+        for parent in parents:
+            if entry in bad_roms:
+                index = bad_roms.index(entry)
+                del bad_roms[index]   
+            indent(parent, "\t")             
+            log_this(log_file, "-auto removing gamelist.xml entry for {} because it has 0 rom, image, or video files".format(entry))
+            log_this(log_file, ET.tostring(parent).decode())
+            #src_root.remove(parent)
+
+        #safe_write_backup(src_xml, file_time)
+        
+        #indent(src_root, space="\t", level=0)
+        #with open(src_xml, "wb") as fh:
+        #    src_tree.write(fh, "utf-8")
+
+        #if safe_write_check(src_xml, file_time) == False:
+        #    log_this(log_file, "-writing to {} FAILED".format(src_xml))
 
     # clean out bad roms from gamelist
     for rom_file in bad_roms:
