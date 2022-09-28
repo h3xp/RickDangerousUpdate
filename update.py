@@ -35,7 +35,7 @@ d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
-genres = ["Action", "Action-Adventure", "Adventure", "Beat'em up", "Fighting", "Platform", "Puzzle", "Racing", "Role Playing Games", "Shoot'em up", "Simulation", "Sports", "Strategy"]
+genres = {"Action": "custom-action.cfg", "Action-Adventure": "custom-action-adventure.cfg", "Adventure": "custom-adventure.cfg", "Beat'em up": "custom-btmups.cfg", "Fighting": "custom-fighting.cfg", "Platform": "custom-platform.cfg", "Puzzle": "custom-puzzle.cfg", "Racing": "custom-racing.cfg", "Role Playing Games": "custom-rpgs.cfg", "Shoot'em up": "custom-shmups.cfg", "Simulation": "custom-simulation.cfg", "Sports": "custom-sports.cfg", "Strategy": "custom-strategy.cfg"}
 update_available_result = "no connection"
 
 def safe_write_backup(file_path: str, file_time=""):
@@ -1223,12 +1223,15 @@ def gamelists_orphan_dialog(systems, clean: bool):
 
 
 def gamelist_genres_dialog(system: str, game: dict, elem: ET.Element):
-    global genres
     dialog_text = ""
     menu_choices = []
+    system_genres = []
 
-    genres.sort()
-    for genre in genres:
+    for key in genres.keys():
+        system_genres.append(key)
+
+    system_genres.sort()
+    for genre in system_genres:
         menu_choices.append((genre, "", False if len(menu_choices) > 0 else True))
 
     dialog_text = "System:\t{}".format(system)
@@ -1258,6 +1261,25 @@ def gamelist_genres_dialog(system: str, game: dict, elem: ET.Element):
             genre.text = tag
         else:
             elem.append(ET.fromstring("<genre>{}</genre>".format(tag)))
+
+        genre_collection = genres[tag]
+        lines = []
+        cfg_file = os.path.join("/opt/retropie/configs/all/emulationstation/collections", genre_collection)
+        with open(cfg_file, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            if game["path"] not in lines:
+                system_roms = "/home/pi/RetroPie/roms/{}/".format(system)
+                lines.append(game["path"].replace("./", system_roms) + "\n")
+                lines.sort()
+        
+                # write cfg
+                file_time = safe_write_backup(cfg_file)
+                
+                with open(cfg_file, 'w', encoding='utf-8') as f:
+                    f.writelines(lines)
+
+                safe_write_check(cfg_file, file_time)
+
 
     if code == d.CANCEL:
         return False
@@ -1320,6 +1342,42 @@ def do_gamelist_genres(systems: list):
     return
 
 
+def count_games(system: str):
+    count = 0    
+    system_dir = os.path.join("/home/pi/RetroPie/roms", system)
+    src_xml = os.path.join(system_dir, "gamelist.xml")
+
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        count += 1
+
+    return count
+
+
+def gamelist_counts_dialog(systems: list):
+    systems.sort()
+    systems_text = ""
+    total_count = 0
+    for system in systems:
+        for single_system in system.split("/"):
+            system_count = count_games(single_system)
+            total_count += system_count
+            systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
+
+    systems_text = "TOTAL: {}\n\nSystems:".format(total_count) + systems_text
+    with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
+        f.write(systems_text)
+
+    d.msgbox(systems_text)
+
+    cls()
+    gamelist_utilities_dialog()
+
+    return 
+    
+    
 def gamelists_dialog(function: str):
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -1328,12 +1386,18 @@ def gamelists_dialog(function: str):
     dialog_title = ""
     if function == "Check":
         dialog_title = "Check Game Lists"
+        button_text = function
     elif function == "Clean":
         dialog_title = "Clean Game Lists"
+        button_text = function
     elif function == "Genre":
         dialog_title = "Manually Select Genres"
+        button_text = "Process"
+    elif function == "Count":
+        dialog_title = "Count of Games"
+        button_text = "Count"
 
-    systems = get_all_systems_from_dirs()
+    systems = get_all_systems_from_cfg()
     menu_choices = []
 
     for system in systems:
@@ -1350,12 +1414,16 @@ def gamelists_dialog(function: str):
     if code == d.OK:
         if function == "Genre":
             do_gamelist_genres(tags)
+        elif function == "Count":
+            gamelist_counts_dialog(tags)
         else:
             gamelists_orphan_dialog(tags, function == "Clean")
 
     if code == d.EXTRA:
         if function == "Genre":
             do_gamelist_genres(systems)
+        elif function == "Count":
+            gamelist_counts_dialog(systems)
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
@@ -1373,7 +1441,8 @@ def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
                              ("2", "Clean Game Lists"), 
-                             ("3", "Manually Select Genres")],
+                             ("3", "Manually Select Genres"), 
+                             ("4", "Count of Games")],
                     title="Game List Utilities")
     
     if code == d.OK:
@@ -1383,6 +1452,8 @@ def gamelist_utilities_dialog():
             gamelists_dialog("Clean")
         elif tag == "3":
             gamelists_dialog("Genre")
+        elif tag == "4":
+            gamelists_dialog("Count")
 
     if code == d.CANCEL:
         cls()
