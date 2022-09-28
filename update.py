@@ -1440,9 +1440,10 @@ def get_valid_path_portion(path: str):
 
 
 def manual_updates_dialog(init_path: str, delete: bool):
-    help_text = ("Use [Tab] or [Left] or [Right] keys to switch between windows."
-                  "\nWithin the \"Directories\" or \"Files\" windows, us [Up] or [Down], use [Space] to copy the path into the text entry window."
-                  "\n\nYou can type the path to directory or file directly into the text entry window.")
+    help_text = ("Type the path to directory or file directly into the text entry window."
+                  "\nAs you type the directory or file will be highlighted, at this point you can press [Space] to add the highlighted item to the path."
+                  "\n\nIf you are adding a directory to the text entry window, and the path ends with a \"/\", the files in that directory will automatically show in the \"Files\" window."
+                  "\nYou can use also cycle through the windows with [Tab] or [Arrow] keys.")
     code, path = d.fselect(init_path, height=10, width=60, help_button=True)
 
     if code == d.OK:
@@ -1471,7 +1472,6 @@ def downloaded_update_question_dialog():
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
                          "\nThis will process the .zip file(s)?"
                          "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                         "\nIf not this process will only add roms, artwork, and videos to the proper locations then update the gamelist.xml accordingly."
                          "\n\nSelecting \"Yes\" will delete the .zip files and directories once the process is complete."
                          "\nSelecting \"No\" will leave the .zip files and directories once the process is complete."
                          "\n\nWould you like to remove .zip files and directories?")
