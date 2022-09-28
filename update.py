@@ -1086,16 +1086,17 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
             indent(parent, "\t")             
             log_this(log_file, "-auto removing gamelist.xml entry for {} because it has 0 rom, image, or video files".format(entry))
             log_this(log_file, ET.tostring(parent).decode())
-            #src_root.remove(parent)
+            # this now automatically does this
+            src_root.remove(parent)
 
-        #safe_write_backup(src_xml, file_time)
+        safe_write_backup(src_xml, file_time)
         
-        #indent(src_root, space="\t", level=0)
-        #with open(src_xml, "wb") as fh:
-        #    src_tree.write(fh, "utf-8")
+        indent(src_root, space="\t", level=0)
+        with open(src_xml, "wb") as fh:
+            src_tree.write(fh, "utf-8")
 
-        #if safe_write_check(src_xml, file_time) == False:
-        #    log_this(log_file, "-writing to {} FAILED".format(src_xml))
+        if safe_write_check(src_xml, file_time) == False:
+            log_this(log_file, "-writing to {} FAILED".format(src_xml))
 
     # clean out bad roms from gamelist
     for rom_file in bad_roms:
@@ -1441,12 +1442,60 @@ def gamelists_dialog(function: str):
     return
 
 
+def do_remove_logs(logs: list):
+    for log in logs:
+        log_file = os.path.join("/home/pi/.update_tool", log)
+        os.remove(log_file)
+
+    return
+
+
+def logs_dialog(function: str, title: str, patterns: list):
+    menu_choices = []
+    logs = []
+
+    for pattern in patterns:
+        for log in Path("/home/pi/.update_tool").glob(pattern):
+            logs.append(os.path.basename(log))
+
+    if len(logs) == 0:
+        d.msgbox("There are no logs to remove!")
+        cls()
+        gamelist_utilities_dialog()
+        
+    logs.sort()
+    for menu_choice in logs:
+        menu_choices.append((menu_choice, "", False))
+
+    code, tags = d.checklist(text="Log Files in \"/home/pi/.update_tool\":",
+                             choices=menu_choices,
+                             ok_label="{} Selected".format(function), 
+                             extra_button=True, 
+                             extra_label="{} All".format(function), 
+                             title=title)
+
+    selected_logs = []
+    if code == d.OK:
+        selected_logs = tags
+
+    if code == d.EXTRA:
+        selected_logs = logs
+
+    do_remove_logs(selected_logs)
+
+    cls()
+    gamelist_utilities_dialog()
+
+    return
+
+
 def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
                              ("2", "Clean Game Lists"), 
-                             ("3", "Manually Select Genres"), 
-                             ("4", "Count of Games")],
+                             ("3", "Remove Check/Clean Game List Logs"), 
+                             ("4", "Manually Select Genres"), 
+                             ("5", "Count of Games")],
                     title="Game List Utilities")
     
     if code == d.OK:
@@ -1455,8 +1504,10 @@ def gamelist_utilities_dialog():
         elif tag == "2":
             gamelists_dialog("Clean")
         elif tag == "3":
-            gamelists_dialog("Genre")
+            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*"])
         elif tag == "4":
+            gamelists_dialog("Genre")
+        elif tag == "5":
             gamelists_dialog("Count")
 
     if code == d.CANCEL:
