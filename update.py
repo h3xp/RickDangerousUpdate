@@ -1356,7 +1356,7 @@ def count_games(system: str):
     return count
 
 
-def gamelist_counts_dialog(systems: list):
+def gamelist_counts_dialog(systems: list, all_systems=False):
     systems.sort()
     systems_text = ""
     total_count = 0
@@ -1366,11 +1366,15 @@ def gamelist_counts_dialog(systems: list):
             total_count += system_count
             systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
 
-    systems_text = "TOTAL: {}\n\nSystems:".format(total_count) + systems_text
+    systems_counted = "All" if all_systems == True else "Selected"
+    systems_text = "TOTAL: {}\n\n{} Systems:".format(total_count, systems_counted) + systems_text
+    display_text = systems_text
+    if all_systems == True:
+        display_text = "You have chosen to count all systems, a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text
     with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
         f.write(systems_text)
 
-    d.msgbox(systems_text)
+    d.msgbox(display_text)
 
     cls()
     gamelist_utilities_dialog()
@@ -1423,7 +1427,7 @@ def gamelists_dialog(function: str):
         if function == "Genre":
             do_gamelist_genres(systems)
         elif function == "Count":
-            gamelist_counts_dialog(systems)
+            gamelist_counts_dialog(systems, True)
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
