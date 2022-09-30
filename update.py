@@ -3,6 +3,7 @@ Update Script for Rick Dangerous' Minecraftium Edition
 https://github.com/h3xp/RickDangerousUpdate
 """
 
+from asyncio import streams
 from genericpath import isdir, isfile
 from http.client import OK
 import os
@@ -35,8 +36,9 @@ d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
 config = configparser.ConfigParser()
-genres = {"Action": "custom-action.cfg", "Action-Adventure": "custom-action-adventure.cfg", "Adventure": "custom-adventure.cfg", "Beat'em up": "custom-btmups.cfg", "Fighting": "custom-fighting.cfg", "Platform": "custom-platform.cfg", "Puzzle": "custom-puzzle.cfg", "Racing": "custom-racing.cfg", "Role Playing Games": "custom-rpgs.cfg", "Shoot'em up": "custom-shmups.cfg", "Simulation": "custom-simulation.cfg", "Sports": "custom-sports.cfg", "Strategy": "custom-strategy.cfg"}
+config.optionxform = str
 update_available_result = "no connection"
+genres = {}
 
 def safe_write_backup(file_path: str, file_time=""):
     if file_time == "":
@@ -108,10 +110,23 @@ def get_overlay_systems():
     return retval
 
 
+def get_config_section(section: str):
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+            config_file = configparser.ConfigParser()
+            config_file.optionxform = str
+            config_file.read("/home/pi/.update_tool/update_tool.ini")
+            if config_file.has_section(section):
+                return config_file.items(section)
+
+    return None
+
+
 def get_config_value(section: str, key: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
             config_file = configparser.ConfigParser()
+            config_file.optionxform = str
             config_file.read("/home/pi/.update_tool/update_tool.ini")
             if config_file.has_option(section, key):
                 return config_file[section][key]
@@ -123,6 +138,7 @@ def set_config_value(section: str, key: str, value: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
             config_file = configparser.ConfigParser()
+            config_file.optionxform = str
             config_file.read("/home/pi/.update_tool/update_tool.ini")
             if config_file.has_section(section):
                 config_file[section][key] = value
@@ -599,8 +615,15 @@ def do_handheld(mode):
 
 
 def log_this(log_file: str, log_text: str):
-    with open(log_file, 'a', encoding='utf-8') as logfile:
-        logfile.write(log_text.strip() + "\n")
+    if log_file is None:
+        return
+
+    if not os.path.isfile(log_file):
+        with open(log_file, 'w', encoding='utf-8') as logfile:
+            logfile.write(log_text.strip() + "\n")
+    else:
+        with open(log_file, 'a', encoding='utf-8') as logfile:
+            logfile.write(log_text.strip() + "\n")
 
     return
 
@@ -797,7 +820,7 @@ def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTr
     return True
 
 
-def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, found_files: list, log_file: str):
+def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, found_files: list, log_file: str, clean=False):
     def _new_element(src_game: ET.Element, subelement_name: str, log_file: str):
         indent(src_game, "\t")
         log_this(log_file, "-{} element will now be:".format(subelement_name))
@@ -817,30 +840,44 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
                 path = src_node.text
 
             if not os.path.isfile(path):
-                # look for file based on rom name
                 log_this(log_file, "-{} file \"{}\" (full path \"{}\") does not exist for rom \"{}\" ({})".format(subelement_name, file, path, rom_file, src_name))
+                # remove bad reference
+                if clean == True:
+                    src_node.text = None
+                else:
+                    log_this(log_file, "-clean would remove reference to {} file".format(subelement_name))
+                # look for file based on rom name
                 file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
                 if len(file) > 0:
                     log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
-                    src_node.text = file
-                    _new_element(src_node, subelement_name, log_file)
+                    if clean == True:
+                        src_node.text = file
+                        _new_element(src_node, subelement_name, log_file)
+                    else:
+                        log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
         else:
             # look for file based on rom name
             log_this(log_file, "-no {} defined for rom \"{}\" ({})".format(subelement_name, rom_file, src_name))
             file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
             if len(file) > 0:
                 log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
-                src_node.text = file
-                _new_element(src_node, subelement_name, log_file)
+                if clean == True:
+                    src_node.text = file
+                    _new_element(src_node, subelement_name, log_file)
+                else:
+                    log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
     else:
         # look for file based on rom name and add to element tree if it exists
         log_this(log_file, "-no {} element defined in gamelist.xml for rom \"{}\"".format(subelement_name, rom_file))
         file = look_for_supporting_files(rom_file, supporting_files_dir, supporting_files_types)
         if len(file) > 0:
-            child = ET.SubElement(src_game, subelement_name)
-            child.text = "./{}/{}".format(supporting_files_dir, file)
             log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
-            _new_element(child, subelement_name, log_file)
+            if clean == True:
+                child = ET.SubElement(src_game, subelement_name)
+                child.text = "./{}/{}".format(supporting_files_dir, file)
+                _new_element(child, subelement_name, log_file)
+            else:
+                log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
 
     # delete validated files
     if len(file) > 0:
@@ -853,7 +890,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
     return
 
 
-def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, file_type: str, clean=False):
+def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, dir_backup: str, file_type: str, clean=False):
     orphaned_files.sort()
     process = "DELETING" if clean == True else "IDENTIFIED"
     for orphaned_file in orphaned_files:
@@ -861,7 +898,8 @@ def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, file_t
         if os.path.exists(file_path):
             log_this(log_file, "-{} orphaned {} file: \"{}\"".format(process, file_type, file_path))
             if clean == True:
-                os.remove(file_path)
+                #os.remove(file_path)
+                shutil.move(file_path, dir_backup)
 
     return
 
@@ -956,7 +994,7 @@ def remove_duplicate_gamelist_entries(src_xml: str, log_file: str):
     return
 
 
-def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -967,11 +1005,23 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
     do_not_delete = ["neogeo.zip"]
     no_m3u_spport = ["atari800"]
 
+    if clean == True and not gamelist_roms_dir == rom_dir:
+        d.msgbox("We do not clean from alternate gamelist.xml files")
+        cls()
+        gamelist_utilities_dialog()
+
     system_gamelists = os.path.join(gamelist_roms_dir, system)
     system_roms = os.path.join(rom_dir, system)
     system_art = os.path.join(system_roms, art_dir)
     system_snaps = os.path.join(system_roms, snaps_dir)
     system_m3u = os.path.join(system_roms, m3u_dir)
+
+    # NEW backups
+    backup_roms = os.path.join(backup_dir, system)
+    backup_art = os.path.join(backup_roms, art_dir)
+    backup_snaps = os.path.join(backup_roms, snaps_dir)
+    backup_m3u = os.path.join(backup_roms, m3u_dir)
+
 
     # we are going to DELETE files still in these lists after the reconciliation
     art_files = []
@@ -1018,8 +1068,18 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
                     m3u_files.append(item.name)
 
     src_xml = os.path.join(system_gamelists, "gamelist.xml")
+    if not os.path.exists(src_xml):
+        log_this(log_file, "ERROR: gamelist.xml does not exist!")
+
+    if clean == True:
+        if not os.path.exists(backup_roms):
+            os.mkdir(backup_roms)
+    
+        # copy gamelist.xml
+        shutil.copy2(os.path.join(system_roms, "gamelist.xml"), os.path.join(backup_dir, system))
 
     # remove duplicate gamelist entries
+    # this will always happen now because I do not want to deal with multiple entries
     #if clean == True:
     #    remove_duplicate_gamelist_entries(src_xml, log_file)
     remove_duplicate_gamelist_entries(src_xml, log_file)
@@ -1066,10 +1126,10 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
                     #continue
 
                 # check if art exists
-                process_supporting_files(src_game, src_name, "image", system_roms, rom_file, art_dir, system_art, art_types, art_files, found_files, log_file)
+                process_supporting_files(src_game, src_name, "image", system_roms, rom_file, art_dir, system_art, art_types, art_files, found_files, log_file, clean=clean)
 
                 # check if snap exists
-                process_supporting_files(src_game, src_name, "video", system_roms, rom_file, snaps_dir, system_snaps, snaps_types, snaps_files, found_files, log_file)
+                process_supporting_files(src_game, src_name, "video", system_roms, rom_file, snaps_dir, system_snaps, snaps_types, snaps_files, found_files, log_file, clean=clean)
 
             # check for auto gamelist removal
             if len(found_files) == 0:
@@ -1083,20 +1143,14 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
             if entry in bad_roms:
                 index = bad_roms.index(entry)
                 del bad_roms[index]   
-            indent(parent, "\t")             
-            log_this(log_file, "-auto removing gamelist.xml entry for {} because it has 0 rom, image, or video files".format(entry))
+            indent(parent, "\t")
+            if clean == True:
+                log_this(log_file, "-auto removing gamelist.xml entry for {} because it has 0 rom, image, or video files".format(entry))
+            else:
+                log_this(log_file, "-clean would auto remove gamelist.xml entry for {} because it has 0 rom, image, or video files".format(entry))
             log_this(log_file, ET.tostring(parent).decode())
-            # this now automatically does this
-            src_root.remove(parent)
-
-        safe_write_backup(src_xml, file_time)
-        
-        indent(src_root, space="\t", level=0)
-        with open(src_xml, "wb") as fh:
-            src_tree.write(fh, "utf-8")
-
-        if safe_write_check(src_xml, file_time) == False:
-            log_this(log_file, "-writing to {} FAILED".format(src_xml))
+            if clean == True:
+                src_root.remove(parent)
 
     # clean out bad roms from gamelist
     for rom_file in bad_roms:
@@ -1129,20 +1183,20 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, del_rom
     process = "DELETING" if clean == True else "INDENTIFYING"
     # clean roms
     if del_roms == True:
-        process_orphaned_files(rom_files, system_roms, log_file, "rom", clean=clean)
+        process_orphaned_files(rom_files, system_roms, log_file, backup_roms, "rom", clean=clean)
 
     # clean art
     if del_art == True:
-        process_orphaned_files(art_files, system_art, log_file, "image", clean=clean)
+        process_orphaned_files(art_files, system_art, log_file, backup_art, "image", clean=clean)
 
     # clean snaps
     if del_snaps == True:
-        process_orphaned_files(snaps_files, system_snaps, log_file, "video", clean=clean)
+        process_orphaned_files(snaps_files, system_snaps, backup_snaps, log_file, "video", clean=clean)
 
     # clean m3u
     if del_m3u == True:
         if system not in no_m3u_spport:
-            process_orphaned_files(m3u_files, system_m3u, log_file, "m3u disk", clean=clean)
+            process_orphaned_files(m3u_files, system_m3u, log_file, backup_m3u, "m3u disk", clean=clean)
         else:
             log_this(log_file, "-cannot process orphaned files from {} directory because m3u file is not supported for {}".format(m3u_dir, system))
     
@@ -1157,11 +1211,16 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
     if check_gamelist_roms_dir is not None:
         gamelist_roms_dir = check_gamelist_roms_dir
 
-    log_file = "/home/pi/.update_tool/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+    if not os.path.exists("/home/pi/.update_tool/gamelist_logs"):
+        os.mkdir("/home/pi/.update_tool/gamelist_logs")
+        
+    log_file = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+    backup_dir = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+    if clean == True:
+        if not os.path.exists(backup_dir):
+            os.mkdir(backup_dir)
 
-    with open(log_file, 'w', encoding='utf-8') as logfile:
-        logfile.write("{}ING GAMELISTS: started at {}".format(process_type.upper(), file_time))
-
+    log_this(log_file, "{}ING GAMELISTS: started at {}".format(process_type.upper(), file_time))
     log_this(log_file, "")
     log_this(log_file, "RUNNING: gamelist.xml files from {}".format(gamelist_roms_dir))
     if clean == True:
@@ -1179,7 +1238,7 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
     for system in systems:
         for single_system in system.split("/"):
             print("")
-            process_gamelist(single_system, gamelist_roms_dir, log_file, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
+            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
 
     log_this(log_file, "\n")
     log_this(log_file, "{}ING GAMELISTS: ended at {}".format(process_type.upper(), datetime.datetime.utcnow()))
@@ -1197,13 +1256,14 @@ def gamelists_orphan_dialog(systems, clean: bool):
     if clean == True:
         menu_text = ("Clean Orphaned Files"
                     "\n\nThis will clean your gamelist.xml files and optionally remove orphaned roms, artwork,  video snapshots, and multiple disk (m3u) files according to your choices below."
-                    "\n\nThe results of this procedure can be viewed in the \"/home/pi/.update_tool\" folder, it will be called \"clean_gamelists-[date]-[time].log"
-                    "\n\nWARNING: removing orphaned files will permantly DELETE them and you will not get them back, only do this if you REALLY want to..."
+                    "\n\nThe results of this procedure can be viewed in the \"/home/pi/.update_tool/gamelist_logs\" folder, it will be called \"clean_gamelists-[date]-[time].log\"."
+                    "\n\nRemoving orphaned files will DELETE them by moving them to a folder that corresponds to the gamelist log called \"clean_gamelists-[date]-[time]\"."
+                    "\nYou can reverse this operation using the \"Restore Clean Game List Logs\" function and selecting the appropriate log file."
                     "\n\nRemove orphaned:")
     else:
         menu_text = ("Check Orphaned Files"
                     "\n\nThis will check your gamelist.xml files and optionally check for orphaned roms, artwork, video snapshots, and multiple disk (m3u) files according to your choices below."
-                    "\n\nThe results of this procedure can be viewed in the \"/home/pi/.update_tool\" folder, it will be called \"check_gamelists-[date]-[time].log"
+                    "\n\nThe results of this procedure can be viewed in the \"/home/pi/.update_tool/gamelist_logs\" folder, it will be called \"check_gamelists-[date]-[time].log\""
                     "\n\nCheck orphaned:")
 
     code, tags = d.checklist(text=menu_text, 
@@ -1382,7 +1442,93 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
 
     return 
     
-    
+
+def remove_system_genres(system: str, cfg_file: str):
+    new_lines = []
+
+    with open(cfg_file, 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        for line in lines:
+            if line.find("/{}/".format(system)) < 0:
+                new_lines.append(line)
+        
+    with open(cfg_file, 'w', encoding='utf-8') as f:
+        f.writelines(new_lines)
+
+    return
+
+
+def system_genre_realignment(system: str):
+    collections_dir = "/opt/retropie/configs/all/emulationstation/collections"
+    rom_dir = "/home/pi/RetroPie/roms"
+    genre_roms = {}
+
+    for key, val in genres.items():
+        collection_cfg = os.path.join(collections_dir, val)
+        remove_system_genres(system, collection_cfg)
+
+    system_roms = os.path.join(rom_dir, system)
+
+    # start scanning gamelist.xml
+    src_xml = os.path.join(system_roms, "gamelist.xml")
+    if os.path.exists(src_xml):
+        if not os.path.isfile(src_xml):
+            return
+
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        path = src_game.find("path")
+        if path is None:
+            continue
+        if path.text is None:
+            continue
+        
+        genre = src_game.find("genre")
+        if genre is None:
+            continue
+        if genre.text is None:
+            continue
+
+        if genre.text not in genre_roms.keys():
+            genre_roms[genre.text] = []
+
+        roms = genre_roms[genre.text]
+        system_rom = os.path.join(system_roms, path.text.replace("./", ""))
+        roms.append(system_rom.strip() + "\n")
+        
+    for key, val in genre_roms.items():
+        if key in genres.keys():
+            collection_cfg = os.path.join(collections_dir, genres[key])
+            if os.path.exists(collection_cfg):
+                if os.path.isfile(collection_cfg):
+                    lines = []
+                    with open(collection_cfg, 'r', encoding='utf-8') as f:
+                        lines = f.readlines()
+
+                    lines.extend(val)
+                    lines.sort()
+                    with open(collection_cfg, 'w', encoding='utf-8') as f:
+                        f.writelines(lines)
+
+    return
+
+
+def do_genre_realignment(systems: list, overwrite=False):
+    collections_dir = "/opt/retropie/configs/all/emulationstation/collections"
+    if overwrite == True:
+        for key, val in genres.items():
+            collection_cfg = os.path.join(collections_dir, val)
+            with open(collection_cfg, 'w', encoding='utf-8') as f:
+                f.write("")
+
+    for system in systems:
+        system_genre_realignment(system)
+
+    return
+
+
 def gamelists_dialog(function: str):
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -1397,6 +1543,9 @@ def gamelists_dialog(function: str):
         button_text = function
     elif function == "Genre":
         dialog_title = "Manually Select Genres"
+        button_text = "Process"
+    elif function == "Realign":
+        dialog_title = "Realign Genre Collections"
         button_text = "Process"
     elif function == "Count":
         dialog_title = "Count of Games"
@@ -1421,6 +1570,8 @@ def gamelists_dialog(function: str):
             do_gamelist_genres(tags)
         elif function == "Count":
             gamelist_counts_dialog(tags)
+        elif function == "Realign":
+            do_genre_realignment(tags)
         else:
             gamelists_orphan_dialog(tags, function == "Clean")
 
@@ -1429,6 +1580,8 @@ def gamelists_dialog(function: str):
             do_gamelist_genres(systems)
         elif function == "Count":
             gamelist_counts_dialog(systems, True)
+        elif function == "Realign":
+            do_genre_realignment(systems, True)
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
@@ -1444,35 +1597,58 @@ def gamelists_dialog(function: str):
 
 def do_remove_logs(logs: list):
     for log in logs:
-        log_file = os.path.join("/home/pi/.update_tool", log)
-        os.remove(log_file)
+        log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
+        log_dir = os.path.splitext(log_file)[0]
+        if os.path.exists(log_file):
+            if os.path.isfile(log_file):
+                os.remove(log_file)
+        if os.path.exists(log_dir):
+            if os.path.isdir(log_dir):
+                shutil.rmtree(log_dir)            
 
     return
 
 
-def logs_dialog(function: str, title: str, patterns: list):
+def do_restore_logs(log: str):
+    log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
+    log_dir = os.path.splitext(log_file)[0]
+    if os.path.exists(log_dir):
+        if os.path.isdir(log_dir):
+            copydir(log_dir, "/home/pi/RetroPie/roms")
+    return
+
+
+def logs_dialog(function: str, title: str, patterns: list, multi=True):
     menu_choices = []
     logs = []
 
     for pattern in patterns:
-        for log in Path("/home/pi/.update_tool").glob(pattern):
-            logs.append(os.path.basename(log))
+        for log in Path("/home/pi/.update_tool/gamelist_logs").glob(pattern):
+            if os.path.exists(log):
+                if os.path.isfile(log):
+                    logs.append(os.path.basename(log))
 
     if len(logs) == 0:
-        d.msgbox("There are no logs to remove!")
+        d.msgbox("There are no logs to {}!".format(function.lower()))
         cls()
         gamelist_utilities_dialog()
         
-    logs.sort()
+    logs.sort(reverse=True)
     for menu_choice in logs:
         menu_choices.append((menu_choice, "", False))
 
-    code, tags = d.checklist(text="Log Files in \"/home/pi/.update_tool\":",
-                             choices=menu_choices,
-                             ok_label="{} Selected".format(function), 
-                             extra_button=True, 
-                             extra_label="{} All".format(function), 
-                             title=title)
+    if multi == True:
+        code, tags = d.checklist(text="Log Files in \"/home/pi/.update_tool/gamelist_logs\":",
+                                choices=menu_choices,
+                                ok_label="{} Selected".format(function), 
+                                extra_button=True, 
+                                extra_label="{} All".format(function), 
+                                title=title)
+    else:
+        code, tags = d.radiolist(text="Log Files in \"/home/pi/.update_tool/gamelist_logs\":",
+                                choices=menu_choices,
+                                ok_label="{} Selected".format(function), 
+                                title=title)
 
     selected_logs = []
     if code == d.OK:
@@ -1481,7 +1657,10 @@ def logs_dialog(function: str, title: str, patterns: list):
     if code == d.EXTRA:
         selected_logs = logs
 
-    do_remove_logs(selected_logs)
+    if function == "Remove":
+        do_remove_logs(selected_logs)
+    elif function == "Restore":
+        do_restore_logs(selected_logs)
 
     cls()
     gamelist_utilities_dialog()
@@ -1493,9 +1672,11 @@ def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
                              ("2", "Clean Game Lists"), 
-                             ("3", "Remove Check/Clean Game List Logs"), 
-                             ("4", "Manually Select Genres"), 
-                             ("5", "Count of Games")],
+                             ("3", "Restore Clean Game List Logs"), 
+                             ("4", "Remove Check/Clean Game List Logs"), 
+                             ("5", "Manually Select Genres"), 
+                             ("6", "Realign Genre Collections"), 
+                             ("7", "Count of Games")],
                     title="Game List Utilities")
     
     if code == d.OK:
@@ -1504,10 +1685,14 @@ def gamelist_utilities_dialog():
         elif tag == "2":
             gamelists_dialog("Clean")
         elif tag == "3":
-            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*"])
+            logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*"], multi=False)
         elif tag == "4":
-            gamelists_dialog("Genre")
+            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*"], multi=True)
         elif tag == "5":
+            gamelists_dialog("Genre")
+        elif tag == "6":
+            gamelists_dialog("Realign")
+        elif tag == "7":
             gamelists_dialog("Count")
 
     if code == d.CANCEL:
@@ -2110,6 +2295,12 @@ def hostname_dialog():
 
 
 def main():
+    global genres
+
+    section = get_config_section("GENRE_MAPPINGS")
+    if section is not None:
+        for key, val in section:
+            genres[key] = val
     global update_available_result
     update_available_result = update_available()
 
