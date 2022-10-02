@@ -1238,6 +1238,7 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
     for system in systems:
         for single_system in system.split("/"):
             print("")
+            print("Now processing {}...".format(single_system))
             process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
 
     log_this(log_file, "\n")
