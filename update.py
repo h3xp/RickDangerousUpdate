@@ -1733,6 +1733,10 @@ def process_manual_updates(path: str, delete: bool):
             if len(os.listdir(path)) == 0:
                 shutil.rmtree(path)
 
+    reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
+    d.pause(reboot_msg, height=10, width=60)
+    restart_es()
+
     return
 
 
@@ -1810,6 +1814,9 @@ def improvements_dialog():
                 official_improvements_dialog()
         elif tag == "2":
             downloaded_update_question_dialog()
+
+    cls()
+    main_dialog()
 
     return
 
@@ -2001,10 +2008,12 @@ def do_improvements(selected_updates: list, megadrive: str):
 
         remove_improvements = remove_improvements & improvement_passed
 
-        try:
-            shutil.rmtree(extracted)
-        except OSError as e:
-            print("Error: %s : %s" % (extracted, e.strerror))
+        if os.path.exists(extracted):
+            if os.path.isdir(extracted):
+                try:
+                    shutil.rmtree(extracted)
+                except OSError as e:
+                    print("Error: %s : %s" % (extracted, e.strerror))
 
     if remove_improvements == True:
         try:
@@ -2015,8 +2024,20 @@ def do_improvements(selected_updates: list, megadrive: str):
     return
 
 
+def clean_comments(line: str):
+    line = line.strip()
+    while True:
+        if line[0:1] == "#" or line[0:1] == " ":
+            line = line[1:]
+        else:
+            line += "\n"
+            return line
+    line += "\n"
+
+    return line
+
+
 def do_system_overlay(system: str, enable_disable = "Enable"):
-    file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     path = "/opt/retropie/configs"
 
     system = os.path.join(path, system)
@@ -2027,14 +2048,13 @@ def do_system_overlay(system: str, enable_disable = "Enable"):
                 lines_in = configfile.readlines()
                 for line in lines_in:
                     if "input_overlay" in line:
-                        if enable_disable == "Enable":
-                            if line.strip()[0:1] == "#":
-                                line = line.strip()[1:] + "\n"
-                        else:
-                            line = "#" + line.strip() + "\n"
+                        line = clean_comments(line)
+                        if enable_disable == "Disable":
+                            line = "#" + line
 
                     lines_out += line
-            safe_write_backup(os.path.join(system, "retroarch.cfg"), os.path.join(system, "retroarch.cfg"), file_time)
+
+            file_time = safe_write_backup(os.path.join(system, "retroarch.cfg"))
 
             with open(os.path.join(system, "retroarch.cfg"), 'w') as configfile:
                 configfile.write(lines_out)
