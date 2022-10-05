@@ -1357,7 +1357,7 @@ def do_gamelist_genres(systems: list):
         genre = elem.find("genre")
         if genre is not None:
             if genre.text is not None:
-                return genre.text not in genres
+                return genre.text not in genres.keys()
 
         return True
 
