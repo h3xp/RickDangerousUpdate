@@ -1352,6 +1352,15 @@ def gamelist_genres_dialog(system: str, game: dict, elem: ET.Element):
     return True
 
 
+def check_for_genres():
+    if len(genres.keys()) == 0:
+        d.msgbox("You need to install the tool to run this utility.")
+        cls()
+        gamelist_utilities_dialog()
+    
+    return
+
+
 def do_gamelist_genres(systems: list):
     def _process_entry(elem: ET.Element):
         genre = elem.find("genre")
@@ -1361,6 +1370,7 @@ def do_gamelist_genres(systems: list):
 
         return True
 
+    check_for_genres()
     continue_processing = True
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
@@ -1435,7 +1445,10 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     systems_text = "TOTAL: {}\n\n{} Systems:".format(total_count, systems_counted) + systems_text
     display_text = systems_text
     if all_systems == True:
-        display_text = "You have chosen to count all systems, a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text
+        display_text = ("This utility only counts systems defined in es_systems.cfg.\n"
+                        "At the time of the creation of this utility Kodi and Steam were the only two items that weren't.\n"
+                        "To match your EmulationStation game count add 2 (1 for Kodi, 1 for Steam) to the total.\n\n"
+                        "You have chosen to count all systems, a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
     with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
         f.write(systems_text)
 
@@ -1520,6 +1533,7 @@ def system_genre_realignment(system: str):
 
 
 def do_genre_realignment(systems: list, overwrite=False):
+    check_for_genres()
     collections_dir = "/opt/retropie/configs/all/emulationstation/collections"
     if overwrite == True:
         for key, val in genres.items():
@@ -1657,6 +1671,10 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
                                 title=title)
 
     selected_logs = []
+    if code -- d.CANCEL:
+        cls()
+        gamelist_utilities_dialog()
+
     if code == d.OK:
         selected_logs = tags
 
