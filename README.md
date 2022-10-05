@@ -21,6 +21,8 @@ Join Ricks discord server to keep track on the latest changes.
   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
   - [Enable/Disable System overlays](#system-overlay)
   - [Enable/Disable Handheld mode](#handheld-mode)
+  - [Gamelist Utilities](#gamelist-utilities)
+  - [Installation](#installation)
 - [SSH Instructions](#ssh-usage)
 
 
@@ -63,11 +65,15 @@ your retropie. Therefore, use this at your own risk.
 4. [Reset Emulationstation configrations](#reset-emulationstation-configurations)
 5. [Enable/Disable System overlays](#system-overlay)
 6. [Enable/Disable Handheld mode](#handheld-mode)
+7. [Gamelist Utilities](#gamelist-utilities)
+8. [Installation](#installation)
 
 ## Improvements
 
 This is the "main" feature and reason to create this tool. 
 This will allow you to easily select single or multiple updates from a mega drive.
+- Download and Install Updates - Allows you to install the updates in a mega drive.
+- Manually Install downloaded updates - allows you to point to a directory, or a single file, containing official updates and process improvement from disk
 
 ## Fix known bugs
 
@@ -98,6 +104,18 @@ These systems will be adjusted:
 - gbc
 - ngpc
 - wonderwancolor
+
+## Gamelist Utilities
+
+Gamelist Utilities provide a lot of functions to clean up and work with your gamelist.xml files.
+- Check Game Lists - This will check your gamelist.xml files and optionally check for orphaned roms, artwork, video snapshots, and multiple disk files.
+- Clean Game Lists - This will clean your gamelist.xml files by removing invalid entries, it will also delete orphaned files like roms.
+- Restore Clean Game List Logs - This will let you reverse the changes you applied with Clean Game Lists to the gamelist.xml. It does not restore deleted files.
+- Remove Check/Clean Game List Logs - Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
+- Manually Select Genres - Allows you to manually select official Rick Dangerous genres for roms that you have added manually, and add them to the correct collections.
+- Realign Genre Collections - Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
+- Count of Games: Drops a counts.txt files, so you can easily validate against official game counts, it also displays it.
+
 
 ## Installation
 

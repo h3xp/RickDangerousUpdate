@@ -1206,6 +1206,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
 
 
 def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+    cls()
     file_time = datetime.datetime.utcnow()
     process_type = "clean" if clean == True else "check"
     gamelist_roms_dir = "/home/pi/RetroPie/roms"
@@ -1528,7 +1529,8 @@ def do_genre_realignment(systems: list, overwrite=False):
 
     for system in systems:
         system_genre_realignment(system)
-
+    d.msgbox('done!')
+    main_dialog()
     return
 
 
@@ -1618,6 +1620,7 @@ def do_restore_logs(log: str):
     if os.path.exists(log_dir):
         if os.path.isdir(log_dir):
             copydir(log_dir, "/home/pi/RetroPie/roms")
+    d.msgbox('done!')
     return
 
 
@@ -1804,8 +1807,8 @@ def downloaded_update_question_dialog():
 
 def improvements_dialog():
     code, tag = d.menu("Load Improvements", 
-                    choices=[("1", "Download and Install Official Updates"), 
-                             ("2", "Install Downloaded Updates")],
+                    choices=[("1", "Download and Install Updates"),
+                             ("2", "Manually Install Downloaded Updates")],
                     title="Load Improvements")
 
     if code == d.OK:
@@ -1824,6 +1827,50 @@ def improvements_dialog():
     return
 
 
+def misc_menu():
+    code, tag = d.menu("Misc",
+                    choices=[("1", "Restore Retroarch Configurations"),
+                             ("2", "Reset EmulationStation Configurations"),
+                             ("3", "System Overlays"),
+                             ("4", "Handheld Mode"),
+                             ("5", "Gamelist Utilities")],
+                    title="Miscellaneous")
+
+    if code == d.OK:
+
+        if tag == "1":
+            if not check_internet():
+                d.msgbox("You need to be connected to the internet for this.")
+                misc_menu()
+            else:
+                restore_retroarch_dialog()
+        elif tag == "2":
+            if not check_internet():
+                d.msgbox("You need to be connected to the internet for this.")
+                misc_menu()
+            else:
+                reset_controls_dialog()
+        elif tag == "3":
+            if not check_internet():
+                d.msgbox("You need to be connected to the internet for this.")
+                misc_menu()
+            else:
+                overlays_dialog()
+        elif tag == "4":
+            if not check_internet():
+                d.msgbox("You need to be connected to the internet for this.")
+                misc_menu()
+            else:
+                handheld_dialog()
+        elif tag == "5":
+            gamelist_utilities_dialog()
+
+    cls()
+    main_dialog()
+
+    return
+
+
 def main_dialog():
     global update_available_result
     if update_available_result == "no connection":
@@ -1831,13 +1878,9 @@ def main_dialog():
 
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load Improvements"), 
-                             ("2", "Fix Known Bugs"), 
-                             ("3", "Restore Retroarch Configurations"), 
-                             ("4", "Reset EmulationStation Configurations"), 
-                             ("5", "System Overlays"),
-                             ("6", "Handheld Mode"),
-                             ("7", "Gamelist Utilities"),
-                             ("8", "Installation")],
+                             ("2", "Fix Known Bugs"),
+                             ("3", "Miscellaneous"),
+                             ("4", "Installation")],
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
                     cancel_label=" Exit ")
@@ -1848,32 +1891,8 @@ def main_dialog():
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                main_dialog()
-            else:
-                restore_retroarch_dialog()
+            misc_menu()
         elif tag == "4":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                main_dialog()
-            else:
-                reset_controls_dialog()
-        elif tag == "5":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                main_dialog()
-            else:
-                overlays_dialog()
-        elif tag == "6":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                main_dialog()
-            else:
-                handheld_dialog()
-        elif tag == "7":
-            gamelist_utilities_dialog()
-        elif tag == "8":
             if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
