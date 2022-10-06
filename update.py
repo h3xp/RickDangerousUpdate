@@ -1671,7 +1671,7 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
                                 title=title)
 
     selected_logs = []
-    if code -- d.CANCEL:
+    if code == d.CANCEL:
         cls()
         gamelist_utilities_dialog()
 
