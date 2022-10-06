@@ -108,7 +108,7 @@ These systems will be adjusted:
 Gamelist Utilities provide a lot of functions to clean up and work with your gamelist.xml files.
 - Check Game Lists - This will check your gamelist.xml files and optionally check for orphaned roms, artwork, video snapshots, and multiple disk files.
 - Clean Game Lists - This will clean your gamelist.xml files by removing invalid entries, it will also delete orphaned files like roms.
-- Restore Clean Game List Logs - This will let you reverse the changes you applied with Clean Game Lists to the gamelist.xml. It does not restore deleted files.
+- Restore Clean Game List Logs - This will let you reverse the changes you applied with the "Clean Game Lists"-feature.
 - Remove Check/Clean Game List Logs - Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
 - Manually Select Genres - Allows you to manually select official Rick Dangerous genres for roms that you have added manually, and add them to the correct collections.
 - Realign Genre Collections - Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
