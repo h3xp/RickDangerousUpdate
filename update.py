@@ -75,7 +75,7 @@ def get_git_branch():
         if git_branch is not None:
             return git_branch
 
-    return "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate"
+    return "main"
     
     
 def get_overlay_systems():
