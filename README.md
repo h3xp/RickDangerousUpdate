@@ -1,4 +1,4 @@
-![Nice banner saying Insanium Edition Update Tool](banner.png)
+![Nice banner saying Insanium Edition Update Tool](docs/banner.png)
 
 **Disclaimer:** This repository is only for educational purpose. Only use this with your own files/backups.
 =============================
@@ -21,6 +21,8 @@ Join Ricks discord server to keep track on the latest changes.
   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
   - [Enable/Disable System overlays](#system-overlay)
   - [Enable/Disable Handheld mode](#handheld-mode)
+  - [Gamelist Utilities](#gamelist-utilities)
+  - [Installation](#installation)
 - [SSH Instructions](#ssh-usage)
 
 
@@ -35,7 +37,7 @@ bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run
 
 The script is self-explanatory, and it will guide you through the whole process.
 
-![demo of the main menu](demo.gif)
+![demo of the main menu](docs/demo.gif)
 
 ## It is recommended to install the tool.
 
@@ -46,7 +48,7 @@ Now hit "Install/Reinstall" and enjoy the comfort of having the tool directly in
 
 
 ### After installation you will find a new "Update Tool" entry inside of EmulationStations "Options" tab:
-![screenshot of the tools options entry inside of emulationstation](screenshot_menu.png)
+![screenshot of the tools options entry inside of emulationstation](docs/screenshot_menu.png)
 
 The script will also install a new command "update_tool" with which you can easily run the script from the CLI.
 
@@ -63,6 +65,8 @@ your retropie. Therefore, use this at your own risk.
 4. [Reset Emulationstation configrations](#reset-emulationstation-configurations)
 5. [Enable/Disable System overlays](#system-overlay)
 6. [Enable/Disable Handheld mode](#handheld-mode)
+7. [Gamelist Utilities](#gamelist-utilities)
+8. [Installation](#installation)
 
 ## Improvements
 
@@ -98,6 +102,18 @@ These systems will be adjusted:
 - gbc
 - ngpc
 - wonderwancolor
+
+## Gamelist Utilities
+
+Gamelist Utilities provide a lot of functions to clean up and work with your gamelist.xml files.
+- Check Game Lists - This will check your gamelist.xml files and optionally check for orphaned roms, artwork, video snapshots, and multiple disk files.
+- Clean Game Lists - This will clean your gamelist.xml files by removing invalid entries, it will also delete orphaned files like roms.
+- Restore Clean Game List Logs - This will let you reverse the changes you applied with Clean Game Lists to the gamelist.xml. It does not restore deleted files.
+- Remove Check/Clean Game List Logs - Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
+- Manually Select Genres - Allows you to manually select official Rick Dangerous genres for roms that you have added manually, and add them to the correct collections.
+- Realign Genre Collections - Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
+- Count of Games: Drops a counts.txt files, so you can easily validate against official game counts, it also displays it.
+
 
 ## Installation
 
