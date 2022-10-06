@@ -185,6 +185,7 @@ def update():
 
 def install():
     git_repo = get_git_repo()
+    git_branch = get_git_branch()
     megadrive = check_drive()
     runcmd("bash <(curl '{}/{}/install.sh' -s -N) {}".format(git_repo, git_branch, megadrive))
     return
