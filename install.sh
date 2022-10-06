@@ -6,7 +6,7 @@ installs dependencies and starts the updater.
 
 parameters [git repo, mega link (optional), "-update" or "-remove" (optional)]
 '
-if [ -z "$2" ]:
+if [ -z "$2" ]
 then
   $git_branch = "main"
 else
