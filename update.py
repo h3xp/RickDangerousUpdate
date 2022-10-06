@@ -172,13 +172,6 @@ def is_update_applied(key: str, modified_timestamp: str):
 def uninstall():
     git_repo = get_git_repo()
     git_branch = get_git_branch()
-    runcmd("bash <(curl '{}/{}/install.sh' -s -N) {} -remove".format(git_repo, git_branch, git_branch))
-    return
-
-
-def uninstall():
-    git_repo = get_git_repo()
-    git_branch = get_git_branch()
     runcmd("bash <(curl '{}/{}/install.sh' -s -N) -remove".format(git_repo, git_branch))
     return
 
@@ -193,7 +186,7 @@ def update():
 def install():
     git_repo = get_git_repo()
     megadrive = check_drive()
-    runcmd("bash <(curl '{}/install.sh' -s -N) {}".format(git_repo, megadrive))
+    runcmd("bash <(curl '{}/{}/install.sh' -s -N) {}".format(git_repo, megadrive))
     return
 
 
