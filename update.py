@@ -175,15 +175,18 @@ def uninstall():
     runcmd("bash <(curl '{}/{}/install.sh' -s -N) {} -remove".format(git_repo, git_branch, git_branch))
     return
 
+
 def uninstall():
     git_repo = get_git_repo()
-    runcmd("bash <(curl '{}/install.sh' -s -N) -remove".format(git_repo))
+    git_branch = get_git_branch()
+    runcmd("bash <(curl '{}/{}/install.sh' -s -N) -remove".format(git_repo, git_branch))
     return
 
 
 def update():
     git_repo = get_git_repo()
-    runcmd("bash <(curl '{}/install.sh' -s -N) -update".format(git_repo))
+    git_branch = get_git_branch()
+    runcmd("bash <(curl '{}/{}/install.sh' -s -N) -update".format(git_repo, git_branch))
     return
 
 
