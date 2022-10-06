@@ -1905,7 +1905,7 @@ def main_dialog():
     
     if code == d.OK:
         if tag == "1":
-            improvements_dialog()
+            official_improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":

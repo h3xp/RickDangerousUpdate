@@ -72,8 +72,6 @@ your retropie. Therefore, use this at your own risk.
 
 This is the "main" feature and reason to create this tool. 
 This will allow you to easily select single or multiple updates from a mega drive.
-- Download and Install Updates - Allows you to install the updates in a mega drive.
-- Manually Install downloaded updates - allows you to point to a directory, or a single file, containing official updates and process improvement from disk
 
 ## Fix known bugs
 
