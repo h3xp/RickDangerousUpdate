@@ -231,7 +231,8 @@ def install(overwrite=True):
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
     runcmd("chmod +x /home/pi/.update_tool/update.py")
-    
+    runcmd("sudo ln -s /home/pi/RetroPie/retropiemenu/update_tool.sh /usr/bin/update_tool")
+
     #merge gamelist
     print("Merging gamelist entries...")
     new_gamelist_path = "{}/gamelist.xml".format(tmp_dir)
