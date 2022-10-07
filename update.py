@@ -884,9 +884,9 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
 
     # delete validated files
     if len(file) > 0:
+        if file not in found_files:
+            found_files.append(file)
         if file in supporting_files:
-            if file not in found_files:
-                found_files.append(file)
             index = supporting_files.index(file)
             del supporting_files[index]
 
@@ -908,7 +908,7 @@ def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, dir_ba
 
 
 def delete_gamelist_entry_dialog(rom: str):
-    code = d.yesno("Gamelist entry for {} has invalid rom entries, would you like to remove it from your gamelist.xml?".format(rom))
+    code = d.yesno("Gamelist entry for \"{}\" has invalid rom entries (rom files or multi disk files defined in .m3u or .cue file can not be found).\nWould you like to remove it from your gamelist.xml?".format(rom))
 
     if code == d.OK:
         return True
@@ -1906,7 +1906,10 @@ def main_dialog():
     
     if code == d.OK:
         if tag == "1":
+            # official_improvements_dialog() is for always forcing downloading
+            # improvements_dialog() is for allowing manual side loadinbg
             official_improvements_dialog()
+            #improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
