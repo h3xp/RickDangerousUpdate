@@ -1418,8 +1418,9 @@ def do_gamelist_genres(systems: list):
     return
 
 
-def count_games(system: str):
+def count_games(system: str, games: list):
     count = 0    
+    games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
 
@@ -1427,7 +1428,14 @@ def count_games(system: str):
     src_root = src_tree.getroot()
 
     for src_game in src_root.iter("game"):
-        count += 1
+        game = src_game.find("name")
+        if game.text is not None:
+            games_list.append(game.text)
+            count += 1
+
+    games_list.sort()
+    for list_game in games_list:
+        games.append((system, list_game))
 
     return count
 
@@ -1436,9 +1444,11 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     systems.sort()
     systems_text = ""
     total_count = 0
+    games = []
+    games_text = "system\tgame\n"
     for system in systems:
         for single_system in system.split("/"):
-            system_count = count_games(single_system)
+            system_count = count_games(single_system, games)
             total_count += system_count
             systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
 
@@ -1449,9 +1459,16 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
         display_text = ("This utility only counts systems defined in es_systems.cfg.\n"
                         "At the time of the creation of this utility Kodi and Steam were the only two items that weren't.\n"
                         "To match your EmulationStation game count add 2 (1 for Kodi, 1 for Steam) to the total.\n\n"
-                        "You have chosen to count all systems, a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
-    with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
-        f.write(systems_text)
+                        "Because you have chosen to count all systems:\n"
+                        "\t-a compiled list af all games, by system, is located in /home/pi/.update_tool/games_list.txt for your reference.\n"
+                        "\t-a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
+        with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
+            f.write(systems_text)
+
+        for game in games:
+            games_text += "{}\t{}\n".format(game[0], game[1])
+        with open("/home/pi/.update_tool/games_list.txt", 'w', encoding='utf-8') as f:
+            f.write(games_text)
 
     d.msgbox(display_text)
 
@@ -1908,8 +1925,8 @@ def main_dialog():
         if tag == "1":
             # official_improvements_dialog() is for always forcing downloading
             # improvements_dialog() is for allowing manual side loadinbg
-            official_improvements_dialog()
-            #improvements_dialog()
+            #official_improvements_dialog()
+            improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
