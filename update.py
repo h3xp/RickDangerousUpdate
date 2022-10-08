@@ -1097,6 +1097,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
         src_name_node = src_game.find("name")
         if src_name_node is not None:
             src_name = src_name_node.text
+            print(src_name)
 
         # get rom file
         src_node = src_game.find("path")
@@ -1194,7 +1195,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
 
     # clean snaps
     if del_snaps == True:
-        process_orphaned_files(snaps_files, system_snaps, backup_snaps, log_file, "video", clean=clean)
+        process_orphaned_files(snaps_files, system_snaps, log_file, backup_snaps, "video", clean=clean)
 
     # clean m3u
     if del_m3u == True:
@@ -1925,8 +1926,8 @@ def main_dialog():
         if tag == "1":
             # official_improvements_dialog() is for always forcing downloading
             # improvements_dialog() is for allowing manual side loadinbg
-            #official_improvements_dialog()
-            improvements_dialog()
+            official_improvements_dialog()
+            #improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
