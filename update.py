@@ -246,6 +246,10 @@ def download_file(file_handle,
                 block = chunk[i:i + 16]
                 encryptor.encrypt(block)
 
+            # fix for mega limit
+            if i is None:
+                return None
+
             # fix for files under 16 bytes failing
             if file_size > 16:
                 i += 16
@@ -360,7 +364,9 @@ def download_update(ID, destdir, megadrive):
         if file_id == ID:
             print("Downloading: {}...".format(attrs["n"]))
             file_data = get_file_data(file_id, root_folder)
-            download_file(file_id, key, file_data, str(destdir))
+            file_path = download_file(file_id, key, file_data, str(destdir))
+
+    return file_path
 
 
 def cls():
@@ -2012,9 +2018,6 @@ def official_improvements_dialog():
         print()
         do_improvements(selected_updates, megadrive)
         #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
-        reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
 
     return
 
@@ -2048,28 +2051,24 @@ def do_improvements(selected_updates: list, megadrive: str):
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
 
-    for update in selected_updates:
-        download_update(update[1], improvements_dir, megadrive)
-
-    install_candidates = []
-    for filename in os.listdir(improvements_dir):
-        f = os.path.join(improvements_dir, filename)
-        if os.path.isfile(f):
-            if f.endswith(".zip"):
-                for update in selected_updates:
-                    if update[0] == filename:
-                        install_candidates.append((update[0], update[2]))
-    #install_candidates.sort()
-    install_candidates.sort(key = lambda x: x[0])
     remove_improvements = True
-    for install_file in install_candidates:
-        f = os.path.join(improvements_dir, install_file[0])
-        improvement_passed = process_improvement(f, extracted)
+    installed_updates = []
+    selected_updates.sort(reverse=True)
+    selected_updates.sort()
+    for update in selected_updates:
+        file_path = download_update(update[1], improvements_dir, megadrive)
+
+        if file_path is None:
+            d.msgbox("Unable to download from mega, please try again later...")
+            main_dialog()
+
+        improvement_passed = process_improvement(file_path, extracted)
         if improvement_passed == True:
-            set_config_value("INSTALLED_UPDATES", install_file[0], str(install_file[1]))
-
+            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+            installed_updates.append(update[0])
+    
         remove_improvements = remove_improvements & improvement_passed
-
+    
         if os.path.exists(extracted):
             if os.path.isdir(extracted):
                 try:
@@ -2083,6 +2082,13 @@ def do_improvements(selected_updates: list, megadrive: str):
         except OSError as e:
             print("Error: %s : %s" % (improvements_dir, e.strerror))
     
+    if len(installed_updates) > 0:
+        reboot_msg = "\n{} of {} selected updates installed, rebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
+        d.pause(reboot_msg, height=10, width=60)
+        restart_es()
+    else:
+        main_dialog()
+
     return
 
 
