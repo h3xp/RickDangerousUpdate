@@ -367,10 +367,8 @@ def get_available_updates(megadrive: str, status=False):
         modified_date = node["ts"]
         if node["t"] == 0:
             if status == True:
-                print("Update \"{}\" found...".format(file_name))
-            file_data = get_file_data(file_id, root_folder)
-            file_size = convert_filesize(file_data["s"])
-            #print("file_name: {}\tfile_id: {}".format(file_name, file_id))
+                #print("Update \"{}\" found...".format(file_name))
+                file_size = convert_filesize(node["s"])
             available_updates.append([file_name, file_id, modified_date, file_size])
 
     return available_updates
