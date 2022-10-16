@@ -326,7 +326,30 @@ def decrypt_node_key(key_str: str, shared_key: str):
     return decrypt_key(encrypted_key, shared_key)
 
 
-def get_available_updates(megadrive):
+def convert_filesize(file_size: str):
+    retval = ""
+    filesize = float(file_size)
+    units = ["KB", "MB", "GB"]
+    unit = "B"
+    count = 0
+    while (filesize) >= 1000:
+        count += 1
+        filesize /= 1024
+
+    if count == 0:
+        retval = str(round(filesize)) + " " + unit
+    elif count == 1:
+        retval = str(round(filesize)) + " " + units[count - 1]
+    else:
+        retval = str(round(filesize, count - 1)) + " " + units[count - 1]
+
+    return retval
+
+
+def get_available_updates(megadrive: str, status=False):
+    if status == True:
+        print()
+        print("Finding availablie updates...")
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -343,8 +366,13 @@ def get_available_updates(megadrive):
         file_id = node["h"]
         modified_date = node["ts"]
         if node["t"] == 0:
+            if status == True:
+                print("Update \"{}\" found...".format(file_name))
+            file_data = get_file_data(file_id, root_folder)
+            file_size = convert_filesize(file_data["s"])
             #print("file_name: {}\tfile_id: {}".format(file_name, file_id))
-            available_updates.append([file_name, file_id, modified_date])
+            available_updates.append([file_name, file_id, modified_date, file_size])
+
     return available_updates
 
 
@@ -1983,13 +2011,13 @@ def official_improvements_dialog():
     check_wrong_permissions()
     reboot_msg = "Updates installed:"
 
-    available_updates = get_available_updates(megadrive)
+    available_updates = get_available_updates(megadrive, status=True)
     available_updates.sort()
 
     menu_choices = []
     for update in available_updates:
         #TO DO: check if update has been installed from config and make True
-        menu_choices.append((update[0], "", not is_update_applied(update[0], update[2])))
+        menu_choices.append(("{} ({})".format(update[0], update[3]), "", not is_update_applied(update[0], update[2])))
 
     code, tags = d.checklist(text="Available Updates",
                              choices=menu_choices,
@@ -2002,7 +2030,7 @@ def official_improvements_dialog():
     if code == d.OK:
         for tag in tags:
             for update in available_updates:
-                if update[0] == tag:
+                if "{} ({})".format(update[0], update[3]) == tag:
                     reboot_msg += "\n" + tag
                     selected_updates.append(update)
                     break
