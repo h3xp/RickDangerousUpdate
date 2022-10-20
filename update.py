@@ -438,7 +438,7 @@ def check_wrong_permissions():
         permissions_dialog()
     else:
         output = runcmd('ls -la /home/pi/.emulationstation/gamelists/retropie | grep " gamelist.xml$" | cut -d \' \' -f3,4')
-        if output.rstrip() != 'pi pi':
+        if "pi" not in output.rstrip():
             permissions_dialog()
 
 
@@ -1960,8 +1960,8 @@ def main_dialog():
         if tag == "1":
             # official_improvements_dialog() is for always forcing downloading
             # improvements_dialog() is for allowing manual side loadinbg
-            #official_improvements_dialog()
-            improvements_dialog()
+            official_improvements_dialog()
+            #improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
