@@ -1948,7 +1948,7 @@ def main_dialog():
         update_available_result - update_available()
 
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Load Improvements"), 
+                    choices=[("1", "Load Improvements"),    
                              ("2", "Fix Known Bugs"),
                              ("3", "Miscellaneous"),
                              ("4", "Installation")],
@@ -1960,8 +1960,8 @@ def main_dialog():
         if tag == "1":
             # official_improvements_dialog() is for always forcing downloading
             # improvements_dialog() is for allowing manual side loadinbg
-            official_improvements_dialog()
-            #improvements_dialog()
+            #official_improvements_dialog()
+            improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
