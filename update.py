@@ -140,13 +140,16 @@ def set_config_value(section: str, key: str, value: str):
             config_file = configparser.ConfigParser()
             config_file.optionxform = str
             config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_section(section):
-                config_file[section][key] = value
+            if config_file.has_section(section) == False:
+                config_file.add_section(section)
 
-                with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                    config_file.write(configfile)
+            config_file[section][key] = value
 
-                    return True
+            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+                config_file.write(configfile)
+
+            return True
+
     return False
 
 
@@ -349,7 +352,7 @@ def convert_filesize(file_size: str):
 def get_available_updates(megadrive: str, status=False):
     if status == True:
         print()
-        print("Finding availablie updates...")
+        print("Finding available updates...")
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -366,9 +369,7 @@ def get_available_updates(megadrive: str, status=False):
         file_id = node["h"]
         modified_date = node["ts"]
         if node["t"] == 0:
-            if status == True:
-                #print("Update \"{}\" found...".format(file_name))
-                file_size = convert_filesize(node["s"])
+            file_size = convert_filesize(node["s"])
             available_updates.append([file_name, file_id, modified_date, file_size])
 
     return available_updates
@@ -1796,12 +1797,13 @@ def process_manual_updates(path: str, delete: bool):
     for file in files:
         for update in available_updates:
             if update[0] == os.path.basename(file):
-                if process_improvement(file, extracted) == True:
-                    if delete == True:
-                        os.remove(file)
+                if update[3] == convert_filesize(os.path.getsize(file)):
+                    if process_improvement(file, extracted) == True:
+                        if delete == True:
+                            os.remove(file)
 
-                    set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
-                break
+                        set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+                    break
 
     if os.path.isdir(path):
         if delete == True:
@@ -1958,8 +1960,8 @@ def main_dialog():
         if tag == "1":
             # official_improvements_dialog() is for always forcing downloading
             # improvements_dialog() is for allowing manual side loadinbg
-            official_improvements_dialog()
-            #improvements_dialog()
+            #official_improvements_dialog()
+            improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
@@ -2048,6 +2050,39 @@ def official_improvements_dialog():
     return
 
 
+def update_config(extracted: str):
+    tmp_config = Path(extracted, "home", "pi", ".update_tool", "update_tool.ini")
+    ini_file = "/home/pi/.update_tool/update_tool.ini"
+    if not os.path.exists(tmp_config):
+        return
+    if not os.path.exists(ini_file):
+        return
+
+    new_config = configparser.ConfigParser()
+    new_config.optionxform = str
+    config_file = configparser.ConfigParser()
+    config_file.optionxform = str
+
+    new_config.read(tmp_config)
+    config_file.read(ini_file)
+
+    for section in new_config.sections():
+        if len(new_config[section]) > 0:
+            if config_file.has_section(section):
+                config_file.remove_section(section)
+
+            config_file.add_section(section)
+            for key in new_config[section]:
+                config_file[section][key] = str(new_config[section][key]).strip()
+
+    with open(ini_file, 'w') as configfile:
+        config_file.write(configfile)
+
+    os.remove(tmp_config)
+
+    return
+
+
 def process_improvement(file: str, extracted: str):
     print("Processing official update: {}...".format(os.path.basename(file)))
     with zipfile.ZipFile(file, 'r') as zip_ref:
@@ -2056,6 +2091,7 @@ def process_improvement(file: str, extracted: str):
     if check_root(extracted):
         os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
 
+    update_config(extracted)
     make_deletions(extracted)
     merge_gamelist(extracted)
     copydir(extracted, "/")
