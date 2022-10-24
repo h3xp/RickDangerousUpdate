@@ -1778,11 +1778,9 @@ def gamelist_utilities_dialog():
     return
 
 
-def process_manual_updates(path: str, delete: bool):
+def get_manual_updates(path: str, available_updates: list):
     files = []
-    megadrive = check_drive()
-    available_updates = get_available_updates(megadrive)
-    extracted = Path("/", "tmp", "extracted")
+    manual_updates = []
 
     if os.path.isfile(path) == True:
         if os.path.splitext(path)[1] == ".zip":
@@ -1798,12 +1796,21 @@ def process_manual_updates(path: str, delete: bool):
         for update in available_updates:
             if update[0] == os.path.basename(file):
                 if update[3] == convert_filesize(os.path.getsize(file)):
-                    if process_improvement(file, extracted) == True:
-                        if delete == True:
-                            os.remove(file)
+                    manual_updates.append(update)
+    
+    return manual_updates
 
-                        set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
-                    break
+
+def process_manual_updates(path: str, updates: list, delete=False):
+    extracted = Path("/", "tmp", "extracted")
+
+    for update in updates:
+        file = os.path.join(path, update[0])
+        if process_improvement(file, extracted) == True:
+            if delete == True:
+                os.remove(file)
+
+            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
 
     if os.path.isdir(path):
         if delete == True:
@@ -1840,7 +1847,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
-            process_manual_updates(path, delete)
+            official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path!")
             path = get_valid_path_portion(path)
@@ -2006,12 +2013,15 @@ def check_root(directory):
     return False
 
 
-def official_improvements_dialog():
+def official_improvements_dialog(update_dir=None, delete=False):
     megadrive = check_drive()
     check_wrong_permissions()
     reboot_msg = "Updates installed:"
 
     available_updates = get_available_updates(megadrive, status=True)
+    if update_dir is not None:
+        available_updates = get_manual_updates(update_dir, available_updates)
+
     available_updates.sort()
 
     menu_choices = []
@@ -2044,7 +2054,10 @@ def official_improvements_dialog():
 
     if len(selected_updates) > 0:
         print()
-        do_improvements(selected_updates, megadrive)
+        if update_dir is None:
+            do_improvements(selected_updates, megadrive)
+        else:
+            process_manual_updates(update_dir, selected_updates, delete)
         #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
 
     return
