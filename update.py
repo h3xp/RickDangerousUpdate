@@ -817,6 +817,8 @@ def parse_m3u_file(m3u_file: str, system_rom_directory: str):
         for line in m3ufile:
             if len(line.strip()) == 0:
                 continue
+            if line.strip()[0:1] == "#":
+                continue
             files.append(os.path.join(system_rom_directory, line.strip()))
 
     return files
@@ -2017,6 +2019,9 @@ def official_improvements_dialog(update_dir=None, delete=False):
     megadrive = check_drive()
     check_wrong_permissions()
     reboot_msg = "Updates installed:"
+    title_msg  = "Download and Install Official Updates"
+    if update_dir is not None:
+        title_msg  = "Manually Install Official Updates"
 
     available_updates = get_available_updates(megadrive, status=True)
     if update_dir is not None:
@@ -2034,7 +2039,7 @@ def official_improvements_dialog(update_dir=None, delete=False):
                              ok_label="Apply Selected", 
                              extra_button=True, 
                              extra_label="Apply All", 
-                             title="Download and Install Official Updates")
+                             title=title_msg)
 
     selected_updates = []
     if code == d.OK:
