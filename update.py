@@ -1479,12 +1479,14 @@ def count_games(system: str, games: list):
     for src_game in src_root.iter("game"):
         game = src_game.find("name")
         if game.text is not None:
-            games_list.append(game.text)
-            count += 1
+            path = src_game.find("path")
+            if path.text is not None:
+                games_list.append((game.text.strip(), path.text.strip()))
+                count += 1
 
     games_list.sort()
     for list_game in games_list:
-        games.append((system, list_game))
+        games.append((system, list_game[0], list_game[1].replace("./", "")))
 
     return count
 
@@ -1515,7 +1517,7 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
             f.write(systems_text)
 
         for game in games:
-            games_text += "{}\t{}\n".format(game[0], game[1])
+            games_text += "{}\t{}\t{}\n".format(game[0], game[1], game[2])
         with open("/home/pi/.update_tool/games_list.txt", 'w', encoding='utf-8') as f:
             f.write(games_text)
 
