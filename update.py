@@ -1496,7 +1496,7 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     systems_text = ""
     total_count = 0
     games = []
-    games_text = "system\tgame\n"
+    games_text = "system\tgame\tpath\n"
     for system in systems:
         for single_system in system.split("/"):
             system_count = count_games(single_system, games)
