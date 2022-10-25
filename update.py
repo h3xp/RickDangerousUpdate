@@ -235,7 +235,7 @@ def download_file(file_handle,
         mac_encryptor = AES.new(k_str, AES.MODE_CBC,
                                 mac_str.encode("utf8"))
         iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
-
+        i = None
         for chunk_start, chunk_size in get_chunks(file_size):
             percent_complete = round(((chunk_start + chunk_size) / file_size) * 100)
             print("\t{}% complete: [{}>{}]".format(percent_complete if percent_complete < 100 else 99, "="*percent_complete, " "*(99 - percent_complete)), end = "\r")
@@ -375,7 +375,7 @@ def get_available_updates(megadrive: str, status=False):
     return available_updates
 
 
-def download_update(ID, destdir, megadrive):
+def download_update(ID, destdir, megadrive, size):
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -389,7 +389,7 @@ def download_update(ID, destdir, megadrive):
         attrs = decrypt_attr(base64_url_decode(node["a"]), k)
         file_id = node["h"]
         if file_id == ID:
-            print("Downloading: {}...".format(attrs["n"]))
+            print("Downloading: {} ({})...".format(attrs["n"], size))
             file_data = get_file_data(file_id, root_folder)
             file_path = download_file(file_id, key, file_data, str(destdir))
 
@@ -2028,6 +2028,23 @@ def check_root(directory):
     return False
 
 
+def sort_official_updates(updates: list):
+    dict_updates = {}
+    retval = []
+
+    for update in updates:
+        segments = update[0].split(" ")
+        for segment in segments:
+            if segment.isdigit():
+                dict_updates[int(segment)] = update
+                break
+
+    for dict_update in sorted(dict_updates.keys()):
+        retval.append(dict_updates[dict_update])
+
+    return retval
+
+
 def official_improvements_dialog(update_dir=None, delete=False):
     megadrive = check_drive()
     check_wrong_permissions()
@@ -2040,7 +2057,8 @@ def official_improvements_dialog(update_dir=None, delete=False):
     if update_dir is not None:
         available_updates = get_manual_updates(update_dir, available_updates)
 
-    available_updates.sort()
+    #available_updates.sort()
+    available_updates = sort_official_updates(available_updates)
 
     menu_choices = []
     for update in available_updates:
@@ -2149,11 +2167,11 @@ def do_improvements(selected_updates: list, megadrive: str):
     selected_updates.sort(reverse=True)
     selected_updates.sort()
     for update in selected_updates:
-        file_path = download_update(update[1], improvements_dir, megadrive)
+        file_path = download_update(update[1], improvements_dir, megadrive, update[3])
 
         if file_path is None:
             d.msgbox("Unable to download from mega, please try again later...")
-            main_dialog()
+            break
 
         improvement_passed = process_improvement(file_path, extracted)
         if improvement_passed == True:
