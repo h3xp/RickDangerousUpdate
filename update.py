@@ -848,14 +848,14 @@ def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTr
         for file in bad_files:
             log_this(log_file, "-m3u entry \"{}\" not found for m3u file \"{}\"".format(file, os.path.basename(m3u_file)))
 
-        return False
+        return good_files
     else:
         for file in good_files:
             if file in m3u_files:
                 index = m3u_files.index(os.path.basename(file))
                 del m3u_files[index]
 
-    return True
+    return bad_files
 
 
 def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, found_files: list, log_file: str, clean=False):
@@ -937,6 +937,8 @@ def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, dir_ba
             log_this(log_file, "-{} orphaned {} file: \"{}\"".format(process, file_type, file_path))
             if clean == True:
                 #os.remove(file_path)
+                if not os.path.exists(dir_backup):
+                    os.makedirs(dir_backup)
                 shutil.move(file_path, dir_backup)
 
     return
@@ -1042,6 +1044,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     snaps_types = [".mp4"]
     do_not_delete = ["neogeo.zip"]
     no_m3u_spport = ["atari800"]
+    bad_m3us = {}
 
     if clean == True and not gamelist_roms_dir == rom_dir:
         d.msgbox("We do not clean from alternate gamelist.xml files")
@@ -1149,7 +1152,10 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
                     if rom_file in rom_files:
                         keep_rom = True
                         if os.path.splitext(rom_file)[1] == ".m3u":
-                            keep_rom &= process_m3u_file(rom_path, src_game, src_tree, system_roms, m3u_files, log_file)
+                            bad_files = process_m3u_file(rom_path, src_game, src_tree, system_roms, m3u_files, log_file)
+                            if len(bad_files) > 0:
+                                keep_rom = False
+                                bad_m3us[rom_file] = bad_files
                         if os.path.splitext(rom_file)[1] == ".cue":
                             keep_rom &= process_cue_file(rom_path, src_game, src_tree, system_roms, rom_files, log_file)
                         if keep_rom == True:
@@ -1203,6 +1209,13 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
                 else:
                     log_this(log_file, "-overridden: removing gamelist.xml entry for {}".format(rom_file))
                     log_this(log_file, ET.tostring(parent).decode())
+                    #remove good files in bad m3u file from orphans
+                    if rom_file in bad_m3us:
+                        bad_files = bad_m3us[rom_file]
+                        for bad_file in bad_files:
+                            if bad_file in m3u_files:
+                                index = m3u_files.index(os.path.basename(bad_file))
+                                del m3u_files[index]
             else:
                 indent(parent, "\t")
                 log_this(log_file, "-clean would potentially (unless overridden) remove gamelist.xml entry for {}".format(rom_file))
