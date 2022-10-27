@@ -1821,9 +1821,11 @@ def get_manual_updates(path: str, available_updates: list):
 def process_manual_updates(path: str, updates: list, delete=False):
     extracted = Path("/", "tmp", "extracted")
 
+    applied_updates = 0
     for update in updates:
         file = os.path.join(path, update[0])
         if process_improvement(file, extracted) == True:
+            applied_updates += 0
             if delete == True:
                 os.remove(file)
 
@@ -1834,7 +1836,8 @@ def process_manual_updates(path: str, updates: list, delete=False):
             if len(os.listdir(path)) == 0:
                 shutil.rmtree(path)
 
-    reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
+    d.msgbox("{} of {} selected manual updates installed.".format(applied_updates, len(updates)))
+    reboot_msg = "\nRebooting in 5 seconds!\n"
     d.pause(reboot_msg, height=10, width=60)
     restart_es()
 
@@ -2195,8 +2198,9 @@ def do_improvements(selected_updates: list, megadrive: str):
         except OSError as e:
             print("Error: %s : %s" % (improvements_dir, e.strerror))
     
+    d.msgbox("{} of {} selected updates installed.".format(len(installed_updates), len(selected_updates)))
     if len(installed_updates) > 0:
-        reboot_msg = "\n{} of {} selected updates installed, rebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
+        reboot_msg = "\nRebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
         d.pause(reboot_msg, height=10, width=60)
         restart_es()
     else:
