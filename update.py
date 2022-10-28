@@ -1825,7 +1825,7 @@ def process_manual_updates(path: str, updates: list, delete=False):
     for update in updates:
         file = os.path.join(path, update[0])
         if process_improvement(file, extracted) == True:
-            applied_updates += 0
+            applied_updates += 1
             if delete == True:
                 os.remove(file)
 
@@ -1836,7 +1836,7 @@ def process_manual_updates(path: str, updates: list, delete=False):
             if len(os.listdir(path)) == 0:
                 shutil.rmtree(path)
 
-    d.msgbox("{} of {} selected manual updates installed.".format(applied_updates, len(updates)))
+    d.msgbox("{} of {} selected manual updates installed.".format(str(applied_updates), len(updates)))
     reboot_msg = "\nRebooting in 5 seconds!\n"
     d.pause(reboot_msg, height=10, width=60)
     restart_es()
