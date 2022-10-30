@@ -71,7 +71,7 @@ your retropie. Therefore, use this at your own risk.
 ## Improvements
 
 This is the "main" feature and reason to create this tool. 
-This will allow you to easily select single or multiple updates from a mega drive.
+This will allow you to easily select single or multiple updates to process, either; to download from a mega drive directory, or previously downloaded to a directory on the pi.
 
 ## Fix known bugs
 
@@ -112,7 +112,7 @@ Gamelist Utilities provide a lot of functions to clean up and work with your gam
 - Remove Check/Clean Game List Logs - Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
 - Manually Select Genres - Allows you to manually select official Rick Dangerous genres for roms that you have added manually, and add them to the correct collections.
 - Realign Genre Collections - Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
-- Count of Games: Drops a counts.txt files, so you can easily validate against official game counts, it also displays it.
+- Count of Games: Displays the total game count within gamelist.xml files from selected systems. When you count all systems this will also drop a counts.txt file and a games_list.txt file, so you can easily validate against official game counts and view a comprehensive listing of all games.
 
 
 ## Installation

@@ -140,13 +140,16 @@ def set_config_value(section: str, key: str, value: str):
             config_file = configparser.ConfigParser()
             config_file.optionxform = str
             config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_section(section):
-                config_file[section][key] = value
+            if config_file.has_section(section) == False:
+                config_file.add_section(section)
 
-                with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                    config_file.write(configfile)
+            config_file[section][key] = value
 
-                    return True
+            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+                config_file.write(configfile)
+
+            return True
+
     return False
 
 
@@ -232,7 +235,7 @@ def download_file(file_handle,
         mac_encryptor = AES.new(k_str, AES.MODE_CBC,
                                 mac_str.encode("utf8"))
         iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
-
+        i = None
         for chunk_start, chunk_size in get_chunks(file_size):
             percent_complete = round(((chunk_start + chunk_size) / file_size) * 100)
             print("\t{}% complete: [{}>{}]".format(percent_complete if percent_complete < 100 else 99, "="*percent_complete, " "*(99 - percent_complete)), end = "\r")
@@ -245,6 +248,10 @@ def download_file(file_handle,
             for i in range(0, len(chunk) - 16, 16):
                 block = chunk[i:i + 16]
                 encryptor.encrypt(block)
+
+            # fix for mega limit
+            if i is None:
+                return None
 
             # fix for files under 16 bytes failing
             if file_size > 16:
@@ -322,7 +329,30 @@ def decrypt_node_key(key_str: str, shared_key: str):
     return decrypt_key(encrypted_key, shared_key)
 
 
-def get_available_updates(megadrive):
+def convert_filesize(file_size: str):
+    retval = ""
+    filesize = float(file_size)
+    units = ["KB", "MB", "GB"]
+    unit = "B"
+    count = 0
+    while (filesize) >= 1000:
+        count += 1
+        filesize /= 1024
+
+    if count == 0:
+        retval = str(round(filesize)) + " " + unit
+    elif count == 1:
+        retval = str(round(filesize)) + " " + units[count - 1]
+    else:
+        retval = str(round(filesize, count - 1)) + " " + units[count - 1]
+
+    return retval
+
+
+def get_available_updates(megadrive: str, status=False):
+    if status == True:
+        print()
+        print("Finding available updates...")
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -339,12 +369,13 @@ def get_available_updates(megadrive):
         file_id = node["h"]
         modified_date = node["ts"]
         if node["t"] == 0:
-            #print("file_name: {}\tfile_id: {}".format(file_name, file_id))
-            available_updates.append([file_name, file_id, modified_date])
+            file_size = convert_filesize(node["s"])
+            available_updates.append([file_name, file_id, modified_date, file_size])
+
     return available_updates
 
 
-def download_update(ID, destdir, megadrive):
+def download_update(ID, destdir, megadrive, size):
     (root_folder, shared_enc_key) = parse_folder_url(megadrive)
     shared_key = base64_to_a32(shared_enc_key)
     nodes = get_nodes_in_shared_folder(root_folder)
@@ -358,9 +389,11 @@ def download_update(ID, destdir, megadrive):
         attrs = decrypt_attr(base64_url_decode(node["a"]), k)
         file_id = node["h"]
         if file_id == ID:
-            print("Downloading: {}...".format(attrs["n"]))
+            print("Downloading: {} ({})...".format(attrs["n"], size))
             file_data = get_file_data(file_id, root_folder)
-            download_file(file_id, key, file_data, str(destdir))
+            file_path = download_file(file_id, key, file_data, str(destdir))
+
+    return file_path
 
 
 def cls():
@@ -405,7 +438,7 @@ def check_wrong_permissions():
         permissions_dialog()
     else:
         output = runcmd('ls -la /home/pi/.emulationstation/gamelists/retropie | grep " gamelist.xml$" | cut -d \' \' -f3,4')
-        if output.rstrip() != 'pi pi':
+        if "pi" not in output.rstrip():
             permissions_dialog()
 
 
@@ -784,6 +817,8 @@ def parse_m3u_file(m3u_file: str, system_rom_directory: str):
         for line in m3ufile:
             if len(line.strip()) == 0:
                 continue
+            if line.strip()[0:1] == "#":
+                continue
             files.append(os.path.join(system_rom_directory, line.strip()))
 
     return files
@@ -813,14 +848,14 @@ def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTr
         for file in bad_files:
             log_this(log_file, "-m3u entry \"{}\" not found for m3u file \"{}\"".format(file, os.path.basename(m3u_file)))
 
-        return False
+        return good_files
     else:
         for file in good_files:
             if file in m3u_files:
                 index = m3u_files.index(os.path.basename(file))
                 del m3u_files[index]
 
-    return True
+    return bad_files
 
 
 def process_supporting_files(src_game: ET.Element, src_name: str, subelement_name: str, system_roms: str, rom_file: str, supporting_files_dir_name: str, supporting_files_dir: str, supporting_files_types: list, supporting_files: list, found_files: list, log_file: str, clean=False):
@@ -884,9 +919,9 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
 
     # delete validated files
     if len(file) > 0:
+        if file not in found_files:
+            found_files.append(file)
         if file in supporting_files:
-            if file not in found_files:
-                found_files.append(file)
             index = supporting_files.index(file)
             del supporting_files[index]
 
@@ -902,13 +937,15 @@ def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, dir_ba
             log_this(log_file, "-{} orphaned {} file: \"{}\"".format(process, file_type, file_path))
             if clean == True:
                 #os.remove(file_path)
+                if not os.path.exists(dir_backup):
+                    os.makedirs(dir_backup)
                 shutil.move(file_path, dir_backup)
 
     return
 
 
 def delete_gamelist_entry_dialog(rom: str):
-    code = d.yesno("Gamelist entry for {} has invalid rom entries, would you like to remove it from your gamelist.xml?".format(rom))
+    code = d.yesno("Gamelist entry for \"{}\" has invalid rom entries (rom files or multi disk files defined in .m3u or .cue file can not be found).\nWould you like to remove it from your gamelist.xml?".format(rom))
 
     if code == d.OK:
         return True
@@ -1007,6 +1044,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     snaps_types = [".mp4"]
     do_not_delete = ["neogeo.zip"]
     no_m3u_spport = ["atari800"]
+    bad_m3us = {}
 
     if clean == True and not gamelist_roms_dir == rom_dir:
         d.msgbox("We do not clean from alternate gamelist.xml files")
@@ -1097,6 +1135,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
         src_name_node = src_game.find("name")
         if src_name_node is not None:
             src_name = src_name_node.text
+            print(src_name)
 
         # get rom file
         src_node = src_game.find("path")
@@ -1113,7 +1152,10 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
                     if rom_file in rom_files:
                         keep_rom = True
                         if os.path.splitext(rom_file)[1] == ".m3u":
-                            keep_rom &= process_m3u_file(rom_path, src_game, src_tree, system_roms, m3u_files, log_file)
+                            bad_files = process_m3u_file(rom_path, src_game, src_tree, system_roms, m3u_files, log_file)
+                            if len(bad_files) > 0:
+                                keep_rom = False
+                                bad_m3us[rom_file] = bad_files
                         if os.path.splitext(rom_file)[1] == ".cue":
                             keep_rom &= process_cue_file(rom_path, src_game, src_tree, system_roms, rom_files, log_file)
                         if keep_rom == True:
@@ -1167,6 +1209,13 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
                 else:
                     log_this(log_file, "-overridden: removing gamelist.xml entry for {}".format(rom_file))
                     log_this(log_file, ET.tostring(parent).decode())
+                    #remove good files in bad m3u file from orphans
+                    if rom_file in bad_m3us:
+                        bad_files = bad_m3us[rom_file]
+                        for bad_file in bad_files:
+                            if bad_file in m3u_files:
+                                index = m3u_files.index(os.path.basename(bad_file))
+                                del m3u_files[index]
             else:
                 indent(parent, "\t")
                 log_this(log_file, "-clean would potentially (unless overridden) remove gamelist.xml entry for {}".format(rom_file))
@@ -1194,7 +1243,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
 
     # clean snaps
     if del_snaps == True:
-        process_orphaned_files(snaps_files, system_snaps, backup_snaps, log_file, "video", clean=clean)
+        process_orphaned_files(snaps_files, system_snaps, log_file, backup_snaps, "video", clean=clean)
 
     # clean m3u
     if del_m3u == True:
@@ -1418,8 +1467,9 @@ def do_gamelist_genres(systems: list):
     return
 
 
-def count_games(system: str):
+def count_games(system: str, games: list):
     count = 0    
+    games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
 
@@ -1427,7 +1477,16 @@ def count_games(system: str):
     src_root = src_tree.getroot()
 
     for src_game in src_root.iter("game"):
-        count += 1
+        game = src_game.find("name")
+        if game.text is not None:
+            path = src_game.find("path")
+            if path.text is not None:
+                games_list.append((game.text.strip(), path.text.strip()))
+                count += 1
+
+    games_list.sort()
+    for list_game in games_list:
+        games.append((system, list_game[0], list_game[1].replace("./", "")))
 
     return count
 
@@ -1436,9 +1495,11 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     systems.sort()
     systems_text = ""
     total_count = 0
+    games = []
+    games_text = "system\tgame\tpath\n"
     for system in systems:
         for single_system in system.split("/"):
-            system_count = count_games(single_system)
+            system_count = count_games(single_system, games)
             total_count += system_count
             systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
 
@@ -1449,9 +1510,16 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
         display_text = ("This utility only counts systems defined in es_systems.cfg.\n"
                         "At the time of the creation of this utility Kodi and Steam were the only two items that weren't.\n"
                         "To match your EmulationStation game count add 2 (1 for Kodi, 1 for Steam) to the total.\n\n"
-                        "You have chosen to count all systems, a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
-    with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
-        f.write(systems_text)
+                        "Because you have chosen to count all systems:\n"
+                        "\t-a compiled list af all games, by system, is located in /home/pi/.update_tool/games_list.txt for your reference.\n"
+                        "\t-a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
+        with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
+            f.write(systems_text)
+
+        for game in games:
+            games_text += "{}\t{}\t{}\n".format(game[0], game[1], game[2])
+        with open("/home/pi/.update_tool/games_list.txt", 'w', encoding='utf-8') as f:
+            f.write(games_text)
 
     d.msgbox(display_text)
 
@@ -1727,11 +1795,9 @@ def gamelist_utilities_dialog():
     return
 
 
-def process_manual_updates(path: str, delete: bool):
+def get_manual_updates(path: str, available_updates: list):
     files = []
-    megadrive = check_drive()
-    available_updates = get_available_updates(megadrive)
-    extracted = Path("/", "tmp", "extracted")
+    manual_updates = []
 
     if os.path.isfile(path) == True:
         if os.path.splitext(path)[1] == ".zip":
@@ -1746,19 +1812,32 @@ def process_manual_updates(path: str, delete: bool):
     for file in files:
         for update in available_updates:
             if update[0] == os.path.basename(file):
-                if process_improvement(file, extracted) == True:
-                    if delete == True:
-                        os.remove(file)
+                if update[3] == convert_filesize(os.path.getsize(file)):
+                    manual_updates.append(update)
+    
+    return manual_updates
 
-                    set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
-                break
+
+def process_manual_updates(path: str, updates: list, delete=False):
+    extracted = Path("/", "tmp", "extracted")
+
+    applied_updates = 0
+    for update in updates:
+        file = os.path.join(path, update[0])
+        if process_improvement(file, extracted) == True:
+            applied_updates += 1
+            if delete == True:
+                os.remove(file)
+
+            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
 
     if os.path.isdir(path):
         if delete == True:
             if len(os.listdir(path)) == 0:
                 shutil.rmtree(path)
 
-    reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
+    d.msgbox("{} of {} selected manual updates installed.".format(str(applied_updates), len(updates)))
+    reboot_msg = "\nRebooting in 5 seconds!\n"
     d.pause(reboot_msg, height=10, width=60)
     restart_es()
 
@@ -1788,7 +1867,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
-            process_manual_updates(path, delete)
+            official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path!")
             path = get_valid_path_portion(path)
@@ -1812,15 +1891,15 @@ def downloaded_update_question_dialog():
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
                          "\nThis will process the .zip file(s)?"
                          "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                         "\n\nSelecting \"Yes\" will delete the .zip files and directories once the process is complete."
-                         "\nSelecting \"No\" will leave the .zip files and directories once the process is complete."
-                         "\n\nWould you like to remove .zip files and directories?")
+                         "\n\nSelecting \"Keep\" will keep the .zip files and directories once the process is complete."
+                         "\nSelecting \"Delete\" will delete the .zip files and directories once the process is complete."
+                         "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
 
     if code == d.OK:
-        manual_updates_dialog("/", True)
+        manual_updates_dialog("/", False)
 
     if code == d.CANCEL:
-        manual_updates_dialog("/", False)
+        manual_updates_dialog("/", True)
 
     return
 
@@ -1896,7 +1975,7 @@ def main_dialog():
         update_available_result - update_available()
 
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Load Improvements"), 
+                    choices=[("1", "Load Improvements"),    
                              ("2", "Fix Known Bugs"),
                              ("3", "Miscellaneous"),
                              ("4", "Installation")],
@@ -1906,7 +1985,10 @@ def main_dialog():
     
     if code == d.OK:
         if tag == "1":
-            official_improvements_dialog()
+            # official_improvements_dialog() is for always forcing downloading
+            # improvements_dialog() is for allowing manual side loadinbg
+            #official_improvements_dialog()
+            improvements_dialog()
         elif tag == "2":
             bugs_dialog()
         elif tag == "3":
@@ -1951,31 +2033,60 @@ def check_root(directory):
     return False
 
 
-def official_improvements_dialog():
+def sort_official_updates(updates: list):
+    dict_updates = {}
+    retval = []
+
+    for update in updates:
+        segments = update[0].split(" ")
+        for segment in segments:
+            if segment.isdigit():
+                dict_updates[int(segment)] = update
+                break
+
+    for dict_update in sorted(dict_updates.keys()):
+        retval.append(dict_updates[dict_update])
+
+    return retval
+
+
+def official_improvements_dialog(update_dir=None, delete=False):
     megadrive = check_drive()
     check_wrong_permissions()
     reboot_msg = "Updates installed:"
+    title_msg  = "Download and Install Official Updates"
+    if update_dir is not None:
+        title_msg  = "Manually Install Official Updates"
 
-    available_updates = get_available_updates(megadrive)
-    available_updates.sort()
+    available_updates = get_available_updates(megadrive, status=True)
+    if update_dir is not None:
+        available_updates = get_manual_updates(update_dir, available_updates)
+
+    if len(available_updates) == 0:
+        d.msgbox("No updates available.")
+        cls()
+        main_dialog()
+        
+    #available_updates.sort()
+    available_updates = sort_official_updates(available_updates)
 
     menu_choices = []
     for update in available_updates:
         #TO DO: check if update has been installed from config and make True
-        menu_choices.append((update[0], "", not is_update_applied(update[0], update[2])))
+        menu_choices.append(("{} ({})".format(update[0], update[3]), "", not is_update_applied(update[0], update[2])))
 
     code, tags = d.checklist(text="Available Updates",
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
                              extra_label="Apply All", 
-                             title="Download and Install Official Updates")
+                             title=title_msg)
 
     selected_updates = []
     if code == d.OK:
         for tag in tags:
             for update in available_updates:
-                if update[0] == tag:
+                if "{} ({})".format(update[0], update[3]) == tag:
                     reboot_msg += "\n" + tag
                     selected_updates.append(update)
                     break
@@ -1989,11 +2100,44 @@ def official_improvements_dialog():
 
     if len(selected_updates) > 0:
         print()
-        do_improvements(selected_updates, megadrive)
+        if update_dir is None:
+            do_improvements(selected_updates, megadrive)
+        else:
+            process_manual_updates(update_dir, selected_updates, delete)
         #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
-        reboot_msg = "\nUpdates installed, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+
+    return
+
+
+def update_config(extracted: str):
+    tmp_config = Path(extracted, "home", "pi", ".update_tool", "update_tool.ini")
+    ini_file = "/home/pi/.update_tool/update_tool.ini"
+    if not os.path.exists(tmp_config):
+        return
+    if not os.path.exists(ini_file):
+        return
+
+    new_config = configparser.ConfigParser()
+    new_config.optionxform = str
+    config_file = configparser.ConfigParser()
+    config_file.optionxform = str
+
+    new_config.read(tmp_config)
+    config_file.read(ini_file)
+
+    for section in new_config.sections():
+        if len(new_config[section]) > 0:
+            if config_file.has_section(section):
+                config_file.remove_section(section)
+
+            config_file.add_section(section)
+            for key in new_config[section]:
+                config_file[section][key] = str(new_config[section][key]).strip()
+
+    with open(ini_file, 'w') as configfile:
+        config_file.write(configfile)
+
+    os.remove(tmp_config)
 
     return
 
@@ -2006,6 +2150,7 @@ def process_improvement(file: str, extracted: str):
     if check_root(extracted):
         os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
 
+    update_config(extracted)
     make_deletions(extracted)
     merge_gamelist(extracted)
     copydir(extracted, "/")
@@ -2027,28 +2172,24 @@ def do_improvements(selected_updates: list, megadrive: str):
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
 
-    for update in selected_updates:
-        download_update(update[1], improvements_dir, megadrive)
-
-    install_candidates = []
-    for filename in os.listdir(improvements_dir):
-        f = os.path.join(improvements_dir, filename)
-        if os.path.isfile(f):
-            if f.endswith(".zip"):
-                for update in selected_updates:
-                    if update[0] == filename:
-                        install_candidates.append((update[0], update[2]))
-    #install_candidates.sort()
-    install_candidates.sort(key = lambda x: x[0])
     remove_improvements = True
-    for install_file in install_candidates:
-        f = os.path.join(improvements_dir, install_file[0])
-        improvement_passed = process_improvement(f, extracted)
+    installed_updates = []
+    selected_updates.sort(reverse=True)
+    selected_updates.sort()
+    for update in selected_updates:
+        file_path = download_update(update[1], improvements_dir, megadrive, update[3])
+
+        if file_path is None:
+            d.msgbox("Unable to download from mega, please try again later...")
+            break
+
+        improvement_passed = process_improvement(file_path, extracted)
         if improvement_passed == True:
-            set_config_value("INSTALLED_UPDATES", install_file[0], str(install_file[1]))
-
+            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+            installed_updates.append(update[0])
+    
         remove_improvements = remove_improvements & improvement_passed
-
+    
         if os.path.exists(extracted):
             if os.path.isdir(extracted):
                 try:
@@ -2062,6 +2203,14 @@ def do_improvements(selected_updates: list, megadrive: str):
         except OSError as e:
             print("Error: %s : %s" % (improvements_dir, e.strerror))
     
+    d.msgbox("{} of {} selected updates installed.".format(len(installed_updates), len(selected_updates)))
+    if len(installed_updates) > 0:
+        reboot_msg = "\nRebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
+        d.pause(reboot_msg, height=10, width=60)
+        restart_es()
+    else:
+        main_dialog()
+
     return
 
 
