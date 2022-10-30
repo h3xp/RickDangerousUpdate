@@ -2062,6 +2062,11 @@ def official_improvements_dialog(update_dir=None, delete=False):
     if update_dir is not None:
         available_updates = get_manual_updates(update_dir, available_updates)
 
+    if len(available_updates) == 0:
+        d.msgbox("No updates available.")
+        cls()
+        main_dialog()
+        
     #available_updates.sort()
     available_updates = sort_official_updates(available_updates)
 
