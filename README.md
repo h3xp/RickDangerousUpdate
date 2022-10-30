@@ -71,7 +71,7 @@ your retropie. Therefore, use this at your own risk.
 ## Improvements
 
 This is the "main" feature and reason to create this tool. 
-This will allow you to easily select single or multiple updates; either to download from a mega drive, or process updates previously downloaded from a directory on the pi.
+This will allow you to easily select single or multiple updates to process, either; to download from a mega drive directory, or previously downloaded to a directory on the pi.
 
 ## Fix known bugs
 
