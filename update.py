@@ -1891,15 +1891,15 @@ def downloaded_update_question_dialog():
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
                          "\nThis will process the .zip file(s)?"
                          "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                         "\n\nSelecting \"Yes\" will delete the .zip files and directories once the process is complete."
-                         "\nSelecting \"No\" will leave the .zip files and directories once the process is complete."
-                         "\n\nWould you like to remove .zip files and directories?")
+                         "\n\nSelecting \"Keep\" will keep the .zip files and directories once the process is complete."
+                         "\nSelecting \"Delete\" will delete the .zip files and directories once the process is complete."
+                         "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
 
     if code == d.OK:
-        manual_updates_dialog("/", True)
+        manual_updates_dialog("/", False)
 
     if code == d.CANCEL:
-        manual_updates_dialog("/", False)
+        manual_updates_dialog("/", True)
 
     return
 
