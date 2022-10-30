@@ -112,7 +112,7 @@ Gamelist Utilities provide a lot of functions to clean up and work with your gam
 - Remove Check/Clean Game List Logs - Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
 - Manually Select Genres - Allows you to manually select official Rick Dangerous genres for roms that you have added manually, and add them to the correct collections.
 - Realign Genre Collections - Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
-- Count of Games: Displays the total game count within gamelist.xml files from selected systems. When you count all systems this will also drop a counts.txt files and a games_list.txt so you can easily validate against official game counts and view a comprehensive listing of all games.
+- Count of Games: Displays the total game count within gamelist.xml files from selected systems. When you count all systems this will also drop a counts.txt file and a games_list.txt file, so you can easily validate against official game counts and view a comprehensive listing of all games.
 
 
 ## Installation
