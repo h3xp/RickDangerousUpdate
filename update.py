@@ -1858,15 +1858,6 @@ def get_valid_path_portion(path: str):
     return return_path
 
 
-def save_default_updates_dir_dialog(update_dir: str):
-    code = d.yesno(text="Do you want to make your selection \"" + update_dir + "\" permanently set as default value for the update directory?")
-
-    if code == d.OK:
-        set_config_value("CONFIG_ITEMS", "update_dir", update_dir)
-
-    return
-
-
 def manual_updates_dialog(init_path: str, delete: bool):
     help_text = ("Type the path to directory or file directly into the text entry window."
                   "\nAs you type the directory or file will be highlighted, at this point you can press [Space] to add the highlighted item to the path."
@@ -1876,7 +1867,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
-            save_default_updates_dir_dialog(path)
+            set_config_value("CONFIG_ITEMS", "update_dir", path)
             official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path!")
