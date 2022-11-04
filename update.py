@@ -1858,6 +1858,14 @@ def get_valid_path_portion(path: str):
     return return_path
 
 
+def save_default_updates_dir_dialog(update_dir: str):
+    code = d.yesno(text="Do you want to make your selection \"" + update_dir + "\" permanently set as default value for the update directory?")
+
+    if code == d.OK:
+        set_config_value("CONFIG_ITEMS", "update_dir", update_dir)
+
+    return
+
 
 def manual_updates_dialog(init_path: str, delete: bool):
     help_text = ("Type the path to directory or file directly into the text entry window."
@@ -1868,6 +1876,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
+            save_default_updates_dir_dialog(path)
             official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path!")
@@ -1888,20 +1897,6 @@ def manual_updates_dialog(init_path: str, delete: bool):
     return
 
 
-def get_default_delete_updates():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        delete_updates = get_config_value("CONFIG_ITEMS", "delete_updates")
-        if delete_updates is not None:
-            if delete_updates == "True":
-                return True
-            elif delete_updates == "False":
-                return False
-            else:
-                return None
-
-    return None
-
-
 def get_default_update_dir():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
@@ -1920,18 +1915,13 @@ def downloaded_update_question_dialog():
                         "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
 
     update_dir = get_default_update_dir()
-    delete_updates = get_default_delete_updates()
     
     if os.path.isdir(update_dir) or os.path.isfile(update_dir):
-        if delete_updates is None:
-            if code == d.OK:
-                manual_updates_dialog(update_dir, False)
+        if code == d.OK:
+            manual_updates_dialog(update_dir, False)
 
-            if code == d.CANCEL:
-                manual_updates_dialog(update_dir, True)
-
-        else:
-            manual_updates_dialog(update_dir, delete_updates)
+        if code == d.CANCEL:
+            manual_updates_dialog(update_dir, True)
 
     return
 
