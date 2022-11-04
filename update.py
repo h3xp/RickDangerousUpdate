@@ -1858,7 +1858,22 @@ def get_valid_path_portion(path: str):
     return return_path
 
 
+def get_default_update_dir():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+        if update_dir is not None:
+            return update_dir
+
+    return None
+
+
 def manual_updates_dialog(init_path: str, delete: bool):
+    update_dir = get_default_update_dir()
+    if update_dir is not None:
+        if os.path.isdir(update_dir) or os.path.isfile(update_dir):
+            official_improvements_dialog(update_dir, delete)
+            return
+            
     help_text = ("Type the path to directory or file directly into the text entry window."
                   "\nAs you type the directory or file will be highlighted, at this point you can press [Space] to add the highlighted item to the path."
                   "\n\nIf you are adding a directory to the text entry window, and the path ends with a \"/\", the files in that directory will automatically show in the \"Files\" window."
@@ -1887,7 +1902,24 @@ def manual_updates_dialog(init_path: str, delete: bool):
     return
 
 
+def get_default_delete_updates():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        delete_updates = get_config_value("CONFIG_ITEMS", "delete_updates")
+        if delete_updates is not None:
+            return delete_updates
+
+    return None
+
+
 def downloaded_update_question_dialog():
+    delete_updates = get_default_delete_updates()
+    if delete_updates == "True":
+        manual_updates_dialog("/", True)
+        return
+    elif delete_updates == "False":
+        manual_updates_dialog("/", False)
+        return
+
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
                          "\nThis will process the .zip file(s)?"
                          "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
