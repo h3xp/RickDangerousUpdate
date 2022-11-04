@@ -1858,6 +1858,15 @@ def get_valid_path_portion(path: str):
     return return_path
 
 
+def save_default_updates_dir_dialog(update_dir: str):
+    code = d.yesno(text="Do you want to make your selection \"" + update_dir + "\" permanently set as default value for the update directory?")
+
+    if code == d.OK:
+        set_config_value("CONFIG_ITEMS", "update_dir", update_dir)
+
+    return
+
+
 def manual_updates_dialog(init_path: str, delete: bool):
     help_text = ("Type the path to directory or file directly into the text entry window."
                   "\nAs you type the directory or file will be highlighted, at this point you can press [Space] to add the highlighted item to the path."
@@ -1867,6 +1876,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
+            save_default_updates_dir_dialog(path)
             official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path!")
@@ -1887,21 +1897,34 @@ def manual_updates_dialog(init_path: str, delete: bool):
     return
 
 
+def get_default_update_dir():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+        if update_dir is not None:
+            return update_dir
+
+    return "/"
+
+
 def downloaded_update_question_dialog():
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
-                         "\nThis will process the .zip file(s)?"
-                         "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                         "\n\nSelecting \"Keep\" will keep the .zip files and directories once the process is complete."
-                         "\nSelecting \"Delete\" will delete the .zip files and directories once the process is complete."
-                         "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
+                        "\nThis will process the .zip file(s)?"
+                        "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
+                        "\n\nSelecting \"Keep\" will keep the .zip files and directories once the process is complete."
+                        "\nSelecting \"Delete\" will delete the .zip files and directories once the process is complete."
+                        "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
 
-    if code == d.OK:
-        manual_updates_dialog("/", False)
+    update_dir = get_default_update_dir()
+    
+    if os.path.isdir(update_dir) or os.path.isfile(update_dir):
+        if code == d.OK:
+            manual_updates_dialog(update_dir, False)
 
-    if code == d.CANCEL:
-        manual_updates_dialog("/", True)
+        if code == d.CANCEL:
+            manual_updates_dialog(update_dir, True)
 
     return
+
 
 def improvements_dialog():
     code, tag = d.menu("Load Improvements", 
