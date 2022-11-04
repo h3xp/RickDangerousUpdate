@@ -1367,8 +1367,13 @@ def gamelist_genres_dialog(system: str, game: dict, elem: ET.Element):
     dialog_text += "\n\nSelect Genre:"
 
     code, tag = d.radiolist(text=dialog_text,
-                             choices=menu_choices, 
+                             choices=menu_choices,
+                             extra_button=True, 
+                             extra_label="Skip", 
                              title="Manually Select Genres")
+
+    if code == d.EXTRA:
+        return True
 
     if code == d.OK:
         genre = elem.find("genre")
