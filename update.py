@@ -2335,8 +2335,8 @@ def multiple_overlays_dialog(enable_disable = "Enable"):
 
 
     if code == d.EXTRA:
-        for system in menu_choices[0]:
-            do_system_overlay(system, enable_disable)
+        for menu_choice in menu_choices:
+            do_system_overlay(menu_choice[0], enable_disable)
 
     cls()
     overlays_dialog()
