@@ -1367,8 +1367,13 @@ def gamelist_genres_dialog(system: str, game: dict, elem: ET.Element):
     dialog_text += "\n\nSelect Genre:"
 
     code, tag = d.radiolist(text=dialog_text,
-                             choices=menu_choices, 
+                             choices=menu_choices,
+                             extra_button=True, 
+                             extra_label="Skip", 
                              title="Manually Select Genres")
+
+    if code == d.EXTRA:
+        return True
 
     if code == d.OK:
         genre = elem.find("genre")
@@ -1831,10 +1836,10 @@ def process_manual_updates(path: str, updates: list, delete=False):
 
             set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
 
-    if os.path.isdir(path):
-        if delete == True:
-            if len(os.listdir(path)) == 0:
-                shutil.rmtree(path)
+#    if os.path.isdir(path):
+#        if delete == True:
+#            if len(os.listdir(path)) == 0:
+#                shutil.rmtree(path)
 
     d.msgbox("{} of {} selected manual updates installed.".format(str(applied_updates), len(updates)))
     reboot_msg = "\nRebooting in 5 seconds!\n"
@@ -1867,6 +1872,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
+            set_config_value("CONFIG_ITEMS", "update_dir", path)
             official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path!")
@@ -1887,21 +1893,34 @@ def manual_updates_dialog(init_path: str, delete: bool):
     return
 
 
+def get_default_update_dir():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+        if update_dir is not None:
+            return update_dir
+
+    return "/"
+
+
 def downloaded_update_question_dialog():
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
-                         "\nThis will process the .zip file(s)?"
-                         "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                         "\n\nSelecting \"Keep\" will keep the .zip files and directories once the process is complete."
-                         "\nSelecting \"Delete\" will delete the .zip files and directories once the process is complete."
-                         "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
+                        "\nThis will process the .zip file(s)?"
+                        "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
+                        "\n\nSelecting \"Keep\" will keep the .zip files once the process is complete."
+                        "\nSelecting \"Delete\" will delete the .zip files once the process is complete."
+                        "\n\nWould you like to remove .zip files?", yes_label="Keep", no_label="Delete")
 
-    if code == d.OK:
-        manual_updates_dialog("/", False)
+    update_dir = get_default_update_dir()
+    
+    if os.path.isdir(update_dir) or os.path.isfile(update_dir):
+        if code == d.OK:
+            manual_updates_dialog(update_dir, False)
 
-    if code == d.CANCEL:
-        manual_updates_dialog("/", True)
+        if code == d.CANCEL:
+            manual_updates_dialog(update_dir, True)
 
     return
+
 
 def improvements_dialog():
     code, tag = d.menu("Load Improvements", 
@@ -2316,8 +2335,8 @@ def multiple_overlays_dialog(enable_disable = "Enable"):
 
 
     if code == d.EXTRA:
-        for system in menu_choices[0]:
-            do_system_overlay(system, enable_disable)
+        for menu_choice in menu_choices:
+            do_system_overlay(menu_choice[0], enable_disable)
 
     cls()
     overlays_dialog()
