@@ -1836,10 +1836,10 @@ def process_manual_updates(path: str, updates: list, delete=False):
 
             set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
 
-    if os.path.isdir(path):
-        if delete == True:
-            if len(os.listdir(path)) == 0:
-                shutil.rmtree(path)
+#    if os.path.isdir(path):
+#        if delete == True:
+#            if len(os.listdir(path)) == 0:
+#                shutil.rmtree(path)
 
     d.msgbox("{} of {} selected manual updates installed.".format(str(applied_updates), len(updates)))
     reboot_msg = "\nRebooting in 5 seconds!\n"
@@ -1906,9 +1906,9 @@ def downloaded_update_question_dialog():
     code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
                         "\nThis will process the .zip file(s)?"
                         "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                        "\n\nSelecting \"Keep\" will keep the .zip files and directories once the process is complete."
-                        "\nSelecting \"Delete\" will delete the .zip files and directories once the process is complete."
-                        "\n\nWould you like to remove .zip files and directories?", yes_label="Keep", no_label="Delete")
+                        "\n\nSelecting \"Keep\" will keep the .zip files once the process is complete."
+                        "\nSelecting \"Delete\" will delete the .zip files once the process is complete."
+                        "\n\nWould you like to remove .zip files?", yes_label="Keep", no_label="Delete")
 
     update_dir = get_default_update_dir()
     
