@@ -1034,7 +1034,7 @@ def remove_duplicate_gamelist_entries(src_xml: str, log_file: str):
     return
 
 
-def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, auto_clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -1202,7 +1202,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
         parents = src_tree.findall(".//game[path=\"./{}\"]".format(rom_file))
         for parent in parents:
             if clean == True:
-                if delete_gamelist_entry_dialog(rom_file) == True:
+                if auto_clean == True or delete_gamelist_entry_dialog(rom_file) == True:
                     log_this(log_file, "-removing gamelist.xml entry for {}".format(rom_file))
                     log_this(log_file, ET.tostring(parent).decode())
                     src_root.remove(parent)
@@ -1255,7 +1255,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     return
 
 
-def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, log_file="", auto_clean=False):
     cls()
     file_time = datetime.datetime.utcnow()
     process_type = "clean" if clean == True else "check"
@@ -1266,9 +1266,10 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
 
     if not os.path.exists("/home/pi/.update_tool/gamelist_logs"):
         os.mkdir("/home/pi/.update_tool/gamelist_logs")
-        
-    log_file = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
-    backup_dir = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+
+    if log_file == "":
+        log_file = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+    backup_dir = "/home/pi/.update_tool/gamelist_logs/{}".format(os.path.splitext(os.path.basename(log_file))[0])
     if clean == True:
         if not os.path.exists(backup_dir):
             os.mkdir(backup_dir)
@@ -1292,15 +1293,16 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
         for single_system in system.split("/"):
             print("")
             print("Now processing {}...".format(single_system))
-            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
+            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean, auto_clean=auto_clean)
 
     log_this(log_file, "\n")
     log_this(log_file, "{}ING GAMELISTS: ended at {}".format(process_type.upper(), datetime.datetime.utcnow()))
     cls()
     d.textbox(log_file, title="Contents of {0}".format(log_file))
 
-    cls()
-    main_dialog()
+    if auto_clean == False:
+        cls()
+        main_dialog()
 
     return
 
@@ -1785,7 +1787,7 @@ def gamelist_utilities_dialog():
         elif tag == "3":
             logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*"], multi=False)
         elif tag == "4":
-            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*"], multi=True)
+            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
         elif tag == "5":
             gamelists_dialog("Genre")
         elif tag == "6":
@@ -1823,25 +1825,46 @@ def get_manual_updates(path: str, available_updates: list):
     return manual_updates
 
 
-def process_manual_updates(path: str, updates: list, delete=False):
+def auto_clean_gamelists(installed_updates: list, manual=False):
+    if len(installed_updates) > 0:
+        systems = get_all_systems_from_cfg()
+        type = "" if manual == False else "MANUAL "
+
+        file_time = datetime.datetime.utcnow()
+        log_file = "/home/pi/.update_tool/gamelist_logs/auto_clean_gamelists-{}.log".format(file_time.strftime("%Y%m%d-%H%M%S"))
+        log_this(log_file, "AUTO CLEANING {}UPDATES INSTALLED:".format(type))
+        for installed_update in installed_updates:
+            log_this(log_file, "-{}".format(installed_update))
+        log_this(log_file, "")
+        log_this(log_file, "")
+
+        do_process_gamelists(systems, del_roms=True, del_art=True, del_snaps=True, del_m3u=True, clean=True, log_file=log_file, auto_clean=True)
+    
+    return
+    
+
+def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
     extracted = Path("/", "tmp", "extracted")
 
-    applied_updates = 0
+    installed_updates = []
     for update in updates:
         file = os.path.join(path, update[0])
         if process_improvement(file, extracted) == True:
-            applied_updates += 1
             if delete == True:
                 os.remove(file)
 
             set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+            installed_updates.append(update[0])
+
+    if auto_clean == True:
+        auto_clean_gamelists(installed_updates, manual=True)
 
 #    if os.path.isdir(path):
 #        if delete == True:
 #            if len(os.listdir(path)) == 0:
 #                shutil.rmtree(path)
 
-    d.msgbox("{} of {} selected manual updates installed.".format(str(applied_updates), len(updates)))
+    d.msgbox("{} of {} selected manual updates installed.".format(len(installed_updates), len(updates)))
     reboot_msg = "\nRebooting in 5 seconds!\n"
     d.pause(reboot_msg, height=10, width=60)
     restart_es()
@@ -2089,12 +2112,15 @@ def official_improvements_dialog(update_dir=None, delete=False):
     #available_updates.sort()
     available_updates = sort_official_updates(available_updates)
 
+    auto_clean = get_config_value("CONFIG_ITEMS", "auto_clean")
+    auto_clean = False if auto_clean is None else auto_clean == "True"
+
     menu_choices = []
     for update in available_updates:
         #TO DO: check if update has been installed from config and make True
         menu_choices.append(("{} ({})".format(update[0], update[3]), "", not is_update_applied(update[0], update[2])))
 
-    code, tags = d.checklist(text="Available Updates",
+    code, tags = d.checklist(text="Auto Clean is {}\n\nAvailable Updates".format("on" if auto_clean == True else "off"),
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
@@ -2120,9 +2146,9 @@ def official_improvements_dialog(update_dir=None, delete=False):
     if len(selected_updates) > 0:
         print()
         if update_dir is None:
-            do_improvements(selected_updates, megadrive)
+            do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
         else:
-            process_manual_updates(update_dir, selected_updates, delete)
+            process_manual_updates(update_dir, selected_updates, delete, auto_clean=auto_clean)
         #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
 
     return
@@ -2161,7 +2187,7 @@ def update_config(extracted: str):
     return
 
 
-def process_improvement(file: str, extracted: str):
+def process_improvement(file: str, extracted: str, auto_clean=False):
     print("Processing official update: {}...".format(os.path.basename(file)))
     with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(extracted)
@@ -2186,7 +2212,7 @@ def process_improvement(file: str, extracted: str):
     return True
 
 
-def do_improvements(selected_updates: list, megadrive: str):
+def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
@@ -2215,6 +2241,9 @@ def do_improvements(selected_updates: list, megadrive: str):
                     shutil.rmtree(extracted)
                 except OSError as e:
                     print("Error: %s : %s" % (extracted, e.strerror))
+
+    if auto_clean == True:
+        auto_clean_gamelists(installed_updates, manual=False)
 
     if remove_improvements == True:
         try:
