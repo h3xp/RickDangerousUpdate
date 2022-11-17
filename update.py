@@ -1844,6 +1844,7 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
     
 
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
 
     installed_updates = []
@@ -1864,7 +1865,7 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 #            if len(os.listdir(path)) == 0:
 #                shutil.rmtree(path)
 
-    d.msgbox("{} of {} selected manual updates installed.".format(len(installed_updates), len(updates)))
+    d.msgbox("{} of {} selected manual updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
     reboot_msg = "\nRebooting in 5 seconds!\n"
     d.pause(reboot_msg, height=10, width=60)
     restart_es()
@@ -2213,6 +2214,7 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
 
 
 def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
+    start_time = datetime.datetime.utcnow()
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
@@ -2251,7 +2253,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
         except OSError as e:
             print("Error: %s : %s" % (improvements_dir, e.strerror))
     
-    d.msgbox("{} of {} selected updates installed.".format(len(installed_updates), len(selected_updates)))
+    d.msgbox("{} of {} selected updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(selected_updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
     if len(installed_updates) > 0:
         reboot_msg = "\nRebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
         d.pause(reboot_msg, height=10, width=60)
