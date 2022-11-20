@@ -1768,6 +1768,32 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
     return
 
 
+def do_clean_emulators_cfg():
+    emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
+    items = {}
+    lines_out = ""
+    if not os.path.exists(emulator_cfg):
+        return
+
+    with open(emulator_cfg, 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            parts = line.split("=")
+            items[parts[0].strip()] = parts[1].strip()
+
+        for item in sorted(items.keys()):
+            lines_out += "{} = {}\n".format(item, items[item])
+
+    file_time = safe_write_backup(emulator_cfg)
+
+    with open(emulator_cfg, 'w') as configfile:
+        configfile.write(lines_out)
+
+    safe_write_check(emulator_cfg, file_time)
+
+    return
+
+
 def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
@@ -1776,8 +1802,9 @@ def gamelist_utilities_dialog():
                              ("4", "Remove Check/Clean Game List Logs"), 
                              ("5", "Manually Select Genres"), 
                              ("6", "Realign Genre Collections"), 
-                             ("7", "Count of Games")],
-                    title="Game List Utilities")
+                             ("7", "Clean Emulators Config"), 
+                             ("8", "Count of Games")],
+                    title="Gamelist (Etc) Utilities")
     
     if code == d.OK:
         if tag == "1":
@@ -1793,6 +1820,8 @@ def gamelist_utilities_dialog():
         elif tag == "6":
             gamelists_dialog("Realign")
         elif tag == "7":
+            do_clean_emulators_cfg()
+        elif tag == "8":
             gamelists_dialog("Count")
 
     if code == d.CANCEL:
@@ -1974,7 +2003,7 @@ def misc_menu():
                              ("2", "Reset EmulationStation Configurations"),
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
-                             ("5", "Gamelist Utilities")],
+                             ("5", "Gamelist (Etc) Utilities")],
                     title="Miscellaneous")
 
     if code == d.OK:
