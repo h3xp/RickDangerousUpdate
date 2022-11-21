@@ -2250,8 +2250,8 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
 
     remove_improvements = True
     installed_updates = []
-    selected_updates.sort(reverse=True)
-    selected_updates.sort()
+#    selected_updates.sort(reverse=True)
+#    selected_updates.sort()
     for update in selected_updates:
         file_path = download_update(update[1], improvements_dir, megadrive, update[3])
 
