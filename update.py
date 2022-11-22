@@ -1479,6 +1479,7 @@ def count_games(system: str, games: list):
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
+    games = []
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
@@ -1489,6 +1490,9 @@ def count_games(system: str, games: list):
             path = src_game.find("path")
             if path.text is not None:
                 games_list.append((game.text.strip(), path.text.strip()))
+                #if game.text.strip() in games:
+                #    d.msgbox(system + " - " + game.text.strip())
+                games.append(game.text.strip())
                 count += 1
 
     games_list.sort()
@@ -1621,6 +1625,58 @@ def do_genre_realignment(systems: list, overwrite=False):
         system_genre_realignment(system)
     d.msgbox('done!')
     main_dialog()
+
+    return
+
+
+def sort_gamelist(system: str):
+    games_list = {}
+    games = []
+    system_dir = os.path.join("/home/pi/RetroPie/roms", system)
+    src_xml = os.path.join(system_dir, "gamelist.xml")
+
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        game = src_game.find("name")
+        path = src_game.find("path")
+        if game.text is not None:
+            if path.text is not None:
+                games_list[game.text.lower() + "-" + path.text.lower()] = ET.tostring(src_game)
+                games.append(src_game)
+
+    for game in games:
+        src_root.remove(game)
+
+    for game in sorted(games_list.keys()):
+        src_root.append(ET.fromstring(games_list[game]))
+
+    file_time = safe_write_backup(src_xml)
+    
+    # ET.indent(dest_tree, space="\t", level=0)
+    indent(src_root, space="\t", level=0)
+    with open(src_xml, "wb") as fh:
+        src_tree.write(fh, "utf-8")
+
+    safe_write_check(src_xml, file_time)
+
+    return len(games)
+
+
+def do_sort_gamelists(systems: list):
+    total_games = 0
+    total_systems = 0
+    start_time = datetime.datetime.utcnow()
+
+    print("")
+    for system in systems:
+        total_systems += 1
+        print("Now sorting: {}".format(system))
+        total_games += sort_gamelist(system)
+        
+    d.msgbox("Sorted {} games, in {} systems.\n\nTime to process: {}".format(total_games, total_systems, str(datetime.datetime.utcnow() - start_time)[:-7]))
+
     return
 
 
@@ -1641,6 +1697,9 @@ def gamelists_dialog(function: str):
         button_text = "Process"
     elif function == "Realign":
         dialog_title = "Realign Genre Collections"
+        button_text = "Process"
+    elif function == "Sort":
+        dialog_title = "Sort Game Lists"
         button_text = "Process"
     elif function == "Count":
         dialog_title = "Count of Games"
@@ -1667,6 +1726,8 @@ def gamelists_dialog(function: str):
             gamelist_counts_dialog(tags)
         elif function == "Realign":
             do_genre_realignment(tags)
+        elif function == "Sort":
+            do_sort_gamelists(tags)
         else:
             gamelists_orphan_dialog(tags, function == "Clean")
 
@@ -1677,6 +1738,8 @@ def gamelists_dialog(function: str):
             gamelist_counts_dialog(systems, True)
         elif function == "Realign":
             do_genre_realignment(systems, True)
+        elif function == "Sort":
+            do_sort_gamelists(systems)
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
@@ -1772,6 +1835,9 @@ def do_clean_emulators_cfg():
     emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
     items = {}
     lines_out = ""
+    game_counter = 0
+    duplicate_counter = 0
+
     if not os.path.exists(emulator_cfg):
         return
 
@@ -1779,10 +1845,13 @@ def do_clean_emulators_cfg():
         lines_in = configfile.readlines()
         for line in lines_in:
             parts = line.split("=")
+            if parts[0].strip() in items.keys():
+                duplicate_counter += 1
             items[parts[0].strip()] = parts[1].strip()
 
         for item in sorted(items.keys()):
             lines_out += "{} = {}\n".format(item, items[item])
+            game_counter += 1
 
     file_time = safe_write_backup(emulator_cfg)
 
@@ -1790,6 +1859,8 @@ def do_clean_emulators_cfg():
         configfile.write(lines_out)
 
     safe_write_check(emulator_cfg, file_time)
+
+    d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.".format(game_counter, duplicate_counter))
 
     return
 
@@ -1802,8 +1873,9 @@ def gamelist_utilities_dialog():
                              ("4", "Remove Check/Clean Game List Logs"), 
                              ("5", "Manually Select Genres"), 
                              ("6", "Realign Genre Collections"), 
-                             ("7", "Clean Emulators Config"), 
-                             ("8", "Count of Games")],
+                             ("7", "Sort Game Lists"), 
+                             ("8", "Clean Emulators Config"), 
+                             ("9", "Count of Games")],
                     title="Gamelist (Etc) Utilities")
     
     if code == d.OK:
@@ -1820,13 +1892,18 @@ def gamelist_utilities_dialog():
         elif tag == "6":
             gamelists_dialog("Realign")
         elif tag == "7":
-            do_clean_emulators_cfg()
+            gamelists_dialog("Sort")
         elif tag == "8":
+            do_clean_emulators_cfg()
+        elif tag == "9":
             gamelists_dialog("Count")
 
     if code == d.CANCEL:
         cls()
         main_dialog()
+
+    cls()
+    gamelist_utilities_dialog()
 
     return
 
