@@ -2700,9 +2700,21 @@ def hostname_dialog():
         main_dialog
 
 
+def clean_failures():
+    if os.path.exists("/tmp/improvements"):
+        if os.path.isdir("/tmp/improvements"):
+            shutil.rmtree("/tmp/improvements")
+    if os.path.exists("/tmp/extracted"):
+        if os.path.isdir("/tmp/extracted"):
+            shutil.rmtree("/tmp/extracted")
+
+    return
+
+
 def main():
     global genres
 
+    clean_failures()
     section = get_config_section("GENRE_MAPPINGS")
     if section is not None:
         for key, val in section:
