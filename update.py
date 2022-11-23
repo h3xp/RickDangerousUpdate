@@ -2257,7 +2257,8 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
         d.msgbox("No updates are needed.")
         official_improvements_dialog(update_dir, delete, available_updates)
 
-    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {}\nNumber of updates needed: {}\nRecommended number of updates: {}\n\nAvailable Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), needed_updates, recommended_updates),
+    update_text = "Available" if show_all_updates == True else "Recommended"
+    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {}\nNumber of updates needed: {}\nRecommended number of updates: {}\n\n{} Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), needed_updates, recommended_updates, update_text),
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
