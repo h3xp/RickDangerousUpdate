@@ -1034,7 +1034,7 @@ def remove_duplicate_gamelist_entries(src_xml: str, log_file: str):
     return
 
 
-def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, auto_clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -1202,7 +1202,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
         parents = src_tree.findall(".//game[path=\"./{}\"]".format(rom_file))
         for parent in parents:
             if clean == True:
-                if delete_gamelist_entry_dialog(rom_file) == True:
+                if auto_clean == True or delete_gamelist_entry_dialog(rom_file) == True:
                     log_this(log_file, "-removing gamelist.xml entry for {}".format(rom_file))
                     log_this(log_file, ET.tostring(parent).decode())
                     src_root.remove(parent)
@@ -1255,7 +1255,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     return
 
 
-def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False):
+def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, log_file="", auto_clean=False):
     cls()
     file_time = datetime.datetime.utcnow()
     process_type = "clean" if clean == True else "check"
@@ -1266,9 +1266,10 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
 
     if not os.path.exists("/home/pi/.update_tool/gamelist_logs"):
         os.mkdir("/home/pi/.update_tool/gamelist_logs")
-        
-    log_file = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
-    backup_dir = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+
+    if log_file == "":
+        log_file = "/home/pi/.update_tool/gamelist_logs/{}_gamelists-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+    backup_dir = "/home/pi/.update_tool/gamelist_logs/{}".format(os.path.splitext(os.path.basename(log_file))[0])
     if clean == True:
         if not os.path.exists(backup_dir):
             os.mkdir(backup_dir)
@@ -1292,15 +1293,16 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
         for single_system in system.split("/"):
             print("")
             print("Now processing {}...".format(single_system))
-            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
+            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean, auto_clean=auto_clean)
 
     log_this(log_file, "\n")
     log_this(log_file, "{}ING GAMELISTS: ended at {}".format(process_type.upper(), datetime.datetime.utcnow()))
     cls()
     d.textbox(log_file, title="Contents of {0}".format(log_file))
 
-    cls()
-    main_dialog()
+    if auto_clean == False:
+        cls()
+        main_dialog()
 
     return
 
@@ -1477,6 +1479,7 @@ def count_games(system: str, games: list):
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
+    games = []
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
@@ -1487,6 +1490,9 @@ def count_games(system: str, games: list):
             path = src_game.find("path")
             if path.text is not None:
                 games_list.append((game.text.strip(), path.text.strip()))
+                #if game.text.strip() in games:
+                #    d.msgbox(system + " - " + game.text.strip())
+                games.append(game.text.strip())
                 count += 1
 
     games_list.sort()
@@ -1619,6 +1625,58 @@ def do_genre_realignment(systems: list, overwrite=False):
         system_genre_realignment(system)
     d.msgbox('done!')
     main_dialog()
+
+    return
+
+
+def sort_gamelist(system: str):
+    games_list = {}
+    games = []
+    system_dir = os.path.join("/home/pi/RetroPie/roms", system)
+    src_xml = os.path.join(system_dir, "gamelist.xml")
+
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        game = src_game.find("name")
+        path = src_game.find("path")
+        if game.text is not None:
+            if path.text is not None:
+                games_list[game.text.lower() + "-" + path.text.lower()] = ET.tostring(src_game)
+                games.append(src_game)
+
+    for game in games:
+        src_root.remove(game)
+
+    for game in sorted(games_list.keys()):
+        src_root.append(ET.fromstring(games_list[game]))
+
+    file_time = safe_write_backup(src_xml)
+    
+    # ET.indent(dest_tree, space="\t", level=0)
+    indent(src_root, space="\t", level=0)
+    with open(src_xml, "wb") as fh:
+        src_tree.write(fh, "utf-8")
+
+    safe_write_check(src_xml, file_time)
+
+    return len(games)
+
+
+def do_sort_gamelists(systems: list):
+    total_games = 0
+    total_systems = 0
+    start_time = datetime.datetime.utcnow()
+
+    print("")
+    for system in systems:
+        total_systems += 1
+        print("Now sorting: {}".format(system))
+        total_games += sort_gamelist(system)
+        
+    d.msgbox("Sorted {} games, in {} systems.\n\nTime to process: {}".format(total_games, total_systems, str(datetime.datetime.utcnow() - start_time)[:-7]))
+
     return
 
 
@@ -1639,6 +1697,9 @@ def gamelists_dialog(function: str):
         button_text = "Process"
     elif function == "Realign":
         dialog_title = "Realign Genre Collections"
+        button_text = "Process"
+    elif function == "Sort":
+        dialog_title = "Sort Game Lists"
         button_text = "Process"
     elif function == "Count":
         dialog_title = "Count of Games"
@@ -1665,6 +1726,8 @@ def gamelists_dialog(function: str):
             gamelist_counts_dialog(tags)
         elif function == "Realign":
             do_genre_realignment(tags)
+        elif function == "Sort":
+            do_sort_gamelists(tags)
         else:
             gamelists_orphan_dialog(tags, function == "Clean")
 
@@ -1675,6 +1738,8 @@ def gamelists_dialog(function: str):
             gamelist_counts_dialog(systems, True)
         elif function == "Realign":
             do_genre_realignment(systems, True)
+        elif function == "Sort":
+            do_sort_gamelists(systems)
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
@@ -1766,6 +1831,40 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
     return
 
 
+def do_clean_emulators_cfg():
+    emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
+    items = {}
+    lines_out = ""
+    game_counter = 0
+    duplicate_counter = 0
+
+    if not os.path.exists(emulator_cfg):
+        return
+
+    with open(emulator_cfg, 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            parts = line.split("=")
+            if parts[0].strip() in items.keys():
+                duplicate_counter += 1
+            items[parts[0].strip()] = parts[1].strip()
+
+        for item in sorted(items.keys()):
+            lines_out += "{} = {}\n".format(item, items[item])
+            game_counter += 1
+
+    file_time = safe_write_backup(emulator_cfg)
+
+    with open(emulator_cfg, 'w') as configfile:
+        configfile.write(lines_out)
+
+    safe_write_check(emulator_cfg, file_time)
+
+    d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.".format(game_counter, duplicate_counter))
+
+    return
+
+
 def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
@@ -1774,8 +1873,10 @@ def gamelist_utilities_dialog():
                              ("4", "Remove Check/Clean Game List Logs"), 
                              ("5", "Manually Select Genres"), 
                              ("6", "Realign Genre Collections"), 
-                             ("7", "Count of Games")],
-                    title="Game List Utilities")
+                             ("7", "Sort Game Lists"), 
+                             ("8", "Clean Emulators Config"), 
+                             ("9", "Count of Games")],
+                    title="Gamelist (Etc) Utilities")
     
     if code == d.OK:
         if tag == "1":
@@ -1785,17 +1886,24 @@ def gamelist_utilities_dialog():
         elif tag == "3":
             logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*"], multi=False)
         elif tag == "4":
-            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*"], multi=True)
+            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
         elif tag == "5":
             gamelists_dialog("Genre")
         elif tag == "6":
             gamelists_dialog("Realign")
         elif tag == "7":
+            gamelists_dialog("Sort")
+        elif tag == "8":
+            do_clean_emulators_cfg()
+        elif tag == "9":
             gamelists_dialog("Count")
 
     if code == d.CANCEL:
         cls()
         main_dialog()
+
+    cls()
+    gamelist_utilities_dialog()
 
     return
 
@@ -1823,25 +1931,47 @@ def get_manual_updates(path: str, available_updates: list):
     return manual_updates
 
 
-def process_manual_updates(path: str, updates: list, delete=False):
+def auto_clean_gamelists(installed_updates: list, manual=False):
+    if len(installed_updates) > 0:
+        systems = get_all_systems_from_cfg()
+        type = "" if manual == False else "MANUAL "
+
+        file_time = datetime.datetime.utcnow()
+        log_file = "/home/pi/.update_tool/gamelist_logs/auto_clean_gamelists-{}.log".format(file_time.strftime("%Y%m%d-%H%M%S"))
+        log_this(log_file, "AUTO CLEANING {}UPDATES INSTALLED:".format(type))
+        for installed_update in installed_updates:
+            log_this(log_file, "-{}".format(installed_update))
+        log_this(log_file, "")
+        log_this(log_file, "")
+
+        do_process_gamelists(systems, del_roms=True, del_art=True, del_snaps=True, del_m3u=True, clean=True, log_file=log_file, auto_clean=True)
+    
+    return
+    
+
+def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
 
-    applied_updates = 0
+    installed_updates = []
     for update in updates:
         file = os.path.join(path, update[0])
         if process_improvement(file, extracted) == True:
-            applied_updates += 1
             if delete == True:
                 os.remove(file)
 
             set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+            installed_updates.append(update[0])
+
+    if auto_clean == True:
+        auto_clean_gamelists(installed_updates, manual=True)
 
 #    if os.path.isdir(path):
 #        if delete == True:
 #            if len(os.listdir(path)) == 0:
 #                shutil.rmtree(path)
 
-    d.msgbox("{} of {} selected manual updates installed.".format(str(applied_updates), len(updates)))
+    d.msgbox("{} of {} selected manual updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
     reboot_msg = "\nRebooting in 5 seconds!\n"
     d.pause(reboot_msg, height=10, width=60)
     restart_es()
@@ -1923,7 +2053,7 @@ def downloaded_update_question_dialog():
 
 
 def improvements_dialog():
-    code, tag = d.menu("Load Improvements", 
+    code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
                              ("2", "Manually Install Downloaded Updates")],
                     title="Load Improvements")
@@ -1950,7 +2080,7 @@ def misc_menu():
                              ("2", "Reset EmulationStation Configurations"),
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
-                             ("5", "Gamelist Utilities")],
+                             ("5", "Gamelist (Etc) Utilities")],
                     title="Miscellaneous")
 
     if code == d.OK:
@@ -2069,17 +2199,19 @@ def sort_official_updates(updates: list):
     return retval
 
 
-def official_improvements_dialog(update_dir=None, delete=False):
+def official_improvements_dialog(update_dir=None, delete=False, available_updates=[]):
     megadrive = check_drive()
     check_wrong_permissions()
+
     reboot_msg = "Updates installed:"
     title_msg  = "Download and Install Official Updates"
     if update_dir is not None:
         title_msg  = "Manually Install Official Updates"
 
-    available_updates = get_available_updates(megadrive, status=True)
-    if update_dir is not None:
-        available_updates = get_manual_updates(update_dir, available_updates)
+    if len(available_updates) == 0:
+        available_updates = get_available_updates(megadrive, status=True)
+        if update_dir is not None:
+            available_updates = get_manual_updates(update_dir, available_updates)
 
     if len(available_updates) == 0:
         d.msgbox("No updates available.")
@@ -2089,16 +2221,50 @@ def official_improvements_dialog(update_dir=None, delete=False):
     #available_updates.sort()
     available_updates = sort_official_updates(available_updates)
 
-    menu_choices = []
-    for update in available_updates:
-        #TO DO: check if update has been installed from config and make True
-        menu_choices.append(("{} ({})".format(update[0], update[3]), "", not is_update_applied(update[0], update[2])))
+    if len(available_updates) == 0:
+        d.msgbox("There are 0 available updates!")
+        return
 
-    code, tags = d.checklist(text="Available Updates",
+    auto_clean = get_config_value("CONFIG_ITEMS", "auto_clean")
+    auto_clean = False if auto_clean is None else auto_clean == "True"
+
+    show_all_updates = get_config_value("CONFIG_ITEMS", "show_all_updates")
+    if show_all_updates == None:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
+        show_all_updates = True
+    show_all_updates = (show_all_updates == "True")
+    help_label = "Show All" if show_all_updates == False else "Show Needed"
+
+    menu_choices = []
+    all_updates = []
+    update_needed = False
+    needed_updates = 0
+    recommended_updates = 0
+    for update in available_updates:
+        update_applied = is_update_applied(update[0], update[2])
+        if update_applied == False:
+            needed_updates += 1  
+        update_needed = (update_needed == True or update_applied == False)
+        if update_needed == True:
+            recommended_updates += 1
+        if show_all_updates == True or update_needed == True:
+            #TO DO: check if update has been installed from config and make True
+            all_updates.append(update)
+            menu_choices.append(("{} ({})".format(update[0], update[3]), "", not update_applied))
+
+    if len(all_updates) == 0:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
+        d.msgbox("No updates are needed.")
+        official_improvements_dialog(update_dir, delete, available_updates)
+
+    update_text = "Available" if show_all_updates == True else "Recommended"
+    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {}\nNumber of updates needed: {}\nRecommended number of updates: {}\n\n{} Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), needed_updates, recommended_updates, update_text),
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
                              extra_label="Apply All", 
+                             help_button=True, 
+                             help_label=help_label, 
                              title=title_msg)
 
     selected_updates = []
@@ -2111,18 +2277,25 @@ def official_improvements_dialog(update_dir=None, delete=False):
                     break
 
     if code == d.EXTRA:
-        selected_updates = available_updates
+        selected_updates = all_updates
 
     if code == d.CANCEL:
-        cls()
-        main_dialog()
+        selected_updates = []
+        return
 
-    if len(selected_updates) > 0:
+    if code == d.HELP:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", str(not show_all_updates))
+        official_improvements_dialog(update_dir, delete, available_updates)
+
+    if len(selected_updates) == 0:
+        d.msgbox("No updates selected!")
+        official_improvements_dialog(update_dir, delete, available_updates)
+    else:
         print()
         if update_dir is None:
-            do_improvements(selected_updates, megadrive)
+            do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
         else:
-            process_manual_updates(update_dir, selected_updates, delete)
+            process_manual_updates(update_dir, selected_updates, delete, auto_clean=auto_clean)
         #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
 
     return
@@ -2161,7 +2334,7 @@ def update_config(extracted: str):
     return
 
 
-def process_improvement(file: str, extracted: str):
+def process_improvement(file: str, extracted: str, auto_clean=False):
     print("Processing official update: {}...".format(os.path.basename(file)))
     with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(extracted)
@@ -2186,15 +2359,16 @@ def process_improvement(file: str, extracted: str):
     return True
 
 
-def do_improvements(selected_updates: list, megadrive: str):
+def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
+    start_time = datetime.datetime.utcnow()
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
 
     remove_improvements = True
     installed_updates = []
-    selected_updates.sort(reverse=True)
-    selected_updates.sort()
+#    selected_updates.sort(reverse=True)
+#    selected_updates.sort()
     for update in selected_updates:
         file_path = download_update(update[1], improvements_dir, megadrive, update[3])
 
@@ -2216,13 +2390,16 @@ def do_improvements(selected_updates: list, megadrive: str):
                 except OSError as e:
                     print("Error: %s : %s" % (extracted, e.strerror))
 
+    if auto_clean == True:
+        auto_clean_gamelists(installed_updates, manual=False)
+
     if remove_improvements == True:
         try:
             shutil.rmtree(improvements_dir)
         except OSError as e:
             print("Error: %s : %s" % (improvements_dir, e.strerror))
     
-    d.msgbox("{} of {} selected updates installed.".format(len(installed_updates), len(selected_updates)))
+    d.msgbox("{} of {} selected updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(selected_updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
     if len(installed_updates) > 0:
         reboot_msg = "\nRebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
         d.pause(reboot_msg, height=10, width=60)
@@ -2483,10 +2660,11 @@ def uninstall_dialog():
 
 
 def installation_dialog():
-    code, tag = d.menu("Installation", 
+    code, tag = d.menu("Select Option", 
                     choices=[("1", "Install/Reinstall"),
                              ("2", "Update"), 
                              ("3", "Uninstall/Remove")],
+                    title="Installation",
                     cancel_label=" Cancel ")
     
     if code == d.OK:
@@ -2497,9 +2675,8 @@ def installation_dialog():
         elif tag == "3":
             uninstall_dialog()
 
-    if code == d.CANCEL:
-        cls()
-        main_dialog()
+    cls()
+    main_dialog()
 
     return
 
@@ -2523,9 +2700,21 @@ def hostname_dialog():
         main_dialog
 
 
+def clean_failures():
+    if os.path.exists("/tmp/improvements"):
+        if os.path.isdir("/tmp/improvements"):
+            shutil.rmtree("/tmp/improvements")
+    if os.path.exists("/tmp/extracted"):
+        if os.path.isdir("/tmp/extracted"):
+            shutil.rmtree("/tmp/extracted")
+
+    return
+
+
 def main():
     global genres
 
+    clean_failures()
     section = get_config_section("GENRE_MAPPINGS")
     if section is not None:
         for key, val in section:
