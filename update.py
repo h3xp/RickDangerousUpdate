@@ -2053,7 +2053,7 @@ def downloaded_update_question_dialog():
 
 
 def improvements_dialog():
-    code, tag = d.menu("Load Improvements", 
+    code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
                              ("2", "Manually Install Downloaded Updates")],
                     title="Load Improvements")
@@ -2280,8 +2280,8 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
         selected_updates = all_updates
 
     if code == d.CANCEL:
-        cls()
-        main_dialog()
+        selected_updates = []
+        return
 
     if code == d.HELP:
         set_config_value("CONFIG_ITEMS", "show_all_updates", str(not show_all_updates))
@@ -2290,13 +2290,13 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
     if len(selected_updates) == 0:
         d.msgbox("No updates selected!")
         official_improvements_dialog(update_dir, delete, available_updates)
-
-    print()
-    if update_dir is None:
-        do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
     else:
-        process_manual_updates(update_dir, selected_updates, delete, auto_clean=auto_clean)
-    #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
+        print()
+        if update_dir is None:
+            do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
+        else:
+            process_manual_updates(update_dir, selected_updates, delete, auto_clean=auto_clean)
+        #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
 
     return
 
@@ -2660,10 +2660,11 @@ def uninstall_dialog():
 
 
 def installation_dialog():
-    code, tag = d.menu("Installation", 
+    code, tag = d.menu("Select Option", 
                     choices=[("1", "Install/Reinstall"),
                              ("2", "Update"), 
                              ("3", "Uninstall/Remove")],
+                    title="Installation",
                     cancel_label=" Cancel ")
     
     if code == d.OK:
@@ -2674,9 +2675,8 @@ def installation_dialog():
         elif tag == "3":
             uninstall_dialog()
 
-    if code == d.CANCEL:
-        cls()
-        main_dialog()
+    cls()
+    main_dialog()
 
     return
 
