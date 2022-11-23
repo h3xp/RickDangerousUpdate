@@ -21,7 +21,7 @@ Join Ricks discord server to keep track on the latest changes.
   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
   - [Enable/Disable System overlays](#system-overlay)
   - [Enable/Disable Handheld mode](#handheld-mode)
-  - [Gamelist Utilities](#gamelist-utilities)
+  - [Gamelist (Etc) Utilities](#gamelist-(etc)-utilities)
   - [Installation](#installation)
 - [SSH Instructions](#ssh-usage)
 
@@ -103,15 +103,17 @@ These systems will be adjusted:
 - ngpc
 - wonderwancolor
 
-## Gamelist Utilities
+## Gamelist (Etc) Utilities
 
-Gamelist Utilities provide a lot of functions to clean up and work with your gamelist.xml files.
+Gamelist (Etc) Utilities provide a lot of functions to clean up, in general, and work with your gamelist.xml files.
 - Check Game Lists - This will check your gamelist.xml files and optionally check for orphaned roms, artwork, video snapshots, and multiple disk files.
 - Clean Game Lists - This will clean your gamelist.xml files by removing invalid entries, it will also delete orphaned files like roms.
 - Restore Clean Game List Logs - This will let you reverse the changes you applied with the "Clean Game Lists"-feature.
 - Remove Check/Clean Game List Logs - Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
 - Manually Select Genres - Allows you to manually select official Rick Dangerous genres for roms that you have added manually, and add them to the correct collections.
 - Realign Genre Collections - Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
+- Sort Game Lists - Sorts your gamelist.xml files by Name for easier readability.
+- Clean Emulators Config - Sorts your emulators.cfg file, removing duplicate entries.
 - Count of Games: Displays the total game count within gamelist.xml files from selected systems. When you count all systems this will also drop a counts.txt file and a games_list.txt file, so you can easily validate against official game counts and view a comprehensive listing of all games.
 
 
