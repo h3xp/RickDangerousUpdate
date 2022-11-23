@@ -65,7 +65,7 @@ your retropie. Therefore, use this at your own risk.
 4. [Reset Emulationstation configrations](#reset-emulationstation-configurations)
 5. [Enable/Disable System overlays](#system-overlay)
 6. [Enable/Disable Handheld mode](#handheld-mode)
-7. [Gamelist Utilities](#gamelist-utilities)
+7. [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
 8. [Installation](#installation)
 
 ## Improvements
