@@ -2199,17 +2199,19 @@ def sort_official_updates(updates: list):
     return retval
 
 
-def official_improvements_dialog(update_dir=None, delete=False):
+def official_improvements_dialog(update_dir=None, delete=False, available_updates=[]):
     megadrive = check_drive()
     check_wrong_permissions()
+
     reboot_msg = "Updates installed:"
     title_msg  = "Download and Install Official Updates"
     if update_dir is not None:
         title_msg  = "Manually Install Official Updates"
 
-    available_updates = get_available_updates(megadrive, status=True)
-    if update_dir is not None:
-        available_updates = get_manual_updates(update_dir, available_updates)
+    if len(available_updates) == 0:
+        available_updates = get_available_updates(megadrive, status=True)
+        if update_dir is not None:
+            available_updates = get_manual_updates(update_dir, available_updates)
 
     if len(available_updates) == 0:
         d.msgbox("No updates available.")
@@ -2219,19 +2221,49 @@ def official_improvements_dialog(update_dir=None, delete=False):
     #available_updates.sort()
     available_updates = sort_official_updates(available_updates)
 
+    if len(available_updates) == 0:
+        d.msgbox("There are 0 available updates!")
+        return
+
     auto_clean = get_config_value("CONFIG_ITEMS", "auto_clean")
     auto_clean = False if auto_clean is None else auto_clean == "True"
 
-    menu_choices = []
-    for update in available_updates:
-        #TO DO: check if update has been installed from config and make True
-        menu_choices.append(("{} ({})".format(update[0], update[3]), "", not is_update_applied(update[0], update[2])))
+    show_all_updates = get_config_value("CONFIG_ITEMS", "show_all_updates")
+    if show_all_updates == None:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
+        show_all_updates = True
+    show_all_updates = (show_all_updates == "True")
+    help_label = "Show All" if show_all_updates == False else "Show Needed"
 
-    code, tags = d.checklist(text="Auto Clean is {}\n\nAvailable Updates".format("on" if auto_clean == True else "off"),
+    menu_choices = []
+    all_updates = []
+    update_needed = False
+    needed_updates = 0
+    recommended_updates = 0
+    for update in available_updates:
+        update_applied = is_update_applied(update[0], update[2])
+        if update_applied == False:
+            needed_updates += 1  
+        update_needed = (update_needed == True or update_applied == False)
+        if update_needed == True:
+            recommended_updates += 1
+        if show_all_updates == True or update_needed == True:
+            #TO DO: check if update has been installed from config and make True
+            all_updates.append(update)
+            menu_choices.append(("{} ({})".format(update[0], update[3]), "", not update_applied))
+
+    if len(all_updates) == 0:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
+        d.msgbox("No updates are needed")
+        official_improvements_dialog(update_dir, delete, available_updates)
+
+    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of updates needed: {}\nRecommended number of updates: {}\n\nAvailable Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", needed_updates, recommended_updates),
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
                              extra_label="Apply All", 
+                             help_button=True, 
+                             help_label=help_label, 
                              title=title_msg)
 
     selected_updates = []
@@ -2244,19 +2276,26 @@ def official_improvements_dialog(update_dir=None, delete=False):
                     break
 
     if code == d.EXTRA:
-        selected_updates = available_updates
+        selected_updates = all_updates
 
     if code == d.CANCEL:
         cls()
         main_dialog()
 
-    if len(selected_updates) > 0:
-        print()
-        if update_dir is None:
-            do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
-        else:
-            process_manual_updates(update_dir, selected_updates, delete, auto_clean=auto_clean)
-        #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
+    if code == d.HELP:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", str(not show_all_updates))
+        official_improvements_dialog(update_dir, delete, available_updates)
+
+    if len(selected_updates) == 0:
+        d.msgbox("No updates selected!")
+        official_improvements_dialog(update_dir, delete, available_updates)
+
+    print()
+    if update_dir is None:
+        do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
+    else:
+        process_manual_updates(update_dir, selected_updates, delete, auto_clean=auto_clean)
+    #reboot_msg += "\n\n" + "Rebooting in 5 seconds!"
 
     return
 
