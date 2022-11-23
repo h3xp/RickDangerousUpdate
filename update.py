@@ -2254,10 +2254,10 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
 
     if len(all_updates) == 0:
         set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
-        d.msgbox("No updates are needed")
+        d.msgbox("No updates are needed.")
         official_improvements_dialog(update_dir, delete, available_updates)
 
-    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of updates needed: {}\nRecommended number of updates: {}\n\nAvailable Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", needed_updates, recommended_updates),
+    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {}\nNumber of updates needed: {}\nRecommended number of updates: {}\n\nAvailable Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), needed_updates, recommended_updates),
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
