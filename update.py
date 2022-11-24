@@ -2215,8 +2215,9 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
 
     if len(available_updates) == 0:
         d.msgbox("No updates available.")
-        cls()
-        main_dialog()
+        return
+        #cls()
+        #main_dialog()
         
     #available_updates.sort()
     available_updates = sort_official_updates(available_updates)
@@ -2256,6 +2257,7 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
         set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
         d.msgbox("No updates are needed.")
         official_improvements_dialog(update_dir, delete, available_updates)
+        return
 
     update_text = "Available" if show_all_updates == True else "Recommended"
     code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {}\nNumber of updates needed: {}\nRecommended number of updates: {}\n\n{} Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), needed_updates, recommended_updates, update_text),
@@ -2286,6 +2288,7 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
     if code == d.HELP:
         set_config_value("CONFIG_ITEMS", "show_all_updates", str(not show_all_updates))
         official_improvements_dialog(update_dir, delete, available_updates)
+        return
 
     if len(selected_updates) == 0:
         d.msgbox("No updates selected!")
