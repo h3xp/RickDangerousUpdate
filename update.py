@@ -1937,6 +1937,10 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
         type = "" if manual == False else "MANUAL "
 
         file_time = datetime.datetime.utcnow()
+
+        if not os.path.exists("/home/pi/.update_tool/gamelist_logs"):
+            os.mkdir("/home/pi/.update_tool/gamelist_logs")
+
         log_file = "/home/pi/.update_tool/gamelist_logs/auto_clean_gamelists-{}.log".format(file_time.strftime("%Y%m%d-%H%M%S"))
         log_this(log_file, "AUTO CLEANING {}UPDATES INSTALLED:".format(type))
         for installed_update in installed_updates:
