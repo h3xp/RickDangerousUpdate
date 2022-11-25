@@ -2030,7 +2030,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 def get_default_update_dir():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
-        if update_dir is not None:
+        if update_dir is not None and os.path.exists(update_dir):
             return update_dir
 
     return "/"
