@@ -2384,7 +2384,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
         file_path = download_update(update[1], improvements_dir, megadrive, update[3])
 
         if file_path is None:
-            d.msgbox("Unable to download from mega, please try again later...")
+            d.msgbox("Unable to download from MEGA.\n\nThe site enforces a 5GB per day download limit, based on your public IP address. You may have reached this limit.\n\nPlease try again later...", 10, 60)
             break
 
         improvement_passed = process_improvement(file_path, extracted)
