@@ -1959,7 +1959,11 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 
     installed_updates = []
     for update in updates:
-        file = os.path.join(path, update[0])
+        if os.path.isdir(path):
+            file = os.path.join(path, update[0])
+        else:
+            # singular file selected so no need to add filename again 
+            file = path
         if process_improvement(file, extracted) == True:
             if delete == True:
                 os.remove(file)
