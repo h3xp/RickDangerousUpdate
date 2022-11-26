@@ -1479,7 +1479,7 @@ def count_games(system: str, games: list):
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
-    games = []
+    #games = []
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
@@ -1492,7 +1492,7 @@ def count_games(system: str, games: list):
                 games_list.append((game.text.strip(), path.text.strip()))
                 #if game.text.strip() in games:
                 #    d.msgbox(system + " - " + game.text.strip())
-                games.append(game.text.strip())
+                #games.append(game.text.strip())
                 count += 1
 
     games_list.sort()
