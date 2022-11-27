@@ -2037,6 +2037,8 @@ def get_default_update_dir():
         update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
         if update_dir is not None and os.path.exists(update_dir):
             return update_dir
+        else:
+            d.msgbox("Invalid saved path " + path + ", path reset to /")
 
     return "/"
 
