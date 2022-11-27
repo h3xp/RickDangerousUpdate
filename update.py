@@ -30,6 +30,7 @@ import subprocess
 from dialog import Dialog
 from packaging import version
 import copy
+import traceback
 
 d = Dialog()
 d.autowidgetsize = True
@@ -2765,9 +2766,19 @@ def main():
 
     if runcmd("id -u -n") == "pi\n":
         check_wrong_permissions()
-        hostname_dialog()
+        hostname_dialog(1)
     else:
         user_dialog()
 
-if __name__ == "__main__":        
-    main()
+if __name__ == "__main__":
+    try:
+        main()
+    except:
+        title_text = ""
+        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            datetime.datetime.utcnow()
+            log_this("/home/pi/.update_tool/exception.log", "*****{}\n{}".format(datetime.datetime.utcnow(), traceback.format_exc()))
+            log_this("/home/pi/.update_tool/exception.log", "\n\n")
+            title_text = "A copy of this exception is logged in /home/pi/.update_tool/exception.log for your records\n\n"
+
+        d.msgbox(title_text + traceback.format_exc(), title="Something has gone really bad...")
