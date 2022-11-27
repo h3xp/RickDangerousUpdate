@@ -160,6 +160,18 @@ def restart_es():
     return
 
 
+def toggle_notification():
+    if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
+        toggle = "False"
+    else:
+        toggle = "True"
+    
+    set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
+    d.msgbox('Display Notification set to: ' + toggle)
+    main_dialog()
+
+
+        
 def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
@@ -2099,7 +2111,8 @@ def misc_menu():
                              ("2", "Reset EmulationStation Configurations"),
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
-                             ("5", "Gamelist (Etc) Utilities")],
+                             ("5", "Gamelist (Etc) Utilities"),
+                             ("6", "Toggle Update Notification" )],
                     title="Miscellaneous")
 
     if code == d.OK:
@@ -2130,6 +2143,8 @@ def misc_menu():
                 handheld_dialog()
         elif tag == "5":
             gamelist_utilities_dialog()
+        elif tag == "6":
+            toggle_notification()
 
     cls()
     main_dialog()
@@ -2750,4 +2765,5 @@ def main():
     else:
         user_dialog()
 
-main()
+if __name__ == "__main__":        
+    main()

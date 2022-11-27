@@ -150,7 +150,10 @@ def uninstall():
         # this somehow failed badly
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
     os.remove(gamelist_file + "." + file_time)
-        
+    
+    #remove cronjob for notifications
+    runcmd("crontab -l | sed '/.update_tool/d' > /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
+
     return    
 
 
@@ -191,6 +194,8 @@ def install(overwrite=True):
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
     #download the update.py
     runshell("curl {}/update.py -o {}/update.py".format(git_repo, home_dir))
+    #download the notification.py
+    runshell("curl {}/notification.py -o {}/update.py".format(git_repo, home_dir))
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
@@ -265,6 +270,9 @@ def install(overwrite=True):
     shutil.copy(new_banner_path, png_file)
 
     shutil.rmtree(tmp_dir)
+
+    #add cronjob for notifications
+    runcmd("crontab -l > /tmp/cron && echo \"@reboot sudo python3 /home/pi/.update_tool/notification.py\" >> /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
 
     return
 
