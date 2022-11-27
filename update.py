@@ -1924,10 +1924,11 @@ def get_manual_updates(path: str, available_updates: list):
     files.sort()
     for file in files:
         for update in available_updates:
-            if update[0] == os.path.basename(file):
-                if update[3] == convert_filesize(os.path.getsize(file)):
-                    manual_updates.append(update)
-    
+#   file name check is not necessary so skip it
+#            if update[0] == os.path.basename(file):
+            if update[3] == convert_filesize(os.path.getsize(file)):
+                  manual_updates.append(update)
+
     return manual_updates
 
 
@@ -1961,10 +1962,15 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
     for update in updates:
         if os.path.isdir(path):
             file = os.path.join(path, update[0])
+            if not os.path.isfile(file):
+                log_this(log_file, "Filename " + file + " can't be located, search for same filename without double spaces")
+                file = re.sub(' +', ' ', file)
         else:
-            # singular file selected so no need to add filename again 
+            # singular file selected so no need to add filename again
             file = path
-        if process_improvement(file, extracted) == True:
+        if not os.path.isfile(file):
+            log_this(log_file, "Filename " + file + " can't be located, skip update for this")
+        elif process_improvement(file, extracted) == True:
             if delete == True:
                 os.remove(file)
 
