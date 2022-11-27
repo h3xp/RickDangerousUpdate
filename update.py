@@ -1957,6 +1957,7 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
+    log_file = "/home/pi/.update_tool/process_manual_updates.log"
 
     installed_updates = []
     for update in updates:
