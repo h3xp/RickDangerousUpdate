@@ -161,14 +161,18 @@ def restart_es():
 
 
 def toggle_notification():
-    if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
-        toggle = "False"
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
+            toggle = "False"
+        else:
+            toggle = "True"
+        
+        set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
+        d.msgbox('Display Notification set to: ' + toggle)
+        main_dialog()
     else:
-        toggle = "True"
-    
-    set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
-    d.msgbox('Display Notification set to: ' + toggle)
-    main_dialog()
+        d.msgbox('To use this feature make sure to install the tool.')
+        main_dialog()
 
 
         
