@@ -2013,9 +2013,10 @@ def manual_updates_dialog(init_path: str, delete: bool):
             set_config_value("CONFIG_ITEMS", "update_dir", os.path.dirname(path) + '/')
             official_improvements_dialog(path, delete)
         else:
-            d.msgbox("Invalid path!")
+            d.msgbox("Invalid path " + path)
             path = get_valid_path_portion(path)
             path = "/" if len(path) == 0 else path
+            d.msgbox("Path is now set to " + path)
             cls()
             manual_updates_dialog(path, delete)
     elif code == d.HELP:
