@@ -272,7 +272,8 @@ def install(overwrite=True):
     shutil.rmtree(tmp_dir)
 
     #add cronjob for notifications
-    runcmd("crontab -l > /tmp/cron && echo \"@reboot sudo python3 /home/pi/.update_tool/notification.py\" >> /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
+    #runcmd("crontab -l > /tmp/cron && echo \"@reboot sudo python3 /home/pi/.update_tool/notification.py\" >> /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
+    runcmd("( crontab -l 2>/dev/null ; echo '@reboot sudo python3 /home/pi/.update_tool/notification.py' ) | sort -u | crontab")
 
     return
 
