@@ -2809,6 +2809,8 @@ def main():
 if __name__ == "__main__":
     try:
         main()
+    except SystemExit:
+        print("")
     except:
         title_text = ""
         if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
