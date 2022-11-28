@@ -1,7 +1,8 @@
 from os import listdir
 import xml.etree.ElementTree as ET
 import configparser
-from update import get_config_value, get_available_updates, check_drive, is_update_applied
+from update import get_config_value, get_available_updates, is_update_applied, runcmd, check_drive
+import sys
 
 NOTIFICATION_TEXT_NAME = "e_UpdateTool_Notification"
 THEMES_PATH = "/etc/emulationstation/themes/"
@@ -19,12 +20,13 @@ config.optionxform = str
 
 def check_for_updates():
     needed_updates = 0
-    available_updates = get_available_updates(check_drive())
+    available_updates = get_available_updates(check_drive(), True)
     for update in available_updates:
         update_applied = is_update_applied(update[0], update[2])
         if update_applied == False:
-            needed_updates += 1  
-    print(needed_updates)
+            needed_updates += 1
+    if len(sys.argv) > 1:
+        if sys.argv[1] == "disable": return False
     if needed_updates > 0:
         return True
     else:
@@ -33,7 +35,6 @@ def check_for_updates():
 
 def check_config():
     display_notification = get_config_value('CONFIG_ITEMS', 'display_notification')
-    print(display_notification)
     if display_notification == "True":
         return True
     return False
@@ -71,35 +72,42 @@ def change_notifications(themes, action):
         for view in root.iter("view"):
             if view.attrib['name'] == 'system':
                 main_menu = view
-
         for element in main_menu.findall("text"):
             if element.attrib['name'] == NOTIFICATION_TEXT_NAME:
                 missing = False
                 if action == 'remove':
                     main_menu.remove(element)
-                    tree.write(theme)
+                    write_theme(tree, theme)
                     print('removed')
         
         if missing:
             if action == 'create':
                 main_menu.append(notification)
-                tree.write(theme)
+                write_theme(tree, theme)
                 print('created')
 
 
-    
+def write_theme(tree, theme):
+    tree.write("/tmp/theme.xml")
+    runcmd("sudo mv /tmp/theme.xml " + theme)
+
 
 def main():
     if check_config():
         themes = get_themes()
         if check_for_updates():
             found = find_custom_elements(themes, 'system', NOTIFICATION_TEXT_NAME)
-            if len(found) == len(themes) - len(IGNORE_THEMES):
+            if len(found) == len(themes):
                 print("notification already shown")
             else:
+                print("else")
                 change_notifications(themes, 'create')
         else:
             change_notifications(themes, 'remove')
 
 main()
 
+# get nodes in shared folder in the update.py seems to error as a cronjob
+# HTTPSConnectionPool(host='g.api.mega.co.nz', port=443): Max retries exceeded 
+# with url: /cs?id=0&n=DfBWGTjA (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0xb56a4fd0>: 
+# Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))

@@ -161,22 +161,52 @@ def restart_es():
     return
 
 
-def toggle_notification():
+def cronjob_exists(unique):
+    output = runcmd("crontab -l")
+    if unique in output:
+        return True
+    else:
+        return False
+
+
+def toggle_autoclean():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
+        if get_config_value('CONFIG_ITEMS', 'auto_clean') == "True":
             toggle = "False"
+            toggle_msg = "disabled"
         else:
             toggle = "True"
-        
-        set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
-        d.msgbox('Display Notification set to: ' + toggle)
+            toggle_msg = "enabled"
+
+        set_config_value('CONFIG_ITEMS', 'auto_clean', toggle)
+        d.msgbox('Auto clean ' + toggle_msg + '! Reboot to apply changes')
         main_dialog()
     else:
         d.msgbox('To use this feature make sure to install the tool.')
         main_dialog()
+    
 
-
+def toggle_notification():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
+            toggle = "False"
+            toggle_msg = "disabled"
+            cmd = "crontab -l | sed '/.update_tool/d' | crontab"
+        else:
+            toggle = "True"
+            toggle_msg = "enabled"
+            if not cronjob_exists("update_tool"):
+                cmd = "( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab"
         
+        set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
+        runcmd(cmd)
+        d.msgbox('Display Notification ' + toggle_msg + '! Reboot to apply changes')
+        main_dialog()
+    else:
+        d.msgbox('To use this feature make sure to install the tool.')
+        main_dialog()
+ 
+
 def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
@@ -310,12 +340,16 @@ def get_file_data(file_id: str, root_folder: str):
 # def get_nodes_in_shared_folder(root_folder: str) -> dict:
 def get_nodes_in_shared_folder(root_folder: str):
     data = [{"a": "f", "c": 1, "ca": 1, "r": 1}]
-    response = requests.post(
-        "https://g.api.mega.co.nz/cs",
-        params={'id': 0,  # self.sequence_num
-                'n': root_folder},
-        data=json.dumps(data)
-    )
+    try:
+        response = requests.post(
+            "https://g.api.mega.co.nz/cs",
+            params={'id': 0,  # self.sequence_num
+                    'n': root_folder},
+            data=json.dumps(data)
+        )
+    except requests.exceptions.RequestException as e:
+        print(e)
+    print(response)
     json_resp = response.json()
     return json_resp[0]["f"]
 
@@ -388,7 +422,6 @@ def get_available_updates(megadrive: str, status=False):
         if node["t"] == 0:
             file_size = convert_filesize(node["s"])
             available_updates.append([file_name, file_id, modified_date, file_size])
-
     return available_updates
 
 
@@ -418,7 +451,7 @@ def cls():
 
 
 def runcmd(command):
-    code = subprocess.check_output(["bash","-c",command])
+    code = subprocess.check_output(["/bin/bash","-c",command])
     return str(code, "UTF-8")
     #return os.popen(command).read()
 
@@ -2117,7 +2150,8 @@ def misc_menu():
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
                              ("5", "Gamelist (Etc) Utilities"),
-                             ("6", "Toggle Update Notification" )],
+                             ("6", "Toggle Update Notification"),
+                             ("7", "Toggle Auto Clean")],
                     title="Miscellaneous")
 
     if code == d.OK:
@@ -2150,6 +2184,8 @@ def misc_menu():
             gamelist_utilities_dialog()
         elif tag == "6":
             toggle_notification()
+        elif tag == "7":
+            toggle_autoclean()
 
     cls()
     main_dialog()

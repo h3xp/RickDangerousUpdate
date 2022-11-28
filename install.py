@@ -151,9 +151,6 @@ def uninstall():
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
     os.remove(gamelist_file + "." + file_time)
     
-    #remove cronjob for notifications
-    #runcmd("crontab -l | sed '/.update_tool/d' > /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
-    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
     return    
 
 
@@ -270,10 +267,6 @@ def install(overwrite=True):
     shutil.copy(new_banner_path, png_file)
 
     shutil.rmtree(tmp_dir)
-
-    #add cronjob for notifications
-    #runcmd("crontab -l > /tmp/cron && echo \"@reboot sudo python3 /home/pi/.update_tool/notification.py\" >> /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
-    runcmd("( crontab -l 2>/dev/null ; echo '@reboot sudo python3 /home/pi/.update_tool/notification.py' ) | sort -u | crontab")
 
     return
 
