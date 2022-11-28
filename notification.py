@@ -3,6 +3,8 @@ import xml.etree.ElementTree as ET
 import configparser
 from update import get_config_value, get_available_updates, is_update_applied, runcmd, check_drive
 import sys
+import requests
+import time
 
 NOTIFICATION_TEXT_NAME = "e_UpdateTool_Notification"
 THEMES_PATH = "/etc/emulationstation/themes/"
@@ -92,22 +94,31 @@ def write_theme(tree, theme):
     runcmd("sudo mv /tmp/theme.xml " + theme)
 
 
+def wait_for_network():
+    for i in range(20):
+        try:
+            r = requests.get('https://1.1.1.1/')
+            print(i, r)
+            return True
+        except requests.exceptions.RequestException as e:
+            print(i, e)
+            time.sleep(1)
+            pass
+    return False
+
+
+
 def main():
     if check_config():
         themes = get_themes()
-        if check_for_updates():
-            found = find_custom_elements(themes, 'system', NOTIFICATION_TEXT_NAME)
-            if len(found) == len(themes):
-                print("notification already shown")
+        if wait_for_network():
+            if check_for_updates():
+                found = find_custom_elements(themes, 'system', NOTIFICATION_TEXT_NAME)
+                if len(found) == len(themes):
+                    print("notification already shown")
+                else:
+                    change_notifications(themes, 'create')
             else:
-                print("else")
-                change_notifications(themes, 'create')
-        else:
-            change_notifications(themes, 'remove')
+                change_notifications(themes, 'remove')
 
 main()
-
-# get nodes in shared folder in the update.py seems to error as a cronjob
-# HTTPSConnectionPool(host='g.api.mega.co.nz', port=443): Max retries exceeded 
-# with url: /cs?id=0&n=DfBWGTjA (Caused by NewConnectionError('<urllib3.connection.HTTPSConnection object at 0xb56a4fd0>: 
-# Failed to establish a new connection: [Errno -3] Temporary failure in name resolution'))
