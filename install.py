@@ -152,8 +152,8 @@ def uninstall():
     os.remove(gamelist_file + "." + file_time)
     
     #remove cronjob for notifications
-    runcmd("crontab -l | sed '/.update_tool/d' > /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
-
+    #runcmd("crontab -l | sed '/.update_tool/d' > /tmp/cron && crontab /tmp/cron && rm /tmp/cron")
+    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
     return    
 
 
