@@ -2766,7 +2766,7 @@ def main():
 
     if runcmd("id -u -n") == "pi\n":
         check_wrong_permissions()
-        hostname_dialog(1)
+        hostname_dialog()
     else:
         user_dialog()
 
