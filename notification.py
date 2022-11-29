@@ -120,5 +120,9 @@ def main():
                     change_notifications(themes, 'create')
             else:
                 change_notifications(themes, 'remove')
+        else:
+            change_notifications(themes, 'remove')
+    else:
+        change_notifications(themes, 'remove')
 
 main()

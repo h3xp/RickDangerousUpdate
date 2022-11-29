@@ -151,6 +151,9 @@ def uninstall():
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
     os.remove(gamelist_file + "." + file_time)
     
+    #remove cronjob
+    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+
     return    
 
 
