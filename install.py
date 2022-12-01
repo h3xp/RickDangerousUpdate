@@ -231,7 +231,8 @@ def install(overwrite=True):
     print("Writing bash script...")
     with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
-        shellfile.write("source <(grep = {} | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        #shellfile.write("source <(grep = {} | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
         shellfile.write("$home_exe $home_dir/$home_command $mega_dir")
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
