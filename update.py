@@ -2042,12 +2042,15 @@ def downloaded_update_question_dialog():
 
     update_dir = get_default_update_dir()
     
-    if os.path.isdir(update_dir) or os.path.isfile(update_dir):
-        if code == d.OK:
-            manual_updates_dialog(update_dir, False)
+    if not os.path.isdir(update_dir) and not os.path.isfile(update_dir):
+        d.msgbox("Previous used path '{}' is not valid. Using /".format(update_dir))
+        update_dir = "/"
 
-        if code == d.CANCEL:
-            manual_updates_dialog(update_dir, True)
+    if code == d.OK:
+        manual_updates_dialog(update_dir, False)
+
+    if code == d.CANCEL:
+        manual_updates_dialog(update_dir, True)
 
     return
 
