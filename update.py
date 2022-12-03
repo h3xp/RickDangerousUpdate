@@ -161,12 +161,12 @@ def restart_es():
     return
 
 
-def cronjob_exists(unique):
-    output = runcmd("crontab -l")
-    if unique in output:
-        return True
-    else:
-        return False
+#def cronjob_exists(unique):
+#    output = runcmd("crontab -l")
+#    if unique in output:
+#        return True
+#    else:
+#        return False
 
 
 def toggle_autoclean():
@@ -191,15 +191,15 @@ def toggle_notification():
         if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
             toggle = "False"
             toggle_msg = "disabled"
-            cmd = "crontab -l | sed '/.update_tool/d' | crontab"
+#            cmd = "crontab -l | sed '/.update_tool/d' | crontab"
         else:
             toggle = "True"
             toggle_msg = "enabled"
-            if not cronjob_exists("update_tool"):
-                cmd = "( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab"
+#            if not cronjob_exists("update_tool"):
+#                cmd = "( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab"
         
         set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
-        runcmd(cmd)
+#        runcmd(cmd)
         d.msgbox('Display Notification ' + toggle_msg + '! Reboot to apply changes')
         main_dialog()
     else:
