@@ -1813,23 +1813,53 @@ def do_remove_logs(logs: list):
         if os.path.exists(log_dir):
             if os.path.isdir(log_dir):
                 shutil.rmtree(log_dir)            
+    d.msgbox('Done!')
 
     return
 
 
-def do_restore_logs(log: str):
+def do_restore_logs(logs: list):
+    for log in logs:
+        log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
+        log_dir = os.path.splitext(log_file)[0]
+        if os.path.exists(log_dir):
+            if os.path.isdir(log_dir):
+                copydir(log_dir, "/home/pi/RetroPie/roms")
+    d.msgbox('Done!')
+
+    return
+
+
+def get_total_path_size(dir: str):
+    if os.path.exists(dir):
+        process = subprocess.run(['du', '-sb', dir], capture_output=True, text=True)
+        size = process.stdout.split()[0]
+        print(size)
+        return size
+
+    return None
+
+
+def get_log_size(log: str):
     log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
     log_dir = os.path.splitext(log_file)[0]
+
+    if os.path.exists(log_file):
+        if not os.path.isfile(log_file):
+            return None
+
+    log_size = int(get_total_path_size(log_file))
     if os.path.exists(log_dir):
         if os.path.isdir(log_dir):
-            copydir(log_dir, "/home/pi/RetroPie/roms")
-    d.msgbox('done!')
-    return
+            log_size += int(get_total_path_size(log_dir))
+
+    return log_size
 
 
 def logs_dialog(function: str, title: str, patterns: list, multi=True):
     menu_choices = []
     logs = []
+    total_size = 0
 
     for pattern in patterns:
         for log in Path("/home/pi/.update_tool/gamelist_logs").glob(pattern):
@@ -1844,36 +1874,47 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
         
     logs.sort(reverse=True)
     for menu_choice in logs:
-        menu_choices.append((menu_choice, "", False))
+        log_size = get_log_size(menu_choice)
+        total_size += log_size
+        menu_choices.append((menu_choice + " ({})".format(convert_filesize(str(log_size))), "", False))
 
+    dlg_text = "Log Files in \"/home/pi/.update_tool/gamelist_logs\" ({}):".format(convert_filesize(str(total_size)))
     if multi == True:
-        code, tags = d.checklist(text="Log Files in \"/home/pi/.update_tool/gamelist_logs\":",
+        code, tags = d.checklist(text=dlg_text,
                                 choices=menu_choices,
                                 ok_label="{} Selected".format(function), 
                                 extra_button=True, 
                                 extra_label="{} All".format(function), 
                                 title=title)
     else:
-        code, tags = d.radiolist(text="Log Files in \"/home/pi/.update_tool/gamelist_logs\":",
+        code, tags = d.radiolist(text=dlg_text,
                                 choices=menu_choices,
                                 ok_label="{} Selected".format(function), 
                                 title=title)
 
     selected_logs = []
+    selected_items = []
     if code == d.CANCEL:
         cls()
         gamelist_utilities_dialog()
 
     if code == d.OK:
-        selected_logs = tags
+        selected_items = tags
 
     if code == d.EXTRA:
-        selected_logs = logs
+        selected_items = logs
 
-    if function == "Remove":
-        do_remove_logs(selected_logs)
-    elif function == "Restore":
-        do_restore_logs(selected_logs)
+    if len(selected_items) > 0:
+        if "'str'" in str(type(selected_items)):
+            selected_logs.append(selected_items.split(" ")[0])
+        else:
+            for selected_item in selected_items:
+                selected_logs.append(selected_item[0].split(" ")[0])
+
+        if function == "Remove":
+            do_remove_logs(selected_logs)
+        elif function == "Restore":
+            do_restore_logs(selected_logs)
 
     cls()
     gamelist_utilities_dialog()
@@ -1934,7 +1975,7 @@ def gamelist_utilities_dialog():
         elif tag == "2":
             gamelists_dialog("Clean")
         elif tag == "3":
-            logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*"], multi=False)
+            logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
         elif tag == "4":
             logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
         elif tag == "5":
