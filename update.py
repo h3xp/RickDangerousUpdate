@@ -2789,7 +2789,29 @@ def clean_failures():
     return
 
 
+def check_for_updates():
+    needed_updates = 0
+    available_updates = get_available_updates(check_drive(), False)
+    for update in available_updates:
+        update_applied = is_update_applied(update[0], update[2])
+        if update_applied == False:
+            needed_updates += 1
+    if needed_updates > 0:
+        return True
+    else:
+        return False
+
+
 def main():
+    if len(sys.argv) > 2 and sys.argv[2] == "notify":
+        if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
+            if check_for_updates():
+                if d.pause("Updates are available\\n\\nProceed with booting or Update ?", height=10, seconds=10, ok_label="Boot", cancel_label="Update") == d.OK:
+                    exit(0)
+        else:
+            exit(0)
+
+
     global genres
 
     clean_failures()
