@@ -349,7 +349,7 @@ def get_nodes_in_shared_folder(root_folder: str):
         )
     except requests.exceptions.RequestException as e:
         print(e)
-    print(response)
+    #print(response)
     json_resp = response.json()
     return json_resp[0]["f"]
 
