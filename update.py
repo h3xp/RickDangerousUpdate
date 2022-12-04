@@ -2041,10 +2041,7 @@ def downloaded_update_question_dialog():
                         "\n\nWould you like to remove .zip files?", yes_label="Keep", no_label="Delete")
 
     update_dir = get_default_update_dir()
-    
-    if not os.path.isdir(update_dir) and not os.path.isfile(update_dir):
-        d.msgbox("Previous used path '{}' is not valid. Using /".format(update_dir))
-        update_dir = "/"
+    update_dir = get_valid_path_portion(update_dir)
 
     if code == d.OK:
         manual_updates_dialog(update_dir, False)
