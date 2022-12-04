@@ -2731,6 +2731,4 @@ def main():
     else:
         user_dialog()
 
-# https://stackabuse.com/what-does-if-__name__-__main__-do-in-python/
-if __name__ == "__main__":
-    main()
+main()
