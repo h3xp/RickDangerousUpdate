@@ -1980,15 +1980,15 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 
 
 def get_valid_path_portion(path: str):
-    return_path = ""
+    return_path = "/"
     parts = path.split("/")
     for part in parts:
         if len(part) > 0:
-            if os.path.isdir(os.path.join(return_path, "/" + part)) == True or os.path.isfile(os.path.join(return_path, "/" + part)) == True:
-                return_path += "/" + part
+            if os.path.isdir(os.path.join(return_path, part)) == True or os.path.isfile(os.path.join(return_path, part)) == True:
+                return_path = os.path.join(return_path, part)
 
-    if os.path.isdir(return_path):
-        return_path += "/"
+    #will add the trailing slash if it's not already there.
+    return_path = os.path.join(return_path, '')
 
     return return_path
 
