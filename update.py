@@ -2858,7 +2858,8 @@ def check_for_updates():
 def main():
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') == "True" and check_for_updates():
-            if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=60, ok_label="Boot", cancel_label="Update") == d.OK:
+            notification_timeout = get_config_value('CONFIG_ITEMS', 'notification_timeout') 
+            if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=notification_timeout, ok_label="Boot", cancel_label="Update") == d.OK:
                 exit(0)
         else:
             exit(0)
