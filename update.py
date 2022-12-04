@@ -2395,7 +2395,8 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
                     break
 
     if code == d.EXTRA:
-        selected_updates = all_updates
+        if d.yesno(text="Are you sure you want to apply all available updates?") == d.OK:
+            selected_updates = all_updates
 
     if code == d.CANCEL:
         selected_updates = []
