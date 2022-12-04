@@ -153,6 +153,8 @@ def uninstall():
     
     ##remove cronjob
     #runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+    # remove autostart.sh entry if one exists
+    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
 
     return    
 
