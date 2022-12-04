@@ -2864,6 +2864,9 @@ def main():
         else:
             exit(0)
 
+    if len(sys.argv) > 2 and sys.argv[2] == "check" and check_for_updates():
+        if d.yesno("Updates are available !\\n\\nProceed or Exit ?", height=8, yes_label="Proceed", no_label="Exit") == d.CANCEL:
+            exit(0)
 
     global genres
 
