@@ -169,6 +169,14 @@ def restart_es():
 #        return False
 
 
+def autostart_exists(unique):
+    output = runcmd("cat /opt/retropie/configs/all/autostart.sh")
+    if unique in output:
+        return True
+    else:
+        return False
+
+
 def toggle_autoclean():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         if get_config_value('CONFIG_ITEMS', 'auto_clean') == "True":
@@ -192,14 +200,17 @@ def toggle_notification():
             toggle = "False"
             toggle_msg = "disabled"
 #            cmd = "crontab -l | sed '/.update_tool/d' | crontab"
+            cmd = "sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh"
         else:
             toggle = "True"
             toggle_msg = "enabled"
 #            if not cronjob_exists("update_tool"):
 #                cmd = "( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab"
+            if not autostart_exists("update_tool"):
+                cmd = "( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh"
         
         set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
-#        runcmd(cmd)
+        runcmd(cmd)
         d.msgbox('Display Notification ' + toggle_msg + '! Reboot to apply changes')
         main_dialog()
     else:
