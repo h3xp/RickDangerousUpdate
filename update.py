@@ -2847,7 +2847,7 @@ def check_for_updates():
 def main():
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') == "True" and check_for_updates():
-            if d.pause("Updates are available\\n\\nProceed with booting or Update ?", height=10, seconds=10, ok_label="Boot", cancel_label="Update") == d.OK:
+            if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=60, ok_label="Boot", cancel_label="Update") == d.OK:
                 exit(0)
         else:
             exit(0)
@@ -2873,7 +2873,8 @@ if __name__ == "__main__":
     try:
         main()
     except SystemExit:
-        print("")
+        #print("")
+        nothing = None
     except:
         title_text = ""
         if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
