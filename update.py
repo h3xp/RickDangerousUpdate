@@ -2089,9 +2089,8 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 #                shutil.rmtree(path)
 
     d.msgbox("{} of {} selected manual updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
-    reboot_msg = "\nRebooting in 5 seconds!\n"
-    d.pause(reboot_msg, height=10, width=60)
-    restart_es()
+    reboot_msg = "\nReboot required for these changes to take effect. Rebooting now.!\n"
+    reboot_dialog(reboot_msg)
 
     return
 
@@ -2532,9 +2531,8 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
     
     d.msgbox("{} of {} selected updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(selected_updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
     if len(installed_updates) > 0:
-        reboot_msg = "\nRebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        reboot_msg = "\nReboot required for these changes to take effect. Rebooting now.!\n"
+        reboot_dialog(reboot_msg)
     else:
         main_dialog()
 
@@ -2751,9 +2749,8 @@ def install_dialog():
 
     if code == d.OK:
         install()
-        reboot_msg = "\nUpdate tool has been installed, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        reboot_msg = "\nUpdate tool has been installed, reboot required for these changes to take effect. Rebooting now.!\n"
+        reboot_dialog(reboot_msg)
     return
 
 
@@ -2766,9 +2763,8 @@ def update_dialog():
 
         if code == d.OK:
             update()
-            reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
-            d.pause(reboot_msg, height=10, width=60)
-            restart_es()
+            reboot_msg = "\nUpdate tool has been updated, reboot required for these changes to take effect. Rebooting now.!\n"
+            reboot_dialog(reboot_msg)
     elif update_available_result == "no update available":
         d.msgbox("You are already running the latest version.")
         main_dialog()
@@ -2784,9 +2780,8 @@ def uninstall_dialog():
 
     if code == d.OK:
         uninstall()
-        reboot_msg = "\nUpdate tool has been uninstalled, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        reboot_msg = "\nUpdate tool has been uninstalled, reboot required for these changes to take effect. Rebooting now.!\n"
+        reboot_dialog(reboot_msg)
     return
 
 
@@ -2829,6 +2824,13 @@ def hostname_dialog():
             main_dialog()
 
         main_dialog
+
+def reboot_dialog(reboot_msg):
+    code = d.pause(reboot_msg, height=10, width=60)
+    if code == d.CANCEL:
+        main_dialog()
+    else:
+        restart_es()
 
 
 def clean_failures():
