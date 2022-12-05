@@ -2863,9 +2863,6 @@ def main():
             notification_timeout = get_config_value('CONFIG_ITEMS', 'notification_timeout') 
             if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=notification_timeout, ok_label="Boot", cancel_label="Update") == d.OK:
                 exit(0)
-        else:
-            exit(0)
-
         if sys.argv[2] == "check" and check_for_updates():
             if d.yesno("Updates are available !\\n\\nProceed or Exit ?", height=8, yes_label="Proceed", no_label="Exit") == d.CANCEL:
                 exit(0)
