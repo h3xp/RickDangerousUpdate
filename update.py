@@ -2096,15 +2096,15 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 
 
 def get_valid_path_portion(path: str):
-    return_path = ""
+    return_path = "/"
     parts = path.split("/")
     for part in parts:
         if len(part) > 0:
-            if os.path.isdir(os.path.join(return_path, "/" + part)) == True or os.path.isfile(os.path.join(return_path, "/" + part)) == True:
-                return_path += "/" + part
+            if os.path.isdir(os.path.join(return_path, part)) == True or os.path.isfile(os.path.join(return_path, part)) == True:
+                return_path = os.path.join(return_path, part)
 
-    if os.path.isdir(return_path):
-        return_path += "/"
+    #will add the trailing slash if it's not already there.
+    return_path = os.path.join(return_path, '')
 
     return return_path
 
@@ -2161,13 +2161,13 @@ def downloaded_update_question_dialog():
                         "\n\nWould you like to remove .zip files?", yes_label="Keep", no_label="Delete")
 
     update_dir = get_default_update_dir()
-    
-    if os.path.isdir(update_dir) or os.path.isfile(update_dir):
-        if code == d.OK:
-            manual_updates_dialog(update_dir, False)
+    update_dir = get_valid_path_portion(update_dir)
 
-        if code == d.CANCEL:
-            manual_updates_dialog(update_dir, True)
+    if code == d.OK:
+        manual_updates_dialog(update_dir, False)
+
+    if code == d.CANCEL:
+        manual_updates_dialog(update_dir, True)
 
     return
 
