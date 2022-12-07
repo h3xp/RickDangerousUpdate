@@ -248,7 +248,7 @@ def install(overwrite=True):
     print("Writing update notification script...")
     with open("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh", "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
-        shellfile.write("if [ $2 != \"gotostart\" ]; then\n")
+        shellfile.write("if [ $2 == \"gotostart\" ]; then\n")
         shellfile.write("  source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
         shellfile.write("  if [ $update_available == \"True\" ]; then\n")
         shellfile.write("    width=$(fbset -s | grep '\".*\"' | grep -m 1 -o '[0-9][0-9][0-9]\+x' | tr -d 'x')\n")
