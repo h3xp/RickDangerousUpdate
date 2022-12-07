@@ -2873,8 +2873,9 @@ def check_for_updates():
 
 def main():
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
-        if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
-            if check_for_updates():
+        if check_for_updates():
+            set_config_value("CONFIG_ITEMS", "display_notification", "True")
+            if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
                 while runcmd("pidof omxplayer.bin | cat") != "":
                     time.sleep(2)
                 if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=5, ok_label="Boot", cancel_label="Update") == d.OK:
@@ -2882,6 +2883,7 @@ def main():
             else:
                 exit(0)
         else:
+            set_config_value("CONFIG_ITEMS", "display_notification", "False")
             exit(0)
 
     global genres

@@ -198,6 +198,10 @@ def install(overwrite=True):
     runshell("curl {}/update.py -o {}/update.py".format(git_repo, home_dir))
     #download the notification.py
     runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
+    #dowload pngview
+    runshell("curl {}/pngview -o {}/pngview".format(git_repo, home_dir))
+    #dowload update_available.png
+    runshell("curl {}/docs/update_available.png -o {}/update_available.png".format(git_repo, home_dir))
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
@@ -237,7 +241,24 @@ def install(overwrite=True):
         shellfile.write("source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
         shellfile.write("$home_exe $home_dir/$home_command $mega_dir $1")
 
+    #create ES script dir
+    os.makedirs("/opt/retropie/configs/all/emulationstation/scripts/system-select", exist_ok=True)
+
+    #write update notification script
+    print("Writing update notification script...")
+    with open("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh", "w") as shellfile:
+        shellfile.write("#!/bin/bash\n")
+        shellfile.write("if [ $2 != \"gotostart\" ]; then\n")
+        shellfile.write("  source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("  if [ $update_available == \"True\" ]; then\n")
+        shellfile.write("    width=$(fbset -s | grep '\".*\"' | grep -m 1 -o '[0-9][0-9][0-9]\+x' | tr -d 'x')\n")
+        shellfile.write("    timeout 20 {}/pngview -b 0 -l 1 -x $((width-139)) -y 0 {}/update_available.png &\n".format(home_dir, home_dir))
+        shellfile.write("  fi\n")
+        shellfile.write("fi\n")
+
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
+    runcmd("chmod +x /opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh")
+    runcmd("chmod +x /home/pi/.update_tool/pngview")
     runcmd("chmod +x /home/pi/.update_tool/update.py")
     runcmd("sudo ln -sf /home/pi/RetroPie/retropiemenu/update_tool.sh /usr/bin/update_tool")
 
