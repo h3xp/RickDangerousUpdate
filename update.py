@@ -2858,17 +2858,12 @@ def check_for_updates():
 
 
 def main():
-    if len(sys.argv) > 2:
-        if sys.argv[2] == "notify" and get_config_value('CONFIG_ITEMS', 'display_notification') == "True" and check_for_updates():
-            notification_timeout = get_config_value('CONFIG_ITEMS', 'notification_timeout') 
-            if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=notification_timeout, ok_label="Boot", cancel_label="Update") == d.OK:
+    if len(sys.argv) > 2 and sys.argv[2] == "notify" and get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
+        if check_for_updates():
+            if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=60, ok_label="Boot", cancel_label="Update") == d.OK:
                 exit(0)
-        if sys.argv[2] == "check" and check_for_updates():
-            if d.yesno("Updates are available !\\n\\nProceed or Exit ?", height=8, yes_label="Proceed", no_label="Exit") == d.CANCEL:
-                exit(0)
-    else:
-        if get_config_value('CONFIG_ITEMS', 'start_update_check') == "True" and check_for_updates():
-            code = d.msgbox("Updates are available !", height=7)
+        else:
+            exit(0)
 
     global genres
 
