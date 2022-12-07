@@ -31,6 +31,7 @@ from dialog import Dialog
 from packaging import version
 import copy
 import traceback
+import time
 
 d = Dialog()
 d.autowidgetsize = True
@@ -161,12 +162,12 @@ def restart_es():
     return
 
 
-#def cronjob_exists(unique):
-#    output = runcmd("crontab -l")
-#    if unique in output:
-#        return True
-#    else:
-#        return False
+def cronjob_exists(unique):
+    output = runcmd("crontab -l 2>/dev/null")
+    if unique in output:
+        return True
+    else:
+        return False
 
 
 def autostart_exists(unique):
@@ -194,28 +195,41 @@ def toggle_autoclean():
         main_dialog()
     
 
-def toggle_notification():
+def select_notification():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
-            toggle = "False"
-            toggle_msg = "disabled"
-#            cmd = "crontab -l | sed '/.update_tool/d' | crontab"
-            cmd = "sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh"
-        else:
-            toggle = "True"
-            toggle_msg = "enabled"
-#            if not cronjob_exists("update_tool"):
-#                cmd = "( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab"
-            if not autostart_exists("update_tool"):
-                cmd = "( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh"
-        
-        set_config_value('CONFIG_ITEMS', 'display_notification', toggle)
-        runcmd(cmd)
-        d.msgbox('Display Notification ' + toggle_msg + '! Reboot to apply changes')
-        main_dialog()
+        previous_method = get_config_value('CONFIG_ITEMS', 'display_notification')
+
+        code, tag = d.radiolist("Choose which notification method you want to use",
+                    choices=[("False", "Do not notify about game updates", previous_method == "False"),
+                             ("Theme", "Notify about game updates via themes", previous_method == "Theme"),
+                             ("Tool", "Notify about game updates via update tool", previous_method == "Tool")],
+                    title="Game Update Notification",
+                    ok_label="Set Method")
+
+        if code == d.OK and previous_method != tag:
+            if tag == "False":
+                if previous_method == "Theme":
+                    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+                if previous_method == "Tool":
+                    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+            if tag == "Theme":
+                if not cronjob_exists("update_tool"):
+                    runcmd("( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab")
+                if previous_method == "Tool":
+                    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+            if tag == "Tool":
+                if not autostart_exists("update_tool"):
+                    runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+                if previous_method == "Theme":
+                    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+
+            set_config_value('CONFIG_ITEMS', 'display_notification', tag)
+            d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
     else:
         d.msgbox('To use this feature make sure to install the tool.')
-        main_dialog()
+    main_dialog()
  
 
 def is_update_applied(key: str, modified_timestamp: str):
@@ -2201,7 +2215,7 @@ def misc_menu():
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
                              ("5", "Gamelist (Etc) Utilities"),
-                             ("6", "Toggle Update Notification"),
+                             ("6", "Select Update Notification"),
                              ("7", "Toggle Auto Clean")],
                     title="Miscellaneous")
 
@@ -2234,7 +2248,7 @@ def misc_menu():
         elif tag == "5":
             gamelist_utilities_dialog()
         elif tag == "6":
-            toggle_notification()
+            select_notification()
         elif tag == "7":
             toggle_autoclean()
 
@@ -2858,9 +2872,14 @@ def check_for_updates():
 
 
 def main():
-    if len(sys.argv) > 2 and sys.argv[2] == "notify" and get_config_value('CONFIG_ITEMS', 'display_notification') == "True":
-        if check_for_updates():
-            if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=60, ok_label="Boot", cancel_label="Update") == d.OK:
+    if len(sys.argv) > 2 and sys.argv[2] == "notify":
+        if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
+            if check_for_updates():
+                while runcmd("pidof omxplayer.bin | cat") != "":
+                    time.sleep(2)
+                if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=5, ok_label="Boot", cancel_label="Update") == d.OK:
+                    exit(0)
+            else:
                 exit(0)
         else:
             exit(0)
