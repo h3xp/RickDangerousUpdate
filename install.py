@@ -16,6 +16,7 @@ ini_file = "/home/pi/.update_tool/update_tool.ini"
 png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
 gamelist_file = "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml"
 sh_file = "/home/pi/RetroPie/retropiemenu/update_tool.sh"
+updates_script = "/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh"
 mega_folder = ""
 
 
@@ -131,6 +132,14 @@ def uninstall():
 
     if os.path.exists(png_file):
         os.remove(png_file)
+
+    if os.path.exists("/opt/retropie/configs/all/emulationstation/scripts/system-select"):
+        if os.path.exists("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh"):
+            os.remove("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh")
+        if len(os.listdir("/opt/retropie/configs/all/emulationstation/scripts/system-select")) == 0:
+            shutil.rmtree("/opt/retropie/configs/all/emulationstation/scripts/system-select")
+        if len(os.listdir("/opt/retropie/configs/all/emulationstation/scripts")) == 0:
+            shutil.rmtree("/opt/retropie/configs/all/emulationstation/scripts")
 
     src_tree = ET.parse(gamelist_file)
     src_root = src_tree.getroot()
