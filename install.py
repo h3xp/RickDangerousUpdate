@@ -151,8 +151,8 @@ def uninstall():
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
     os.remove(gamelist_file + "." + file_time)
     
-    ##remove cronjob
-    #runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+    #remove cronjob
+    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
     # remove autostart.sh entry if one exists
     runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
 
@@ -196,8 +196,8 @@ def install(overwrite=True):
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
     #download the update.py
     runshell("curl {}/update.py -o {}/update.py".format(git_repo, home_dir))
-    ##download the notification.py
-    #runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
+    #download the notification.py
+    runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
