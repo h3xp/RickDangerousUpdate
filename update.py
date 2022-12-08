@@ -215,7 +215,7 @@ def select_notification():
 
         if code == d.OK:
             remove_notification()
-            if tag != "False":
+            if tag in ["Theme", "Tool"]:
                 runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
             set_config_value('CONFIG_ITEMS', 'display_notification', tag)
             d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
