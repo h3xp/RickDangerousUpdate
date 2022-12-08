@@ -195,6 +195,13 @@ def toggle_autoclean():
         main_dialog()
     
 
+def remove_notification():
+    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+    return
+
+
 def select_notification():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         previous_method = get_config_value('CONFIG_ITEMS', 'display_notification')
@@ -206,27 +213,34 @@ def select_notification():
                     title="Game Update Notification",
                     ok_label="Set Method")
 
-        if code == d.OK and previous_method != tag:
-            if tag == "False":
-                if previous_method == "Theme":
-                    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
-                if previous_method == "Tool":
-                    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
-
-            if tag == "Theme":
-                if not cronjob_exists("update_tool"):
-                    runcmd("( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab")
-                if previous_method == "Tool":
-                    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
-
-            if tag == "Tool":
-                if not autostart_exists("update_tool"):
-                    runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
-                if previous_method == "Theme":
-                    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
-
+        if code == d.OK:
+            remove_notification()
+            if tag != "False":
+                runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
             set_config_value('CONFIG_ITEMS', 'display_notification', tag)
             d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
+                        
+        #if code == d.OK and previous_method != tag:
+        #    if tag == "False":
+        #        if previous_method == "Theme":
+        #            runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+        #        if previous_method == "Tool":
+        #            runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+        #    if tag == "Theme":
+        #        if not cronjob_exists("update_tool"):
+        #            runcmd("( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab")
+        #        if previous_method == "Tool":
+        #            runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+        #    if tag == "Tool":
+        #        if not autostart_exists("update_tool"):
+        #            runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+        #        if previous_method == "Theme":
+        #            runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+
+        #    set_config_value('CONFIG_ITEMS', 'display_notification', tag)
+        #    d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
     else:
         d.msgbox('To use this feature make sure to install the tool.')
     main_dialog()
@@ -2873,12 +2887,17 @@ def check_for_updates():
 
 def main():
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
+        if get_config_value('CONFIG_ITEMS', 'display_notification') == "False":
+            remove_notification()
+            exit(0)
+            
         if check_for_updates():
             set_config_value("CONFIG_ITEMS", "update_availabe", "True")
             if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
                 while runcmd("pidof omxplayer.bin | cat") != "":
                     time.sleep(2)
                 if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=5, ok_label="Boot", cancel_label="Update") == d.OK:
+                    set_config_value("CONFIG_ITEMS", "update_availabe", "False")
                     exit(0)
             else:
                 exit(0)
