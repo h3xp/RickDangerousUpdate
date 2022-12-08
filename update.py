@@ -2892,12 +2892,12 @@ def main():
             exit(0)
             
         if check_for_updates():
-            set_config_value("CONFIG_ITEMS", "update_availabe", "True")
+            set_config_value("CONFIG_ITEMS", "update_available", "False")
             if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
+                set_config_value("CONFIG_ITEMS", "update_availabe", "False")
                 while runcmd("pidof omxplayer.bin | cat") != "":
                     time.sleep(2)
                 if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=5, ok_label="Boot", cancel_label="Update") == d.OK:
-                    set_config_value("CONFIG_ITEMS", "update_availabe", "False")
                     exit(0)
             else:
                 exit(0)
