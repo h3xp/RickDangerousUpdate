@@ -2887,7 +2887,7 @@ def check_for_updates():
 
 def main():
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
-        if get_config_value('CONFIG_ITEMS', 'display_notification') == "False":
+        if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
             exit(0)
             
