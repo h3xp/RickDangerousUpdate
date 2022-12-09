@@ -209,8 +209,6 @@ def install(overwrite=True):
     runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
     #dowload pngview
     runshell("curl {}/pngview -o {}/pngview".format(git_repo, home_dir))
-    #dowload update_available.png
-    runshell("curl {}/docs/update_available.png -o {}/update_available.png".format(git_repo, home_dir))
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
