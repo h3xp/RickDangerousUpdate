@@ -2275,7 +2275,7 @@ def misc_menu():
 def main_dialog():
     global update_available_result
     if update_available_result == "no connection":
-        update_available_result - update_available()
+        update_available_result = update_available()
 
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load Improvements"),    
@@ -2886,39 +2886,46 @@ def check_for_updates():
 
 
 def main():
+    global update_available_result
+    update_available_result = update_available()
+
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
             exit(0)
-            
+
+        if update_available_result == "update available":
+            set_config_value("CONFIG_ITEMS", "upgrade_available", "True")
+        else:
+            set_config_value("CONFIG_ITEMS", "upgrade_available", "False")
+
         if check_for_updates():
+            set_config_value("CONFIG_ITEMS", "update_available", "True")
             if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
                 while runcmd("pidof omxplayer.bin | cat") != "":
                     time.sleep(2)
                 if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=5, ok_label="Boot", cancel_label="Update") == d.OK:
                     exit(0)
             else:
-                set_config_value("CONFIG_ITEMS", "update_available", "True")
                 exit(0)
         else:
             set_config_value("CONFIG_ITEMS", "update_available", "False")
             exit(0)
 
-    global genres
-
     clean_failures()
+
+    global genres
     section = get_config_section("GENRE_MAPPINGS")
     if section is not None:
         for key, val in section:
             genres[key] = val
-    global update_available_result
-    update_available_result = update_available()
 
     if runcmd("id -u -n") == "pi\n":
         check_wrong_permissions()
         hostname_dialog()
     else:
         user_dialog()
+
 
 if __name__ == "__main__":
     try:
