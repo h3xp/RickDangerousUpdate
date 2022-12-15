@@ -30,6 +30,8 @@ import subprocess
 from dialog import Dialog
 from packaging import version
 import copy
+import traceback
+import time
 
 d = Dialog()
 d.autowidgetsize = True
@@ -159,6 +161,90 @@ def restart_es():
     #runcmd("sudo systemctl restart autologin@tty1.service")
     return
 
+
+def cronjob_exists(unique):
+    output = runcmd("crontab -l 2>/dev/null")
+    if unique in output:
+        return True
+    else:
+        return False
+
+
+def autostart_exists(unique):
+    output = runcmd("cat /opt/retropie/configs/all/autostart.sh")
+    if unique in output:
+        return True
+    else:
+        return False
+
+
+def toggle_autoclean():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if get_config_value('CONFIG_ITEMS', 'auto_clean') == "True":
+            toggle = "False"
+            toggle_msg = "disabled"
+        else:
+            toggle = "True"
+            toggle_msg = "enabled"
+
+        set_config_value('CONFIG_ITEMS', 'auto_clean', toggle)
+        d.msgbox('Auto clean ' + toggle_msg + '! Reboot to apply changes')
+        main_dialog()
+    else:
+        d.msgbox('To use this feature make sure to install the tool.')
+        main_dialog()
+    
+
+def remove_notification():
+    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+    return
+
+
+def select_notification():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        previous_method = get_config_value('CONFIG_ITEMS', 'display_notification')
+
+        code, tag = d.radiolist("Choose which notification method you want to use",
+                    choices=[("False", "Do not notify about game updates", previous_method == "False"),
+                             ("Theme", "Notify about game updates via themes", previous_method == "Theme"),
+                             ("Tool", "Notify about game updates via update tool", previous_method == "Tool")],
+                    title="Game Update Notification",
+                    ok_label="Set Method")
+
+        if code == d.OK:
+            remove_notification()
+            if tag in ["Theme", "Tool"]:
+                runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+            set_config_value('CONFIG_ITEMS', 'display_notification', tag)
+            d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
+                        
+        #if code == d.OK and previous_method != tag:
+        #    if tag == "False":
+        #        if previous_method == "Theme":
+        #            runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+        #        if previous_method == "Tool":
+        #            runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+        #    if tag == "Theme":
+        #        if not cronjob_exists("update_tool"):
+        #            runcmd("( crontab -l 2>/dev/null ; echo '@reboot python3 /home/pi/.update_tool/notification.py' ) | crontab")
+        #        if previous_method == "Tool":
+        #            runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
+        #    if tag == "Tool":
+        #        if not autostart_exists("update_tool"):
+        #            runcmd("( echo 'update_tool notify' ; cat /opt/retropie/configs/all/autostart.sh ) >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+        #        if previous_method == "Theme":
+        #            runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+
+        #    set_config_value('CONFIG_ITEMS', 'display_notification', tag)
+        #    d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
+    else:
+        d.msgbox('To use this feature make sure to install the tool.')
+    main_dialog()
+ 
 
 def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
@@ -293,12 +379,16 @@ def get_file_data(file_id: str, root_folder: str):
 # def get_nodes_in_shared_folder(root_folder: str) -> dict:
 def get_nodes_in_shared_folder(root_folder: str):
     data = [{"a": "f", "c": 1, "ca": 1, "r": 1}]
-    response = requests.post(
-        "https://g.api.mega.co.nz/cs",
-        params={'id': 0,  # self.sequence_num
-                'n': root_folder},
-        data=json.dumps(data)
-    )
+    try:
+        response = requests.post(
+            "https://g.api.mega.co.nz/cs",
+            params={'id': 0,  # self.sequence_num
+                    'n': root_folder},
+            data=json.dumps(data)
+        )
+    except requests.exceptions.RequestException as e:
+        print(e)
+    #print(response)
     json_resp = response.json()
     return json_resp[0]["f"]
 
@@ -371,7 +461,6 @@ def get_available_updates(megadrive: str, status=False):
         if node["t"] == 0:
             file_size = convert_filesize(node["s"])
             available_updates.append([file_name, file_id, modified_date, file_size])
-
     return available_updates
 
 
@@ -401,7 +490,7 @@ def cls():
 
 
 def runcmd(command):
-    code = subprocess.check_output(["bash","-c",command])
+    code = subprocess.check_output(["/bin/bash","-c",command])
     return str(code, "UTF-8")
     #return os.popen(command).read()
 
@@ -1479,7 +1568,7 @@ def count_games(system: str, games: list):
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
-    games = []
+    #games = []
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
@@ -1492,7 +1581,7 @@ def count_games(system: str, games: list):
                 games_list.append((game.text.strip(), path.text.strip()))
                 #if game.text.strip() in games:
                 #    d.msgbox(system + " - " + game.text.strip())
-                games.append(game.text.strip())
+                #games.append(game.text.strip())
                 count += 1
 
     games_list.sort()
@@ -1763,23 +1852,53 @@ def do_remove_logs(logs: list):
         if os.path.exists(log_dir):
             if os.path.isdir(log_dir):
                 shutil.rmtree(log_dir)            
+    d.msgbox('Done!')
 
     return
 
 
-def do_restore_logs(log: str):
+def do_restore_logs(logs: list):
+    for log in logs:
+        log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
+        log_dir = os.path.splitext(log_file)[0]
+        if os.path.exists(log_dir):
+            if os.path.isdir(log_dir):
+                copydir(log_dir, "/home/pi/RetroPie/roms")
+    d.msgbox('Done!')
+
+    return
+
+
+def get_total_path_size(dir: str):
+    if os.path.exists(dir):
+        process = subprocess.run(['du', '-sb', dir], capture_output=True, text=True)
+        size = process.stdout.split()[0]
+        print(size)
+        return size
+
+    return None
+
+
+def get_log_size(log: str):
     log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
     log_dir = os.path.splitext(log_file)[0]
+
+    if os.path.exists(log_file):
+        if not os.path.isfile(log_file):
+            return None
+
+    log_size = int(get_total_path_size(log_file))
     if os.path.exists(log_dir):
         if os.path.isdir(log_dir):
-            copydir(log_dir, "/home/pi/RetroPie/roms")
-    d.msgbox('done!')
-    return
+            log_size += int(get_total_path_size(log_dir))
+
+    return log_size
 
 
 def logs_dialog(function: str, title: str, patterns: list, multi=True):
     menu_choices = []
     logs = []
+    total_size = 0
 
     for pattern in patterns:
         for log in Path("/home/pi/.update_tool/gamelist_logs").glob(pattern):
@@ -1794,36 +1913,47 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
         
     logs.sort(reverse=True)
     for menu_choice in logs:
-        menu_choices.append((menu_choice, "", False))
+        log_size = get_log_size(menu_choice)
+        total_size += log_size
+        menu_choices.append((menu_choice + " ({})".format(convert_filesize(str(log_size))), "", False))
 
+    dlg_text = "Log Files in \"/home/pi/.update_tool/gamelist_logs\" ({}):".format(convert_filesize(str(total_size)))
     if multi == True:
-        code, tags = d.checklist(text="Log Files in \"/home/pi/.update_tool/gamelist_logs\":",
+        code, tags = d.checklist(text=dlg_text,
                                 choices=menu_choices,
                                 ok_label="{} Selected".format(function), 
                                 extra_button=True, 
                                 extra_label="{} All".format(function), 
                                 title=title)
     else:
-        code, tags = d.radiolist(text="Log Files in \"/home/pi/.update_tool/gamelist_logs\":",
+        code, tags = d.radiolist(text=dlg_text,
                                 choices=menu_choices,
                                 ok_label="{} Selected".format(function), 
                                 title=title)
 
     selected_logs = []
+    selected_items = []
     if code == d.CANCEL:
         cls()
         gamelist_utilities_dialog()
 
     if code == d.OK:
-        selected_logs = tags
+        selected_items = tags
 
     if code == d.EXTRA:
-        selected_logs = logs
+        selected_items = logs
 
-    if function == "Remove":
-        do_remove_logs(selected_logs)
-    elif function == "Restore":
-        do_restore_logs(selected_logs)
+    if len(selected_items) > 0:
+        if "'str'" in str(type(selected_items)):
+            selected_logs.append(selected_items.split(" ")[0])
+        else:
+            for selected_item in selected_items:
+                selected_logs.append(selected_item[0].split(" ")[0])
+
+        if function == "Remove":
+            do_remove_logs(selected_logs)
+        elif function == "Restore":
+            do_restore_logs(selected_logs)
 
     cls()
     gamelist_utilities_dialog()
@@ -1884,7 +2014,7 @@ def gamelist_utilities_dialog():
         elif tag == "2":
             gamelists_dialog("Clean")
         elif tag == "3":
-            logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*"], multi=False)
+            logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
         elif tag == "4":
             logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
         elif tag == "5":
@@ -1924,10 +2054,11 @@ def get_manual_updates(path: str, available_updates: list):
     files.sort()
     for file in files:
         for update in available_updates:
-            if update[0] == os.path.basename(file):
-                if update[3] == convert_filesize(os.path.getsize(file)):
-                    manual_updates.append(update)
-    
+#   file name check is not necessary so skip it
+#            if update[0] == os.path.basename(file):
+            if update[3] == convert_filesize(os.path.getsize(file)):
+                  manual_updates.append(update)
+
     return manual_updates
 
 
@@ -1937,6 +2068,10 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
         type = "" if manual == False else "MANUAL "
 
         file_time = datetime.datetime.utcnow()
+
+        if not os.path.exists("/home/pi/.update_tool/gamelist_logs"):
+            os.mkdir("/home/pi/.update_tool/gamelist_logs")
+
         log_file = "/home/pi/.update_tool/gamelist_logs/auto_clean_gamelists-{}.log".format(file_time.strftime("%Y%m%d-%H%M%S"))
         log_this(log_file, "AUTO CLEANING {}UPDATES INSTALLED:".format(type))
         for installed_update in installed_updates:
@@ -1952,11 +2087,21 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
+    log_file = "/home/pi/.update_tool/process_manual_updates.log"
 
     installed_updates = []
     for update in updates:
-        file = os.path.join(path, update[0])
-        if process_improvement(file, extracted) == True:
+        if os.path.isdir(path):
+            file = os.path.join(path, update[0])
+            if not os.path.isfile(file):
+                log_this(log_file, "Filename " + file + " can't be located, search for same filename without double spaces")
+                file = re.sub(' +', ' ', file)
+        else:
+            # singular file selected so no need to add filename again
+            file = path
+        if not os.path.isfile(file):
+            log_this(log_file, "Filename " + file + " can't be located, skip update for this")
+        elif process_improvement(file, extracted) == True:
             if delete == True:
                 os.remove(file)
 
@@ -1972,23 +2117,22 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 #                shutil.rmtree(path)
 
     d.msgbox("{} of {} selected manual updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
-    reboot_msg = "\nRebooting in 5 seconds!\n"
-    d.pause(reboot_msg, height=10, width=60)
-    restart_es()
+    reboot_msg = "\nReboot required for these changes to take effect. Rebooting now.!\n"
+    reboot_dialog(reboot_msg)
 
     return
 
 
 def get_valid_path_portion(path: str):
-    return_path = ""
+    return_path = "/"
     parts = path.split("/")
     for part in parts:
         if len(part) > 0:
-            if os.path.isdir(os.path.join(return_path, "/" + part)) == True or os.path.isfile(os.path.join(return_path, "/" + part)) == True:
-                return_path += "/" + part
+            if os.path.isdir(os.path.join(return_path, part)) == True or os.path.isfile(os.path.join(return_path, part)) == True:
+                return_path = os.path.join(return_path, part)
 
-    if os.path.isdir(return_path):
-        return_path += "/"
+    #will add the trailing slash if it's not already there.
+    return_path = os.path.join(return_path, '')
 
     return return_path
 
@@ -2002,12 +2146,13 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
-            set_config_value("CONFIG_ITEMS", "update_dir", path)
+            set_config_value("CONFIG_ITEMS", "update_dir", os.path.dirname(path) + '/')
             official_improvements_dialog(path, delete)
         else:
-            d.msgbox("Invalid path!")
+            d.msgbox("Invalid path " + path)
             path = get_valid_path_portion(path)
             path = "/" if len(path) == 0 else path
+            d.msgbox("Path is now set to " + path)
             cls()
             manual_updates_dialog(path, delete)
     elif code == d.HELP:
@@ -2026,8 +2171,11 @@ def manual_updates_dialog(init_path: str, delete: bool):
 def get_default_update_dir():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
-        if update_dir is not None:
+        if update_dir is not None and os.path.exists(update_dir):
             return update_dir
+        else:
+            if update_dir is not None:
+                d.msgbox("Invalid saved update_dir " + update_dir + ", resetting to /")                
 
     return "/"
 
@@ -2041,13 +2189,13 @@ def downloaded_update_question_dialog():
                         "\n\nWould you like to remove .zip files?", yes_label="Keep", no_label="Delete")
 
     update_dir = get_default_update_dir()
-    
-    if os.path.isdir(update_dir) or os.path.isfile(update_dir):
-        if code == d.OK:
-            manual_updates_dialog(update_dir, False)
+    update_dir = get_valid_path_portion(update_dir)
 
-        if code == d.CANCEL:
-            manual_updates_dialog(update_dir, True)
+    if code == d.OK:
+        manual_updates_dialog(update_dir, False)
+
+    if code == d.CANCEL:
+        manual_updates_dialog(update_dir, True)
 
     return
 
@@ -2080,7 +2228,9 @@ def misc_menu():
                              ("2", "Reset EmulationStation Configurations"),
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
-                             ("5", "Gamelist (Etc) Utilities")],
+                             ("5", "Gamelist (Etc) Utilities"),
+                             ("6", "Select Update Notification"),
+                             ("7", "Toggle Auto Clean")],
                     title="Miscellaneous")
 
     if code == d.OK:
@@ -2111,6 +2261,10 @@ def misc_menu():
                 handheld_dialog()
         elif tag == "5":
             gamelist_utilities_dialog()
+        elif tag == "6":
+            select_notification()
+        elif tag == "7":
+            toggle_autoclean()
 
     cls()
     main_dialog()
@@ -2121,7 +2275,7 @@ def misc_menu():
 def main_dialog():
     global update_available_result
     if update_available_result == "no connection":
-        update_available_result - update_available()
+        update_available_result = update_available()
 
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load Improvements"),    
@@ -2279,7 +2433,8 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
                     break
 
     if code == d.EXTRA:
-        selected_updates = all_updates
+        if d.yesno(text="Are you sure you want to apply all available updates?") == d.OK:
+            selected_updates = all_updates
 
     if code == d.CANCEL:
         selected_updates = []
@@ -2376,7 +2531,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
         file_path = download_update(update[1], improvements_dir, megadrive, update[3])
 
         if file_path is None:
-            d.msgbox("Unable to download from mega, please try again later...")
+            d.msgbox("Unable to download from MEGA.\n\nThe site enforces a 5GB per day download limit, based on your public IP address. You may have reached this limit.\n\nPlease try again later...", 10, 60)
             break
 
         improvement_passed = process_improvement(file_path, extracted)
@@ -2404,9 +2559,8 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
     
     d.msgbox("{} of {} selected updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(selected_updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
     if len(installed_updates) > 0:
-        reboot_msg = "\nRebooting in 5 seconds!\n".format(len(installed_updates), len(selected_updates))
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        reboot_msg = "\nReboot required for these changes to take effect. Rebooting now.!\n"
+        reboot_dialog(reboot_msg)
     else:
         main_dialog()
 
@@ -2623,9 +2777,8 @@ def install_dialog():
 
     if code == d.OK:
         install()
-        reboot_msg = "\nUpdate tool has been installed, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        reboot_msg = "\nUpdate tool has been installed, reboot required for these changes to take effect. Rebooting now.!\n"
+        reboot_dialog(reboot_msg)
     return
 
 
@@ -2638,9 +2791,8 @@ def update_dialog():
 
         if code == d.OK:
             update()
-            reboot_msg = "\nUpdate tool has been updated, rebooting in 5 seconds!\n"
-            d.pause(reboot_msg, height=10, width=60)
-            restart_es()
+            reboot_msg = "\nUpdate tool has been updated, reboot required for these changes to take effect. Rebooting now.!\n"
+            reboot_dialog(reboot_msg)
     elif update_available_result == "no update available":
         d.msgbox("You are already running the latest version.")
         main_dialog()
@@ -2656,9 +2808,8 @@ def uninstall_dialog():
 
     if code == d.OK:
         uninstall()
-        reboot_msg = "\nUpdate tool has been uninstalled, rebooting in 5 seconds!\n"
-        d.pause(reboot_msg, height=10, width=60)
-        restart_es()
+        reboot_msg = "\nUpdate tool has been uninstalled, reboot required for these changes to take effect. Rebooting now.!\n"
+        reboot_dialog(reboot_msg)
     return
 
 
@@ -2702,6 +2853,13 @@ def hostname_dialog():
 
         main_dialog
 
+def reboot_dialog(reboot_msg):
+    code = d.pause(reboot_msg, height=10, width=60)
+    if code == d.CANCEL:
+        main_dialog()
+    else:
+        restart_es()
+
 
 def clean_failures():
     if os.path.exists("/tmp/improvements"):
@@ -2714,16 +2872,53 @@ def clean_failures():
     return
 
 
+def check_for_updates():
+    needed_updates = 0
+    available_updates = get_available_updates(check_drive(), False)
+    for update in available_updates:
+        update_applied = is_update_applied(update[0], update[2])
+        if update_applied == False:
+            needed_updates += 1
+    if needed_updates > 0:
+        return True
+    else:
+        return False
+
+
 def main():
-    global genres
+    global update_available_result
+    update_available_result = update_available()
+
+    if len(sys.argv) > 2 and sys.argv[2] == "notify":
+        if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
+            remove_notification()
+            exit(0)
+
+        if update_available_result == "update available":
+            set_config_value("CONFIG_ITEMS", "upgrade_available", "True")
+        else:
+            set_config_value("CONFIG_ITEMS", "upgrade_available", "False")
+
+        if check_for_updates():
+            set_config_value("CONFIG_ITEMS", "update_available", "True")
+            if get_config_value('CONFIG_ITEMS', 'display_notification') == "Tool":
+                while runcmd("pidof omxplayer.bin | cat") != "":
+                    time.sleep(2)
+                if d.pause("Updates are available !\\n\\nProceed with Booting or Process Updates ?", height=11, seconds=5, ok_label="Boot", cancel_label="Update") == d.OK:
+                    exit(0)
+            else:
+                exit(0)
+        else:
+            set_config_value("CONFIG_ITEMS", "update_available", "False")
+            exit(0)
 
     clean_failures()
+
+    global genres
     section = get_config_section("GENRE_MAPPINGS")
     if section is not None:
         for key, val in section:
             genres[key] = val
-    global update_available_result
-    update_available_result = update_available()
 
     if runcmd("id -u -n") == "pi\n":
         check_wrong_permissions()
@@ -2731,4 +2926,19 @@ def main():
     else:
         user_dialog()
 
-main()
+
+if __name__ == "__main__":
+    try:
+        main()
+    except SystemExit:
+        #print("")
+        nothing = None
+    except:
+        title_text = ""
+        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            datetime.datetime.utcnow()
+            log_this("/home/pi/.update_tool/exception.log", "*****{}\n{}".format(datetime.datetime.utcnow(), traceback.format_exc()))
+            log_this("/home/pi/.update_tool/exception.log", "\n\n")
+            title_text = "A copy of this exception is logged in /home/pi/.update_tool/exception.log for your records\n\n"
+
+        d.msgbox(title_text + traceback.format_exc(), title="Something has gone really bad...")

@@ -16,6 +16,7 @@ ini_file = "/home/pi/.update_tool/update_tool.ini"
 png_file = "/home/pi/RetroPie/retropiemenu/icons/update_tool.png"
 gamelist_file = "/opt/retropie/configs/all/emulationstation/gamelists/retropie/gamelist.xml"
 sh_file = "/home/pi/RetroPie/retropiemenu/update_tool.sh"
+updates_script = "/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh"
 mega_folder = ""
 
 
@@ -132,6 +133,14 @@ def uninstall():
     if os.path.exists(png_file):
         os.remove(png_file)
 
+    if os.path.exists("/opt/retropie/configs/all/emulationstation/scripts/system-select"):
+        if os.path.exists("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh"):
+            os.remove("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh")
+        if len(os.listdir("/opt/retropie/configs/all/emulationstation/scripts/system-select")) == 0:
+            shutil.rmtree("/opt/retropie/configs/all/emulationstation/scripts/system-select")
+        if len(os.listdir("/opt/retropie/configs/all/emulationstation/scripts")) == 0:
+            shutil.rmtree("/opt/retropie/configs/all/emulationstation/scripts")
+
     src_tree = ET.parse(gamelist_file)
     src_root = src_tree.getroot()
 
@@ -150,7 +159,12 @@ def uninstall():
         # this somehow failed badly
         shutil.copy2(gamelist_file + "." + file_time, gamelist_file)
     os.remove(gamelist_file + "." + file_time)
-        
+    
+    #remove cronjob
+    runcmd("crontab -l | sed '/.update_tool/d' | crontab")
+    # remove autostart.sh entry if one exists
+    runcmd("sed '/update_tool/d' /opt/retropie/configs/all/autostart.sh >/tmp/ut.$$ ; mv /tmp/ut.$$ /opt/retropie/configs/all/autostart.sh")
+
     return    
 
 
@@ -191,6 +205,10 @@ def install(overwrite=True):
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
     #download the update.py
     runshell("curl {}/update.py -o {}/update.py".format(git_repo, home_dir))
+    #download the notification.py
+    runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
+    #dowload pngview
+    runshell("curl {}/pngview -o {}/pngview".format(git_repo, home_dir))
 
     if os.path.exists("{}/update_tool.ini".format(tmp_dir)) == True:
         new_config.read("{}/update_tool.ini".format(tmp_dir))
@@ -226,12 +244,40 @@ def install(overwrite=True):
     print("Writing bash script...")
     with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
-        shellfile.write("source <(grep = {} | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
-        shellfile.write("$home_exe $home_dir/$home_command $mega_dir")
+        #shellfile.write("source <(grep = {} | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("$home_exe $home_dir/$home_command $mega_dir $1")
+
+    #create ES script dir
+    os.makedirs("/opt/retropie/configs/all/emulationstation/scripts/system-select", exist_ok=True)
+
+    #write update notification script
+    print("Writing update notification script...")
+    with open("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh", "w") as shellfile:
+        shellfile.write("#!/bin/bash\n")
+        shellfile.write("if [ $2 == \"gotostart\" ]; then\n")
+        shellfile.write("  source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("  if [ $display_notification == \"Theme\" ]; then\n")
+        shellfile.write("    screen_width=$(fbset -s | grep '\".*\"' | grep -m 1 -o '[0-9][0-9][0-9]\+x' | tr -d 'x')\n")
+        shellfile.write("    screen_height=$(fbset -s | grep '\".*\"' | grep -m 1 -o 'x[0-9][0-9][0-9]\+' | tr -d 'x')\n")
+        shellfile.write("    png_width=$(($screen_width / 10))\n")
+        shellfile.write("    png_height=$(($screen_height / 25))\n")
+        shellfile.write("    if [ $update_available == \"True\" ]; then\n")
+        shellfile.write("      convert -background Red -fill White -font /usr/share/fonts/truetype/freefont/FreeSansBold.ttf -gravity center -size $((png_width))x$((png_height)) label:\"UPDATES AVAILABLE\" /tmp/update_available.png\n")
+        shellfile.write("      timeout 20 /home/pi/.update_tool/pngview -b 0 -l 1 -x $((screen_width-png_width)) -y 0 /tmp/update_available.png &\n")
+        shellfile.write("    fi\n")
+        shellfile.write("    if [ $upgrade_available == \"True\" ]; then\n")
+        shellfile.write("      convert -background Red -fill White -font /usr/share/fonts/truetype/freefont/FreeSansBold.ttf -gravity center -size $((png_width))x$((png_height)) label:\"UPGRADE AVAILABLE\" /tmp/upgrade_available.png\n")
+        shellfile.write("      timeout 20 /home/pi/.update_tool/pngview -b 0 -l 1 -x 0 -y 0 /tmp/upgrade_available.png &\n")
+        shellfile.write("    fi\n")
+        shellfile.write("  fi\n")
+        shellfile.write("fi\n")
 
     runcmd("chmod +x /home/pi/RetroPie/retropiemenu/update_tool.sh")
+    runcmd("chmod +x /opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh")
+    runcmd("chmod +x /home/pi/.update_tool/pngview")
     runcmd("chmod +x /home/pi/.update_tool/update.py")
-    runcmd("sudo ln -s /home/pi/RetroPie/retropiemenu/update_tool.sh /usr/bin/update_tool")
+    runcmd("sudo ln -sf /home/pi/RetroPie/retropiemenu/update_tool.sh /usr/bin/update_tool")
 
     #merge gamelist
     print("Merging gamelist entries...")
