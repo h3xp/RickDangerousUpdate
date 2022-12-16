@@ -103,7 +103,7 @@ These systems will be adjusted:
 - gba
 - gbc
 - ngpc
-- wonderwancolor
+- wonderswancolor
 
 ## Gamelist (Etc) Utilities
 
