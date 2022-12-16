@@ -52,7 +52,7 @@ Now hit "Install/Reinstall" and enjoy the comfort of having the tool directly in
 
 The script will also install a new command "update_tool" with which you can easily run the script from the CLI.
 
-Note that if you do not install the tool, it will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the update tool until you do properly install it.
+Note that if you do not install the tool, it will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the tool until you do properly install it.
 
 # Attention
 
@@ -154,5 +154,5 @@ Replace [IP] with the IP adress you just found out and [link] with a URL to the 
 ```
 ssh pi@[IP] bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
 ```
-5. It is strongly recommended that you use the "Installation menu" to properly install the update tool to the "Options" tab in EmulationStation.  If you do not then the tool will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the update tool until you do properly install it.
+5. It is strongly recommended that you use the "Installation menu" to properly install the update tool to the "Options" tab in EmulationStation.  If you do not then the tool will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the update tool until you properly install it.
 6. Enjoy !
