@@ -31,7 +31,7 @@ Join Ricks discord server to keep track on the latest changes.
 # Usage
 
 Simply run the following command on your Retropie via SSH (this is the recommended way, click [here](#ssh-usage) for further instruction) or access a terminal by connecting a keyboard and pressing F4
-(Replace [link] with a URL to the mega storage containing the updates):
+(Replace [link] with a URL to the MEGA storage containing the updates):
 
 ```
 bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
@@ -78,7 +78,7 @@ your retropie. Therefore, use this at your own risk.
 ## Improvements
 
 This is the "main" feature and reason to create this tool. 
-This will allow you to easily select single or multiple updates to process, either; to download from a mega drive directory, or previously downloaded to a directory on the pi.
+This will allow you to easily select single or multiple updates to process, either; to download from a MEGA drive directory, or previously downloaded to a directory on the pi.
 
 ## Fix known bugs
 
@@ -169,7 +169,7 @@ usage: ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-B bind_interface]
 3. Now you need to know your retropies IP address. The easiest way to get it is by opening the "Options" tab in EmulationStation and use the "Show IP" menu entry.
 4. You are all set! Simply run this command in your command line window (`Windowskey + R` then type `cmd` and hit return):
 
-Replace [IP] with the IP adress you just found out and [link] with a URL to the mega storage containing the updates.
+Replace [IP] with the IP adress you just found out and [link] with a URL to the MEGA storage containing the updates.
 ```
 ssh pi@[IP] bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
 ```
