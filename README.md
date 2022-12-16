@@ -21,7 +21,9 @@ Join Ricks discord server to keep track on the latest changes.
   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
   - [Enable/Disable System overlays](#system-overlay)
   - [Enable/Disable Handheld mode](#handheld-mode)
-  - [Gamelist (Etc) Utilities](#gamelist-(etc)-utilities)
+  - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
+  - [Select Update Notification](#select-update-notification)
+  - [Toggle Auto Clean](#toggle-auto-clean)
   - [Installation](#installation)
 - [SSH Instructions](#ssh-usage)
 
@@ -63,12 +65,15 @@ your retropie. Therefore, use this at your own risk.
 
 1. [Install Improvements](#improvements)
 2. [Fix known bugs](#fix-known-bugs)
-3. [Restore Retroarch configurations](#restore-retroarch-configurations)
-4. [Reset Emulationstation configrations](#reset-emulationstation-configurations)
-5. [Enable/Disable System overlays](#system-overlay)
-6. [Enable/Disable Handheld mode](#handheld-mode)
-7. [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
-8. [Installation](#installation)
+3. [Miscellaneous](#miscellaneous)
+   - [Restore Retroarch configurations](#restore-retroarch-configurations)
+   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
+   - [Enable/Disable System overlays](#system-overlay)
+   - [Enable/Disable Handheld mode](#handheld-mode)
+   - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
+   - [Select Update Notification](#select-update-notification)
+   - [Toggle Auto Clean](#toggle-auto-clean)
+4. [Installation](#installation)
 
 ## Improvements
 
@@ -79,19 +84,23 @@ This will allow you to easily select single or multiple updates to process, eith
 
 The title is self-explanatory, this feature will easily fix known bugs for you. It is recommended to run these.
 
-## Restore Retroarch configurations
+## Miscellaneous
+
+Various settings, tools and resets.
+
+### Restore Retroarch configurations
 
 Only use this if you screwed up. This will reset all retroarch configuration files for every system to their original state.
 
-## Reset emulationstation configurations
+### Reset emulationstation configurations
 
 Only use this if you screwed up. This will reset all emulationstation configurations to their original state.
 
-## System overlay
+### System overlay
 
 This lets you easily activate and deactivate the bezels/overlays for each system.
 
-## Handheld mode
+### Handheld mode
 
 This will reset the video settings and deactivate the bezels for these systems to make them more enjoyable on a handheld screen.
 Don't use this if you have your retropie connected to a TV.
@@ -105,7 +114,7 @@ These systems will be adjusted:
 - ngpc
 - wonderswancolor
 
-## Gamelist (Etc) Utilities
+### Gamelist (Etc) Utilities
 
 Gamelist (Etc) Utilities provide a lot of functions to clean up, in general, and work with your gamelist.xml files.
 - Check Game Lists - This will check your gamelist.xml files and optionally check for orphaned roms, artwork, video snapshots, and multiple disk files.
@@ -118,6 +127,16 @@ Gamelist (Etc) Utilities provide a lot of functions to clean up, in general, and
 - Clean Emulators Config - Sorts your emulators.cfg file, removing duplicate entries.
 - Count of Games: Displays the total game count within gamelist.xml files from selected systems. When you count all systems this will also drop a counts.txt file and a games_list.txt file, so you can easily validate against official game counts and view a comprehensive listing of all games.
 
+### Select Update Notification
+
+Select Update Notification allows you to set what method is used to notify you of image updates and tool updates
+- False - No notifications of updates or upgrades are displayed
+- Theme - A message is displayed on the system selection screen when image updates or an upgrade to the tool is available
+- Tool - At boot time the update tool can be optionally executed when image updates are available. This option should only be set if you have a keyboard attached to your Pi. This option includes the behaviour of the Theme notification.
+
+### Toggle Auto Clean
+
+Toggle Auto Clean allows you to turn on or off automatic cleaning of your gamelist files after any updates are loaded.
 
 ## Installation
 
