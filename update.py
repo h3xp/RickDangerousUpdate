@@ -2146,7 +2146,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
-            set_config_value("CONFIG_ITEMS", "update_dir", os.path.dirname(path) + '/')
+            set_config_value("CONFIG_ITEMS", "update_dir", os.path.dirname(path))
             official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path " + path)

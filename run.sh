@@ -9,4 +9,3 @@ if [ "$EUID" -eq 0 ]
   exit
 fi
 sudo apt-get -y install python3-pip && pip3 install -r <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/requirements.txt" -s -N) && python3 <(curl "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/update.py" -s -N) $1
-
