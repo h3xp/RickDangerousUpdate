@@ -2873,6 +2873,8 @@ def clean_failures():
 
 
 def check_for_updates():
+    if not check_internet():
+        return False; 
     needed_updates = 0
     available_updates = get_available_updates(check_drive(), False)
     for update in available_updates:
