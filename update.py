@@ -460,7 +460,7 @@ def get_available_updates(megadrive: str, status=False):
         modified_date = node["ts"]
         if node["t"] == 0:
             file_size = convert_filesize(node["s"])
-            available_updates.append([file_name, file_id, modified_date, file_size])
+            available_updates.append([file_name, file_id, modified_date, file_size, node["s"]])
     return available_updates
 
 
@@ -2056,7 +2056,8 @@ def get_manual_updates(path: str, available_updates: list):
         for update in available_updates:
 #   file name check is not necessary so skip it
 #            if update[0] == os.path.basename(file):
-            if update[3] == convert_filesize(os.path.getsize(file)):
+            #if update[3] == convert_filesize(os.path.getsize(file)):
+            if update[4] == os.path.getsize(file):
                   manual_updates.append(update)
 
     return manual_updates
