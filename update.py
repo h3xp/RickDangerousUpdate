@@ -2354,6 +2354,15 @@ def sort_official_updates(updates: list):
     return retval
 
 
+def get_total_size_of_updates(updates: list):
+    total_size = 0
+
+    for update in updates:
+        total_size += int(update[4])
+
+    return convert_filesize(str(total_size))
+
+
 def official_improvements_dialog(update_dir=None, delete=False, available_updates=[]):
     megadrive = check_drive()
     check_wrong_permissions()
@@ -2394,15 +2403,15 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
     menu_choices = []
     all_updates = []
     update_needed = False
-    needed_updates = 0
-    recommended_updates = 0
+    needed_updates = []
+    recommended_updates = []
     for update in available_updates:
         update_applied = is_update_applied(update[0], update[2])
         if update_applied == False:
-            needed_updates += 1  
+            needed_updates.append(update)
         update_needed = (update_needed == True or update_applied == False)
         if update_needed == True:
-            recommended_updates += 1
+            recommended_updates.append(update)
         if show_all_updates == True or update_needed == True:
             #TO DO: check if update has been installed from config and make True
             all_updates.append(update)
@@ -2415,7 +2424,7 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
         return
 
     update_text = "Available" if show_all_updates == True else "Recommended"
-    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {}\nNumber of updates needed: {}\nRecommended number of updates: {}\n\n{} Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), needed_updates, recommended_updates, update_text),
+    code, tags = d.checklist(text="Auto Clean is {}\nShow All Updates is {}\n\nNumber of available updates: {} ({})\nNumber of updates needed: {} ({})\nRecommended number of updates: {} ({})\n\n{} Updates".format("on" if auto_clean == True else "off", "on" if show_all_updates == True else "off", len(available_updates), get_total_size_of_updates(available_updates), len(needed_updates), get_total_size_of_updates(needed_updates), len(recommended_updates), get_total_size_of_updates(recommended_updates), update_text),
                              choices=menu_choices,
                              ok_label="Apply Selected", 
                              extra_button=True, 
