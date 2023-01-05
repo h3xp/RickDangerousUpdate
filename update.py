@@ -1873,7 +1873,7 @@ def get_total_path_size(dir: str):
     if os.path.exists(dir):
         process = subprocess.run(['du', '-sb', dir], capture_output=True, text=True)
         size = process.stdout.split()[0]
-        print(size)
+        #print(size)
         return size
 
     return None
