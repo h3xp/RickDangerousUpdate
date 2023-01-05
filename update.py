@@ -1948,7 +1948,7 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
             selected_logs.append(selected_items.split(" ")[0])
         else:
             for selected_item in selected_items:
-                selected_logs.append(selected_item[0].split(" ")[0])
+                selected_logs.append(selected_item.split(" ")[0])
 
         if function == "Remove":
             do_remove_logs(selected_logs)
