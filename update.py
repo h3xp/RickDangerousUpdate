@@ -979,7 +979,8 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             #relative_file = src_node.text.replace("./", "")
             #file = relative_file.replace("{}/".format(supporting_files_dir_name), "")
             file = os.path.basename(src_node.text)
-            path = os.path.join(supporting_files_dir, file)
+            #path = os.path.join(supporting_files_dir, file)
+            path = src_node.text.replace("./", system_roms + "/")
             if src_node.text[0:1] == "/":
                 path = src_node.text
 
@@ -1249,7 +1250,9 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
             if src_node.text is not None:
                 found_files = []
                 rom_file = os.path.basename(src_node.text)
-                rom_path = os.path.join(system_roms, rom_file)
+                #rom_path = os.path.join(system_roms, rom_file)
+                rom_path = src_node.text.replace("./", system_roms + "/")
+                
                 if src_node.text[0:1] == "/":
                     rom_path = src_node.text
                 
