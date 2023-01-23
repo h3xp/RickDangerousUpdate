@@ -178,6 +178,23 @@ def autostart_exists(unique):
         return False
 
 
+def toggle_countofficialonly():
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if get_config_value('CONFIG_ITEMS', 'count_official_only') == "True":
+            toggle = "False"
+            toggle_msg = "disabled"
+        else:
+            toggle = "True"
+            toggle_msg = "enabled"
+
+        set_config_value('CONFIG_ITEMS', 'count_official_only', toggle)
+        d.msgbox('Count official games ' + toggle_msg + '! Reboot to apply changes')
+        main_dialog()
+    else:
+        d.msgbox('To use this feature make sure to install the tool.')
+        main_dialog()
+
+
 def toggle_autoclean():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         if get_config_value('CONFIG_ITEMS', 'auto_clean') == "True":
@@ -1563,7 +1580,7 @@ def do_gamelist_genres(systems: list):
     return
 
 
-def count_games(system: str, games: list):
+def count_games(system: str, games: list, official_only = True, additional_columns = []):
     count = 0    
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
@@ -1574,32 +1591,66 @@ def count_games(system: str, games: list):
     src_root = src_tree.getroot()
 
     for src_game in src_root.iter("game"):
+        game_list = []
         game = src_game.find("name")
         if game.text is not None:
             path = src_game.find("path")
             if path.text is not None:
-                games_list.append((game.text.strip(), path.text.strip()))
+                game_path = path.text.replace("./", system_dir + "/").strip()
+                if official_only == True:
+                    if not os.path.dirname(game_path) == system_dir:
+                        continue
+                game_size = 0
+                if os.path.isfile(game_path):
+                    game_size = os.path.getsize(game_path)
+                
+                game_list = [game.text.strip(), game_path.replace(system_dir + "/", ""), convert_filesize(str(game_size))]
                 #if game.text.strip() in games:
                 #    d.msgbox(system + " - " + game.text.strip())
                 #games.append(game.text.strip())
                 count += 1
+            for additional_column in additional_columns:
+                column_text = ""
+                column = src_game.find(additional_column)
+                if column is not None:
+                    if column.text is not None:
+                        column_text = column.text
+                game_list.append(column_text)
+            games_list.append(tuple(game_list))
 
     games_list.sort()
     for list_game in games_list:
-        games.append((system, list_game[0], list_game[1].replace("./", "")))
+        new_list = list(list_game)
+        new_list.insert(0, system)
+        games.append(tuple(new_list))
+        #games.append((system, list_game[0], list_game[1], list_game[2], list_game[3], list_game[4]))
 
     return count
 
 
 def gamelist_counts_dialog(systems: list, all_systems=False):
+    official_only = get_config_value("CONFIG_ITEMS", "count_official_only")
+    if official_only is None:
+        official_only = False
     systems.sort()
     systems_text = ""
     total_count = 0
     games = []
-    games_text = "system\tgame\tpath\n"
+    games_text = "system\tgame\tpath\tsize"
+    additional_gameslist_columns = get_config_value("CONFIG_ITEMS", "additional_gameslist_columns")
+    if additional_gameslist_columns is None:
+        additional_gameslist_columns = ""
+    #additional_columns = [column.strip() for column in additional_gameslist_columns.split(',')]
+    additional_columns = []
+    for additional_column in additional_gameslist_columns.split(','):
+        if len(additional_column.strip()) > 0:
+            additional_columns.append(additional_column.strip())
+    for additional_column in additional_columns:
+        games_text += "\t" + additional_column
+    games_text += "\n"
     for system in systems:
         for single_system in system.split("/"):
-            system_count = count_games(single_system, games)
+            system_count = count_games(single_system, games, official_only=(official_only=="True"), additional_columns=additional_columns)
             total_count += system_count
             systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
 
@@ -1607,9 +1658,11 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     systems_text = "TOTAL: {}\n\n{} Systems:".format(total_count, systems_counted) + systems_text
     display_text = systems_text
     if all_systems == True:
+        display_count = "all games" if official_only == False else "official games only"
         display_text = ("This utility only counts systems defined in es_systems.cfg.\n"
                         "At the time of the creation of this utility Kodi and Steam were the only two items that weren't.\n"
-                        "To match your EmulationStation game count add 2 (1 for Kodi, 1 for Steam) to the total.\n\n"
+                        "To match your EmulationStation game count add 2 (1 for Kodi, 1 for Steam) to the total.\n"
+                        "This utility is currently set to count " + display_count + ".\n"
                         "Because you have chosen to count all systems:\n"
                         "\t-a compiled list af all games, by system, is located in /home/pi/.update_tool/games_list.txt for your reference.\n"
                         "\t-a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
@@ -1617,7 +1670,13 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
             f.write(systems_text)
 
         for game in games:
-            games_text += "{}\t{}\t{}\n".format(game[0], game[1], game[2])
+            line_text = ""
+            #game_list = list(game)
+            for game_text in game:
+                #line_text += "\t" if len(games_text) > 0 else ""
+                line_text += game_text + "\t"
+            games_text += line_text[:-1] + "\n"
+            #games_text += "{}\t{}\t{}\t{}\t{}\t{}\n".format(game[0], game[1], game[2], game[3], game[4], game[5])
         with open("/home/pi/.update_tool/games_list.txt", 'w', encoding='utf-8') as f:
             f.write(games_text)
 
@@ -2231,7 +2290,8 @@ def misc_menu():
                              ("4", "Handheld Mode"),
                              ("5", "Gamelist (Etc) Utilities"),
                              ("6", "Select Update Notification"),
-                             ("7", "Toggle Auto Clean")],
+                             ("7", "Toggle Auto Clean"),
+                             ("8", "Toggle Count Official Only")],
                     title="Miscellaneous")
 
     if code == d.OK:
@@ -2266,6 +2326,8 @@ def misc_menu():
             select_notification()
         elif tag == "7":
             toggle_autoclean()
+        elif tag == "8":
+            toggle_countofficialonly()
 
     cls()
     main_dialog()
