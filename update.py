@@ -2382,7 +2382,8 @@ def main_dialog():
                 main_dialog()
             else:
                 installation_dialog()
-        elif tag == "5":  
+        elif tag == "5":
+            support_dialog()
 
     if code == d.CANCEL:
         cls()
