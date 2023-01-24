@@ -2343,7 +2343,8 @@ def support_dialog():
              "\n\nThe Insanium Update Guide channel can be found here"
              "\n\nhttps://discord.com/channels/857515631422603286/1059484786302922842"
              "\n\nDocumentation for this Update Tool can be found here"
-             "\n\nhttps://github.com/h3xp/RickDangerousUpdate")
+             "\n\nhttps://github.com/h3xp/RickDangerousUpdate"
+             "\n\nPlease use Google Lens to grab these links to avoid typing mistakes.")
 
     main_dialog()
 
