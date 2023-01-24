@@ -25,6 +25,7 @@ Join Ricks discord server to keep track on the latest changes.
   - [Select Update Notification](#select-update-notification)
   - [Toggle Auto Clean](#toggle-auto-clean)
   - [Installation](#installation)
+  - [Support](#support)
 - [SSH Instructions](#ssh-usage)
 
 
@@ -74,6 +75,7 @@ your retropie. Therefore, use this at your own risk.
    - [Select Update Notification](#select-update-notification)
    - [Toggle Auto Clean](#toggle-auto-clean)
 4. [Installation](#installation)
+5. [Support](#support)
 
 ## Improvements
 
@@ -144,6 +146,10 @@ The three options on the "Installation menu" are:
 - Install/Reinstall - this option will install the update tool fresh to the "Options" tab in EmulationStation, overwriting any existing configuration.
 - Update - this option will update your version to the most current version available.
 - Uninstall/Remove - this option will remove the tool entirely from the "Options" tab in EmulationStation..
+
+## Support
+
+Displays links to the Discord server and the Update Tool project
 
 # SSH Usage
 
