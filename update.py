@@ -2338,6 +2338,18 @@ def misc_menu():
     return
 
 
+def support_dialog():
+    d.msgbox("Rick Dangerous's Discord server is https://discord.gg/H3FdEanPmv"
+             "\n\nThe Insanium Update Guide channel can be found here"
+             "\n\nhttps://discord.com/channels/857515631422603286/1059484786302922842"
+             "\n\nDocumentation for this Update Tool can be found here"
+             "\n\nhttps://github.com/h3xp/RickDangerousUpdate")
+
+    main_dialog()
+
+    return
+
+
 def main_dialog():
     global update_available_result
     if update_available_result == "no connection":
@@ -2347,7 +2359,9 @@ def main_dialog():
                     choices=[("1", "Load Improvements"),    
                              ("2", "Fix Known Bugs"),
                              ("3", "Miscellaneous"),
-                             ("4", "Installation")],
+                             ("4", "Installation"),
+                             ("5", "Support")],
+                             
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
                     cancel_label=" Exit ")
@@ -2368,6 +2382,7 @@ def main_dialog():
                 main_dialog()
             else:
                 installation_dialog()
+        elif tag == "5":  
 
     if code == d.CANCEL:
         cls()
