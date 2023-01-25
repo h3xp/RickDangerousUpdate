@@ -24,6 +24,7 @@ Join Ricks discord server to keep track on the latest changes.
   - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
   - [Select Update Notification](#select-update-notification)
   - [Toggle Auto Clean](#toggle-auto-clean)
+  - [Toggle Count Official Only](#toggle-count-official)
   - [Installation](#installation)
   - [Support](#support)
 - [SSH Instructions](#ssh-usage)
@@ -74,6 +75,7 @@ your retropie. Therefore, use this at your own risk.
    - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
    - [Select Update Notification](#select-update-notification)
    - [Toggle Auto Clean](#toggle-auto-clean)
+   - [Toggle Count Official Only](#toggle-count-official)
 4. [Installation](#installation)
 5. [Support](#support)
 
@@ -139,6 +141,10 @@ Select Update Notification allows you to set what method is used to notify you o
 ### Toggle Auto Clean
 
 Toggle Auto Clean allows you to turn on or off automatic cleaning of your gamelist files after any updates are loaded.
+
+### Toggle Count Official
+
+Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files. Unofficial games are those whose path entries in gamelist.xml is not ./ .
 
 ## Installation
 
