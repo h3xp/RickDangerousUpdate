@@ -41,8 +41,6 @@ bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run
 
 The script is self-explanatory, and it will guide you through the whole process.
 
-![demo of the main menu](docs/demo.gif)
-
 ## It is recommended to install the tool.
 
 Installation will make the tool available from the "Options" tab in EmulationStation.
