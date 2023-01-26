@@ -24,7 +24,9 @@ Join Ricks discord server to keep track on the latest changes.
   - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
   - [Select Update Notification](#select-update-notification)
   - [Toggle Auto Clean](#toggle-auto-clean)
+  - [Toggle Count Official Only](#toggle-count-official)
   - [Installation](#installation)
+  - [Support](#support)
 - [SSH Instructions](#ssh-usage)
 
 
@@ -38,8 +40,6 @@ bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run
 ```
 
 The script is self-explanatory, and it will guide you through the whole process.
-
-![demo of the main menu](docs/demo.gif)
 
 ## It is recommended to install the tool.
 
@@ -73,7 +73,9 @@ your retropie. Therefore, use this at your own risk.
    - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
    - [Select Update Notification](#select-update-notification)
    - [Toggle Auto Clean](#toggle-auto-clean)
+   - [Toggle Count Official Only](#toggle-count-official)
 4. [Installation](#installation)
+5. [Support](#support)
 
 ## Improvements
 
@@ -138,12 +140,20 @@ Select Update Notification allows you to set what method is used to notify you o
 
 Toggle Auto Clean allows you to turn on or off automatic cleaning of your gamelist files after any updates are loaded.
 
+### Toggle Count Official
+
+Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files. Unofficial games are those whose path entries in gamelist.xml is not ./ .
+
 ## Installation
 
 The three options on the "Installation menu" are:
 - Install/Reinstall - this option will install the update tool fresh to the "Options" tab in EmulationStation, overwriting any existing configuration.
 - Update - this option will update your version to the most current version available.
 - Uninstall/Remove - this option will remove the tool entirely from the "Options" tab in EmulationStation..
+
+## Support
+
+Displays links to the Discord server and the Update Tool project
 
 # SSH Usage
 
