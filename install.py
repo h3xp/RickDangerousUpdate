@@ -205,8 +205,8 @@ def install(overwrite=True):
     runshell("curl {}/gamelist.xml -o {}/gamelist.xml".format(git_repo, tmp_dir))
     #download the update.py
     runshell("curl {}/update.py -o {}/update.py".format(git_repo, home_dir))
-    #download the notification.py
-    runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
+    ##download the notification.py
+    #runshell("curl {}/notification.py -o {}/notification.py".format(git_repo, home_dir))
     #dowload pngview
     runshell("curl {}/pngview -o {}/pngview".format(git_repo, home_dir))
 
