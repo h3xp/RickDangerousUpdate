@@ -1583,6 +1583,27 @@ def do_gamelist_genres(systems: list):
     return
 
 
+def get_official_origins():
+    ret_val = []
+
+    origins = get_config_value("CONFIG_ITEMS", "official_origin")
+    for origin in origins.split(","):
+        ret_val.append(origin.strip())
+
+    return ret_val
+
+
+def is_game_official(game: ET.Element, origins=[]):
+    if len(origins) == 0:
+        origins = get_official_origins()
+    origin = game.find("origin")
+    if origin is not None:
+        if origin.text is not None:
+            return origin.text in origins
+
+    return False
+
+
 def count_games(system: str, games: list, official_only = True, additional_columns = []):
     count = 0    
     games_list = []
@@ -1592,6 +1613,7 @@ def count_games(system: str, games: list, official_only = True, additional_colum
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
+    origins = get_official_origins()
 
     for src_game in src_root.iter("game"):
         game_list = []
@@ -1601,7 +1623,8 @@ def count_games(system: str, games: list, official_only = True, additional_colum
             if path.text is not None:
                 game_path = path.text.replace("./", system_dir + "/").strip()
                 if official_only == True:
-                    if not os.path.dirname(game_path) == system_dir:
+                    #if not os.path.dirname(game_path) == system_dir:
+                    if not is_game_official(src_game, origins):
                         continue
                 game_size = 0
                 if os.path.isfile(game_path):
