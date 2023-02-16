@@ -350,6 +350,6 @@ def main():
                 if pattern.match(str(arg)):
                     mega_folder = arg
 
-    install(False)
+    install()
 
 main()
