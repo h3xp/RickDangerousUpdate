@@ -3002,10 +3002,27 @@ def check_for_updates():
         return False
 
 
+def display_message():
+    message_file = "/home/pi/.RickDangerous/message"
+    message = ""
+
+    if os.path.isfile(message_file):
+        with open(message_file) as file:
+            lines = file.readlines()
+        for line in lines:
+            message += line
+        d.msgbox(message)
+        os.remove(message_file)
+
+    return
+
+
 def main():
     global update_available_result
     update_available_result = update_available()
 
+    display_message()
+    
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
