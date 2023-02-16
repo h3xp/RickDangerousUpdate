@@ -41,6 +41,8 @@ config = configparser.ConfigParser()
 config.optionxform = str
 update_available_result = "no connection"
 genres = {}
+rick_folder = "/home/pi/.RickDangerous"
+rick_file = "/home/pi/.RickDangerous/RickDangerous.ini"
 
 def safe_write_backup(file_path: str, file_time=""):
     if file_time == "":
@@ -3017,12 +3019,50 @@ def display_message():
     return
 
 
+def get_rick_values(value: str):
+    ret_val = []
+    rick_config = configparser.ConfigParser()
+    rick_config.optionxform = str
+
+    if os.path.isdir(rick_folder):
+        if os.path.isfile(rick_file):
+            rick_config.read(rick_file)
+            for section in rick_config.sections():
+                if rick_config.has_option(section, value):
+                    ret_val.append(rick_config[section][value].strip())
+
+    return ret_val
+    
+def update_official_origins():
+    if os.path.isfile(rick_file):
+        current_origins = get_official_origins()
+        rick_origins = get_rick_values("origin")
+        needs_update = False
+
+        for origin in rick_origins:
+            if not origin in current_origins:
+                current_origins.append(origin)
+                needs_update = True
+
+        if needs_update == True:
+            origins = ""
+            for origin in current_origins:
+                if len(origins) > 0:
+                    origins += ","
+                origins += origin
+            
+            set_config_value("CONFIG_ITEMS", "official_origin", origins)
+            
+    return
+
+
 def main():
     global update_available_result
     update_available_result = update_available()
 
     display_message()
-    
+    update_official_origins()
+
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
