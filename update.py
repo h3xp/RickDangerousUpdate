@@ -2284,11 +2284,75 @@ def downloaded_update_question_dialog():
     return
 
 
+def check_update_status_dialog(available_updates=[]):
+    megadrive = check_drive()
+    check_wrong_permissions()
+
+    if len(available_updates) == 0:
+        available_updates = get_available_updates(megadrive, status=True)
+
+    if len(available_updates) == 0:
+        d.msgbox("No updates available.")
+        return
+
+    available_updates = sort_official_updates(available_updates)
+
+    if len(available_updates) == 0:
+        d.msgbox("There are 0 available updates!")
+        return
+
+    show_all_updates = (get_config_value("CONFIG_ITEMS", "show_all_updates") == "True")
+    extra_label = "Show All" if show_all_updates == False else "Show Needed"
+
+    updates_status = ""
+    all_updates = []
+    update_needed = False
+    needed_updates = []
+    recommended_updates = []
+    for update in available_updates:
+        update_applied = is_update_applied(update[0], update[2])
+        if update_applied == False:
+            needed_updates.append(update)
+        update_needed = (update_needed == True or update_applied == False)
+        if update_needed == True:
+            recommended_updates.append(update)
+        if show_all_updates == True or update_needed == True:
+            #TO DO: check if update has been installed from config and make True
+            all_updates.append(update)
+            if len(updates_status) > 0:
+                updates_status += "\n"
+
+            update_status = "NEEDED"
+            if update_applied == True:
+                update_status = "applied"
+                if update_needed == True:
+                    update_status = "recommended"
+            
+            updates_status += "{} ({}) [{}]".format(update[0], update[3], update_status)
+
+    if len(all_updates) == 0:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
+        d.msgbox("No updates are needed.")
+        check_update_status_dialog(available_updates=available_updates)
+        return
+
+    update_totals = "Show All Updates is {}\n\nNumber of available updates: {} ({})\nNumber of updates needed: {} ({})\nRecommended number of updates: {} ({})\n\n".format("on" if show_all_updates == True else "off", len(available_updates), get_total_size_of_updates(available_updates), len(needed_updates), get_total_size_of_updates(needed_updates), len(recommended_updates), get_total_size_of_updates(recommended_updates))
+    code = d.msgbox(update_totals + updates_status, title="Update Status", extra_button=True, extra_label=extra_label)
+
+    if code == d.EXTRA:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", str(not show_all_updates))
+        check_update_status_dialog(available_updates=available_updates)
+        return
+
+    return
+
+
 def improvements_dialog():
     code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
-                             ("2", "Manually Install Downloaded Updates")],
-                    title="Load Improvements")
+                             ("2", "Manually Install Downloaded Updates"), 
+                             ("3", "Update Status")],
+                    title="Improvements")
 
     if code == d.OK:
         if tag == "1":
@@ -2299,6 +2363,8 @@ def improvements_dialog():
                 official_improvements_dialog()
         elif tag == "2":
             downloaded_update_question_dialog()
+        elif tag == "3":
+            check_update_status_dialog()
 
     cls()
     main_dialog()
@@ -2381,13 +2447,13 @@ def main_dialog():
         update_available_result = update_available()
 
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Load Improvements"),    
+                    choices=[("1", "Improvements"),    
                              ("2", "System Tools and Utilities"),
                              ("3", "Installation"),
                              ("4", "Support")],
                              
                     title=check_update(),
-                    backtitle="Rick Dangerous Insanium Edition Update Tool",
+                    backtitle="Rick Dangerous Update Tool",
                     cancel_label=" Exit ")
     
     if code == d.OK:
