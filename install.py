@@ -18,23 +18,6 @@ gamelist_file = "/opt/retropie/configs/all/emulationstation/gamelists/retropie/g
 sh_file = "/home/pi/RetroPie/retropiemenu/update_tool.sh"
 updates_script = "/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh"
 mega_folder = ""
-rick_folder = "/home/pi/.RickDangerous"
-rick_file = "/home/pi/.RickDangerous/RickDangerous.ini"
-
-
-def get_rick_sections():
-    ret_val = []
-    rick_config = configparser.ConfigParser()
-    rick_config.optionxform = str
-
-    if os.path.isdir(rick_folder):
-        if os.path.isfile(rick_file):
-            rick_config.read(rick_file)
-            for section in rick_config.sections():
-                if rick_config.has_option(section, "ini_section"):
-                    ret_val.append(rick_config[section]["ini_section"])
-
-    return ret_val
 
 
 def get_version(version):
@@ -195,7 +178,7 @@ def install(overwrite=True):
     old_config.optionxform = str
     new_version_label = ""
     git_branch = "main"
-    
+
     if overwrite == True:
         uninstall()
     
@@ -236,10 +219,7 @@ def install(overwrite=True):
                 new_version_label = "[Version {} (running from version {} on branch {})]: ".format(get_version(new_version), new_version, git_branch)
                 new_config["CONFIG_ITEMS"]["tool_ver"] = get_version(new_version)
 
-    for section in get_rick_sections():
-        if not new_config.has_section(section):
-            new_config.add_section(section)
-
+    
     for section in new_config.sections():
         if len(new_config[section]) > 0:
             if section == "CONFIG_ITEMS":
