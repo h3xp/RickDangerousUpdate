@@ -41,8 +41,6 @@ config = configparser.ConfigParser()
 config.optionxform = str
 update_available_result = "no connection"
 genres = {}
-rick_folder = "/home/pi/.RickDangerous"
-rick_file = "/home/pi/.RickDangerous/RickDangerous.ini"
 
 def safe_write_backup(file_path: str, file_time=""):
     if file_time == "":
@@ -114,42 +112,42 @@ def get_overlay_systems():
     return retval
 
 
-def get_config_section(section: str, path="/home/pi/.update_tool/update_tool.ini"):
-    if os.path.exists(path):
-        if os.path.isfile(path):
+def get_config_section(section: str):
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
             config_file = configparser.ConfigParser()
             config_file.optionxform = str
-            config_file.read(path)
+            config_file.read("/home/pi/.update_tool/update_tool.ini")
             if config_file.has_section(section):
                 return config_file.items(section)
 
     return None
 
 
-def get_config_value(section: str, key: str, path="/home/pi/.update_tool/update_tool.ini"):
-    if os.path.exists(path):
-        if os.path.isfile(path):
+def get_config_value(section: str, key: str):
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
             config_file = configparser.ConfigParser()
             config_file.optionxform = str
-            config_file.read(path)
+            config_file.read("/home/pi/.update_tool/update_tool.ini")
             if config_file.has_option(section, key):
                 return config_file[section][key]
 
     return None
 
 
-def set_config_value(section: str, key: str, value: str, path="/home/pi/.update_tool/update_tool.ini"):
-    if os.path.exists(path):
-        if os.path.isfile(path):
+def set_config_value(section: str, key: str, value: str):
+    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
             config_file = configparser.ConfigParser()
             config_file.optionxform = str
-            config_file.read(path)
+            config_file.read("/home/pi/.update_tool/update_tool.ini")
             if config_file.has_section(section) == False:
                 config_file.add_section(section)
 
             config_file[section][key] = value
 
-            with open(path, 'w') as configfile:
+            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
                 config_file.write(configfile)
 
             return True
@@ -269,11 +267,10 @@ def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
 
-    ini_section = get_config_value("CONFIG_ITEMS", "update_section")
     config = configparser.ConfigParser()
     config.read("/home/pi/.update_tool/update_tool.ini")
-    if config.has_option(ini_section, key):
-        return config[ini_section][key] == str(modified_timestamp)
+    if config.has_option("INSTALLED_UPDATES", key):
+        return config["INSTALLED_UPDATES"][key] == str(modified_timestamp)
 
     return False
 
@@ -559,7 +556,6 @@ def merge_gamelist(directory):
         corr = corr[corr.index('extracted')+1:]
         corr = Path("/", *corr)
         if os.path.isfile(corr):
-            print(corr)
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
 
@@ -1659,9 +1655,7 @@ def count_games(system: str, games: list, official_only = True, additional_colum
 
 
 def gamelist_counts_dialog(systems: list, all_systems=False):
-    official_only = get_config_value("CONFIG_ITEMS", "count_official_only")
-    if official_only is None:
-        official_only = False
+    official_only = (get_config_value("CONFIG_ITEMS", "count_official_only") == "True")
     systems.sort()
     systems_text = ""
     total_count = 0
@@ -1680,7 +1674,7 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     games_text += "\n"
     for system in systems:
         for single_system in system.split("/"):
-            system_count = count_games(single_system, games, official_only=(official_only=="True"), additional_columns=additional_columns)
+            system_count = count_games(single_system, games, official_only=official_only, additional_columns=additional_columns)
             total_count += system_count
             systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
 
@@ -2195,8 +2189,7 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
             if delete == True:
                 os.remove(file)
 
-            ini_section = get_config_value("CONFIG_ITEMS", "update_section")
-            set_config_value(ini_section, update[0], str(update[2]))
+            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
             installed_updates.append(update[0])
 
     if auto_clean == True:
@@ -2292,14 +2285,9 @@ def downloaded_update_question_dialog():
 
 
 def improvements_dialog():
-    menu_choices = [("1", "Download and Install Updates"),
-                    ("2", "Manually Install Downloaded Updates")]
-
-    if os.path.isfile(rick_file):
-        menu_choices.append(("3", "Set Edition"))
-
     code, tag = d.menu("Select Option", 
-                    choices=menu_choices,
+                    choices=[("1", "Download and Install Updates"),
+                             ("2", "Manually Install Downloaded Updates")],
                     title="Load Improvements")
 
     if code == d.OK:
@@ -2311,8 +2299,6 @@ def improvements_dialog():
                 official_improvements_dialog()
         elif tag == "2":
             downloaded_update_question_dialog()
-        elif tag == "3":
-            set_edition_dialog()
 
     cls()
     main_dialog()
@@ -2663,8 +2649,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
 
         improvement_passed = process_improvement(file_path, extracted)
         if improvement_passed == True:
-            ini_section = get_config_value("CONFIG_ITEMS", "update_section")
-            set_config_value(ini_section, update[0], str(update[2]))
+            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
             installed_updates.append(update[0])
     
         remove_improvements = remove_improvements & improvement_passed
@@ -3015,109 +3000,9 @@ def check_for_updates():
         return False
 
 
-def display_message():
-    message_file = "/home/pi/.RickDangerous/message"
-    message = ""
-
-    if os.path.isfile(message_file):
-        with open(message_file) as file:
-            lines = file.readlines()
-        for line in lines:
-            message += line
-        d.msgbox(message)
-        os.remove(message_file)
-
-    return
-
-
-def get_rick_values(value: str):
-    ret_val = []
-    rick_config = configparser.ConfigParser()
-    rick_config.optionxform = str
-
-    if os.path.isdir(rick_folder):
-        if os.path.isfile(rick_file):
-            rick_config.read(rick_file)
-            for section in rick_config.sections():
-                if rick_config.has_option(section, value):
-                    ret_val.append(rick_config[section][value].strip())
-
-    return ret_val
-    
-def update_official_origins():
-    if os.path.isfile(rick_file):
-        current_origins = get_official_origins()
-        rick_origins = get_rick_values("origin")
-        needs_update = False
-
-        for origin in rick_origins:
-            if not origin in current_origins:
-                current_origins.append(origin)
-                needs_update = True
-
-        if needs_update == True:
-            origins = ""
-            for origin in current_origins:
-                if len(origins) > 0:
-                    origins += ","
-                origins += origin
-            
-            set_config_value("CONFIG_ITEMS", "official_origin", origins)
-            
-    return
-
-
-def set_edition_dialog():
-    rick_config = configparser.ConfigParser()
-    rick_config.optionxform = str
-    editions_dict = {}
-    dialog_choices = []
-
-    previous_edition = get_config_value("CONFIG_ITEMS", "update_edition")
-    if previous_edition == None:
-        previous_edition = ""
-
-    rick_config.read(rick_file)
-    for section in rick_config.sections():
-        items = get_config_section(section, path=rick_file)
-        edition_dict = {}
-        for key, val in items:
-            edition_dict[key] = val
-        editions_dict[section] = edition_dict
-        dialog_choices.append((section, editions_dict[section]["size"], previous_edition == section))
-
-    code, tag = d.radiolist("Choose which notification method you want to use",
-                choices=dialog_choices)
-
-    if code == d.OK:
-        set_config_value('CONFIG_ITEMS', 'update_edition', tag)
-        set_config_value('CONFIG_ITEMS', 'mega_dir', editions_dict[tag]["mega_dir"])
-        set_config_value('CONFIG_ITEMS', 'update_section', editions_dict[tag]["ini_section"])
-        d.msgbox('Edition set to ' + tag + ' for updates!')
-
-    return
-
-
-def is_edition_set():
-    if os.path.isfile(rick_file):
-        current_edition = get_config_value("CONFIG_ITEMS", "update_edition")
-        if current_edition is None or len(current_edition) == 0:
-            return False
-
-    return True
-
-
 def main():
     global update_available_result
     update_available_result = update_available()
-
-    display_message()
-    update_official_origins()
-    while True:
-        if is_edition_set() == False:
-            set_edition_dialog()
-        else: 
-            break
 
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
