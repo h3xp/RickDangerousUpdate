@@ -522,7 +522,7 @@ def copydir(source_path, target_path):
 
 def fix_permissions():
     runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
-    d.msgbox("Done! The permissions bug has been fixed!")
+    d.msgbox("Done! Permissions have been reset!")
     main_dialog()
 
 
@@ -2307,16 +2307,17 @@ def improvements_dialog():
 
 
 def misc_menu():
-    code, tag = d.menu("Misc",
+    code, tag = d.menu("Select Option",
                     choices=[("1", "Restore Retroarch Configurations"),
                              ("2", "Reset EmulationStation Configurations"),
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
-                             ("5", "Gamelist (Etc) Utilities"),
-                             ("6", "Select Update Notification"),
-                             ("7", "Toggle Auto Clean"),
-                             ("8", "Toggle Count Official Only")],
-                    title="Miscellaneous")
+                             ("5", "Reset Permissions"),
+                             ("6", "Gamelist (Etc) Utilities"),
+                             ("7", "Select Update Notification"),
+                             ("8", "Toggle Auto Clean"),
+                             ("9", "Toggle Count Official Only")],
+                    title="System Tools and Utilities")
 
     if code == d.OK:
 
@@ -2345,12 +2346,14 @@ def misc_menu():
             else:
                 handheld_dialog()
         elif tag == "5":
-            gamelist_utilities_dialog()
+            fix_permissions()
         elif tag == "6":
-            select_notification()
+            gamelist_utilities_dialog()
         elif tag == "7":
-            toggle_autoclean()
+            select_notification()
         elif tag == "8":
+            toggle_autoclean()
+        elif tag == "9":
             toggle_countofficialonly()
 
     cls()
@@ -2379,10 +2382,9 @@ def main_dialog():
 
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Load Improvements"),    
-                             ("2", "Fix Known Bugs"),
-                             ("3", "Miscellaneous"),
-                             ("4", "Installation"),
-                             ("5", "Support")],
+                             ("2", "System Tools and Utilities"),
+                             ("3", "Installation"),
+                             ("4", "Support")],
                              
                     title=check_update(),
                     backtitle="Rick Dangerous Insanium Edition Update Tool",
@@ -2395,16 +2397,14 @@ def main_dialog():
             #official_improvements_dialog()
             improvements_dialog()
         elif tag == "2":
-            bugs_dialog()
-        elif tag == "3":
             misc_menu()
-        elif tag == "4":
+        elif tag == "3":
             if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
                 installation_dialog()
-        elif tag == "5":
+        elif tag == "4":
             support_dialog()
 
     if code == d.CANCEL:
