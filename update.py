@@ -2876,19 +2876,19 @@ def overlays_dialog():
     return
 
 
-def bugs_dialog():
-    code, tag = d.menu("Bugs Menu", 
-                    choices=[("1", "Fix permissions")], 
-                    title="Fix Known Bugs")
-    
-    if code == d.OK:
-        if tag == "1":
-            fix_permissions()
-
-    if code == d.CANCEL:
-        main_dialog()
-
-    return
+#def bugs_dialog():
+#    code, tag = d.menu("Bugs Menu", 
+#                    choices=[("1", "Fix permissions")], 
+#                    title="Fix Known Bugs")
+#    
+#    if code == d.OK:
+#        if tag == "1":
+#            fix_permissions()
+#
+#    if code == d.CANCEL:
+#        main_dialog()
+#
+#    return
 
 
 def restore_retroarch_dialog():
