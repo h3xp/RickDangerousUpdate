@@ -1605,7 +1605,10 @@ def is_game_official(game: ET.Element, origins=[]):
 
 
 def count_games(system: str, games: list, official_only = True, additional_columns = []):
-    count = 0    
+    count = 0
+    official_count = 0
+    unofficial_count = 0
+    counts = []
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
@@ -1622,15 +1625,26 @@ def count_games(system: str, games: list, official_only = True, additional_colum
             path = src_game.find("path")
             if path.text is not None:
                 game_path = path.text.replace("./", system_dir + "/").strip()
+                official = is_game_official(src_game, origins)
+                if official:
+                    official_count += 1
+                else:
+                    unofficial_count += 1
                 if official_only == True:
                     #if not os.path.dirname(game_path) == system_dir:
-                    if not is_game_official(src_game, origins):
+                    if not official:
                         continue
                 game_size = 0
                 if os.path.isfile(game_path):
                     game_size = os.path.getsize(game_path)
                 
-                game_list = [game.text.strip(), game_path.replace(system_dir + "/", ""), convert_filesize(str(game_size))]
+                origin_text = ""
+                origin = src_game.find("origin")
+                if origin is not None:
+                    if origin.text is not None:
+                        origin_text = origin.text
+
+                game_list = [game.text.strip(), game_path.replace(system_dir + "/", ""), convert_filesize(str(game_size)), "OFFICIAL" if official == True else "unofficial", origin_text]
                 #if game.text.strip() in games:
                 #    d.msgbox(system + " - " + game.text.strip())
                 #games.append(game.text.strip())
@@ -1651,7 +1665,10 @@ def count_games(system: str, games: list, official_only = True, additional_colum
         games.append(tuple(new_list))
         #games.append((system, list_game[0], list_game[1], list_game[2], list_game[3], list_game[4]))
 
-    return count
+    counts.append(count)
+    counts.append(official_count)
+    counts.append(unofficial_count)
+    return counts
 
 
 def gamelist_counts_dialog(systems: list, all_systems=False):
@@ -1659,8 +1676,10 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     systems.sort()
     systems_text = ""
     total_count = 0
+    official_count = 0
+    unofficial_count = 0
     games = []
-    games_text = "system\tgame\tpath\tsize"
+    games_text = "Count offical only is {}.\n\nsystem\tgame\tpath\tsize\tofficial\torigin".format("on" if official_only == True else "off")
     additional_gameslist_columns = get_config_value("CONFIG_ITEMS", "additional_gameslist_columns")
     if additional_gameslist_columns is None:
         additional_gameslist_columns = ""
@@ -1675,11 +1694,20 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     for system in systems:
         for single_system in system.split("/"):
             system_count = count_games(single_system, games, official_only=official_only, additional_columns=additional_columns)
-            total_count += system_count
-            systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
+            total_count += system_count[0]
+            official_count += system_count[1]
+            unofficial_count += system_count[2]
+            systems_text += "\n-{}:\t{}".format(single_system, str(system_count[0]))
+            if official_only == False:
+                systems_text += "\t{}\t{}".format(str(system_count[1]), str(system_count[2]))
 
     systems_counted = "All" if all_systems == True else "Selected"
-    systems_text = "TOTAL: {}\n\n{} Systems:".format(total_count, systems_counted) + systems_text
+    systems_header = "Count official only is {}\n\nTOTAL: {}".format("on" if official_only == True else "off", total_count)
+    if official_only == False:
+        systems_header += "\tOfficial: {}\tUnofficial: {}".format(official_count, unofficial_count)
+    systems_header += "\n\n{} Systems:".format(systems_counted)
+    systems_text = systems_header + systems_text
+
     display_text = systems_text
     if all_systems == True:
         display_count = "all games" if official_only == False else "official games only"
@@ -2876,19 +2904,19 @@ def overlays_dialog():
     return
 
 
-def bugs_dialog():
-    code, tag = d.menu("Bugs Menu", 
-                    choices=[("1", "Fix permissions")], 
-                    title="Fix Known Bugs")
-    
-    if code == d.OK:
-        if tag == "1":
-            fix_permissions()
-
-    if code == d.CANCEL:
-        main_dialog()
-
-    return
+#def bugs_dialog():
+#    code, tag = d.menu("Bugs Menu", 
+#                    choices=[("1", "Fix permissions")], 
+#                    title="Fix Known Bugs")
+#    
+#    if code == d.OK:
+#        if tag == "1":
+#            fix_permissions()
+#
+#    if code == d.CANCEL:
+#        main_dialog()
+#
+#    return
 
 
 def restore_retroarch_dialog():
