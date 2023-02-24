@@ -956,8 +956,6 @@ def process_m3u_file(m3u_file: str, src_game: ET.Element, src_tree: ET.ElementTr
         bad_files.sort()
         for file in bad_files:
             log_this(log_file, "-m3u entry \"{}\" not found for m3u file \"{}\"".format(file, os.path.basename(m3u_file)))
-
-        return good_files
     else:
         for file in good_files:
             if file in m3u_files:
