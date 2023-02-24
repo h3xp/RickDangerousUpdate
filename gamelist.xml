@@ -3,7 +3,7 @@
 	<game>
 		<path>./update_tool.sh</path>
 		<name>Update Tool</name>
-		<desc>Install updates to the Rick Dangerous Insanium Edition, fix common issues, etc.</desc>
+		<desc>Install updates to the Rick Dangerous Insanium/Retro Power Edition, fix common issues, etc.</desc>
 		<image>./icons/update_tool.png</image>
 		<rating>0</rating>
 		<releasedate>19700101T010000</releasedate>
