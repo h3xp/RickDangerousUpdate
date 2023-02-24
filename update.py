@@ -9,7 +9,8 @@ from http.client import OK
 import os
 import zipfile
 import platform
-from distutils.dir_util import copy_tree
+#from distutils.dir_util import copy_tree
+import distutils.dir_util
 import json
 from pathlib import Path
 import re
@@ -517,7 +518,9 @@ def copyfile(localpath, filepath):
 
 
 def copydir(source_path, target_path):
-    copy_tree(source_path, target_path)
+    #copy_tree(source_path, target_path)
+    distutils.dir_util._path_created = {}
+    distutils.dir_util.copy_tree(source_path, target_path)
 
 
 def fix_permissions():
