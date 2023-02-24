@@ -56,9 +56,11 @@ The script will also install a new command "update_tool" with which you can easi
 
 Note that if you do not install the tool, it will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the tool until you do properly install it.
 
-# Attention
+# Attention - Important Things To Be Aware Of
 
-The script has been tested, however we can't give a 100% guarantee that it might not break something on
+- Before installing any updates you should use the Fix known bugs option. It is very important that you do this or you will likely have unpredictable results if you process any updates before doing this.
+- It is strongly recommended to actually install the tool rather than just running it.
+- The script has been tested, however we can't give a 100% guarantee that it might not break something on
 your retropie. Therefore, use this at your own risk.
 
 # Features

@@ -9,7 +9,8 @@ from http.client import OK
 import os
 import zipfile
 import platform
-from distutils.dir_util import copy_tree
+#from distutils.dir_util import copy_tree
+import distutils.dir_util
 import json
 from pathlib import Path
 import re
@@ -517,12 +518,14 @@ def copyfile(localpath, filepath):
 
 
 def copydir(source_path, target_path):
-    copy_tree(source_path, target_path)
+    #copy_tree(source_path, target_path)
+    distutils.dir_util._path_created = {}
+    distutils.dir_util.copy_tree(source_path, target_path)
 
 
 def fix_permissions():
     runcmd('sudo chown -R pi:pi ~/RetroPie/roms/ && sudo chown -R pi:pi ~/.emulationstation/')
-    d.msgbox("Done! The permissions bug has been fixed!")
+    d.msgbox("Done! Permissions have been reset!")
     main_dialog()
 
 
@@ -1583,8 +1586,32 @@ def do_gamelist_genres(systems: list):
     return
 
 
+def get_official_origins():
+    ret_val = []
+
+    origins = get_config_value("CONFIG_ITEMS", "official_origin")
+    for origin in origins.split(","):
+        ret_val.append(origin.strip())
+
+    return ret_val
+
+
+def is_game_official(game: ET.Element, origins=[]):
+    if len(origins) == 0:
+        origins = get_official_origins()
+    origin = game.find("origin")
+    if origin is not None:
+        if origin.text is not None:
+            return origin.text in origins
+
+    return False
+
+
 def count_games(system: str, games: list, official_only = True, additional_columns = []):
-    count = 0    
+    count = 0
+    official_count = 0
+    unofficial_count = 0
+    counts = []
     games_list = []
     system_dir = os.path.join("/home/pi/RetroPie/roms", system)
     src_xml = os.path.join(system_dir, "gamelist.xml")
@@ -1592,6 +1619,7 @@ def count_games(system: str, games: list, official_only = True, additional_colum
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
+    origins = get_official_origins()
 
     for src_game in src_root.iter("game"):
         game_list = []
@@ -1600,14 +1628,26 @@ def count_games(system: str, games: list, official_only = True, additional_colum
             path = src_game.find("path")
             if path.text is not None:
                 game_path = path.text.replace("./", system_dir + "/").strip()
+                official = is_game_official(src_game, origins)
+                if official:
+                    official_count += 1
+                else:
+                    unofficial_count += 1
                 if official_only == True:
-                    if not os.path.dirname(game_path) == system_dir:
+                    #if not os.path.dirname(game_path) == system_dir:
+                    if not official:
                         continue
                 game_size = 0
                 if os.path.isfile(game_path):
                     game_size = os.path.getsize(game_path)
                 
-                game_list = [game.text.strip(), game_path.replace(system_dir + "/", ""), convert_filesize(str(game_size))]
+                origin_text = ""
+                origin = src_game.find("origin")
+                if origin is not None:
+                    if origin.text is not None:
+                        origin_text = origin.text
+
+                game_list = [game.text.strip(), game_path.replace(system_dir + "/", ""), convert_filesize(str(game_size)), "OFFICIAL" if official == True else "unofficial", origin_text]
                 #if game.text.strip() in games:
                 #    d.msgbox(system + " - " + game.text.strip())
                 #games.append(game.text.strip())
@@ -1628,18 +1668,21 @@ def count_games(system: str, games: list, official_only = True, additional_colum
         games.append(tuple(new_list))
         #games.append((system, list_game[0], list_game[1], list_game[2], list_game[3], list_game[4]))
 
-    return count
+    counts.append(count)
+    counts.append(official_count)
+    counts.append(unofficial_count)
+    return counts
 
 
 def gamelist_counts_dialog(systems: list, all_systems=False):
-    official_only = get_config_value("CONFIG_ITEMS", "count_official_only")
-    if official_only is None:
-        official_only = False
+    official_only = (get_config_value("CONFIG_ITEMS", "count_official_only") == "True")
     systems.sort()
     systems_text = ""
     total_count = 0
+    official_count = 0
+    unofficial_count = 0
     games = []
-    games_text = "system\tgame\tpath\tsize"
+    games_text = "Count offical only is {}.\n\nsystem\tgame\tpath\tsize\tofficial\torigin".format("on" if official_only == True else "off")
     additional_gameslist_columns = get_config_value("CONFIG_ITEMS", "additional_gameslist_columns")
     if additional_gameslist_columns is None:
         additional_gameslist_columns = ""
@@ -1653,12 +1696,21 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
     games_text += "\n"
     for system in systems:
         for single_system in system.split("/"):
-            system_count = count_games(single_system, games, official_only=(official_only=="True"), additional_columns=additional_columns)
-            total_count += system_count
-            systems_text += "\n-{}:\t{}".format(single_system, str(system_count))
+            system_count = count_games(single_system, games, official_only=official_only, additional_columns=additional_columns)
+            total_count += system_count[0]
+            official_count += system_count[1]
+            unofficial_count += system_count[2]
+            systems_text += "\n-{}:\t{}".format(single_system, str(system_count[0]))
+            if official_only == False:
+                systems_text += "\t{}\t{}".format(str(system_count[1]), str(system_count[2]))
 
     systems_counted = "All" if all_systems == True else "Selected"
-    systems_text = "TOTAL: {}\n\n{} Systems:".format(total_count, systems_counted) + systems_text
+    systems_header = "Count official only is {}\n\nTOTAL: {}".format("on" if official_only == True else "off", total_count)
+    if official_only == False:
+        systems_header += "\tOfficial: {}\tUnofficial: {}".format(official_count, unofficial_count)
+    systems_header += "\n\n{} Systems:".format(systems_counted)
+    systems_text = systems_header + systems_text
+
     display_text = systems_text
     if all_systems == True:
         display_count = "all games" if official_only == False else "official games only"
@@ -2263,11 +2315,75 @@ def downloaded_update_question_dialog():
     return
 
 
+def check_update_status_dialog(available_updates=[]):
+    megadrive = check_drive()
+    check_wrong_permissions()
+
+    if len(available_updates) == 0:
+        available_updates = get_available_updates(megadrive, status=True)
+
+    if len(available_updates) == 0:
+        d.msgbox("No updates available.")
+        return
+
+    available_updates = sort_official_updates(available_updates)
+
+    if len(available_updates) == 0:
+        d.msgbox("There are 0 available updates!")
+        return
+
+    show_all_updates = (get_config_value("CONFIG_ITEMS", "show_all_updates") == "True")
+    extra_label = "Show All" if show_all_updates == False else "Show Needed"
+
+    updates_status = ""
+    all_updates = []
+    update_needed = False
+    needed_updates = []
+    recommended_updates = []
+    for update in available_updates:
+        update_applied = is_update_applied(update[0], update[2])
+        if update_applied == False:
+            needed_updates.append(update)
+        update_needed = (update_needed == True or update_applied == False)
+        if update_needed == True:
+            recommended_updates.append(update)
+        if show_all_updates == True or update_needed == True:
+            #TO DO: check if update has been installed from config and make True
+            all_updates.append(update)
+            if len(updates_status) > 0:
+                updates_status += "\n"
+
+            update_status = "NEEDED"
+            if update_applied == True:
+                update_status = "applied"
+                if update_needed == True:
+                    update_status = "recommended"
+            
+            updates_status += "{} ({}) [{}]".format(update[0], update[3], update_status)
+
+    if len(all_updates) == 0:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", "True")
+        d.msgbox("No updates are needed.")
+        check_update_status_dialog(available_updates=available_updates)
+        return
+
+    update_totals = "Show All Updates is {}\n\nNumber of available updates: {} ({})\nNumber of updates needed: {} ({})\nRecommended number of updates: {} ({})\n\n".format("on" if show_all_updates == True else "off", len(available_updates), get_total_size_of_updates(available_updates), len(needed_updates), get_total_size_of_updates(needed_updates), len(recommended_updates), get_total_size_of_updates(recommended_updates))
+    code = d.msgbox(update_totals + updates_status, title="Update Status", extra_button=True, extra_label=extra_label)
+
+    if code == d.EXTRA:
+        set_config_value("CONFIG_ITEMS", "show_all_updates", str(not show_all_updates))
+        check_update_status_dialog(available_updates=available_updates)
+        return
+
+    return
+
+
 def improvements_dialog():
     code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
-                             ("2", "Manually Install Downloaded Updates")],
-                    title="Load Improvements")
+                             ("2", "Manually Install Downloaded Updates"), 
+                             ("3", "Update Status")],
+                    title="Improvements")
 
     if code == d.OK:
         if tag == "1":
@@ -2278,6 +2394,8 @@ def improvements_dialog():
                 official_improvements_dialog()
         elif tag == "2":
             downloaded_update_question_dialog()
+        elif tag == "3":
+            check_update_status_dialog()
 
     cls()
     main_dialog()
@@ -2286,16 +2404,17 @@ def improvements_dialog():
 
 
 def misc_menu():
-    code, tag = d.menu("Misc",
+    code, tag = d.menu("Select Option",
                     choices=[("1", "Restore Retroarch Configurations"),
                              ("2", "Reset EmulationStation Configurations"),
                              ("3", "System Overlays"),
                              ("4", "Handheld Mode"),
-                             ("5", "Gamelist (Etc) Utilities"),
-                             ("6", "Select Update Notification"),
-                             ("7", "Toggle Auto Clean"),
-                             ("8", "Toggle Count Official Only")],
-                    title="Miscellaneous")
+                             ("5", "Reset Permissions"),
+                             ("6", "Gamelist (Etc) Utilities"),
+                             ("7", "Select Update Notification"),
+                             ("8", "Toggle Auto Clean"),
+                             ("9", "Toggle Count Official Only")],
+                    title="System Tools and Utilities")
 
     if code == d.OK:
 
@@ -2324,12 +2443,14 @@ def misc_menu():
             else:
                 handheld_dialog()
         elif tag == "5":
-            gamelist_utilities_dialog()
+            fix_permissions()
         elif tag == "6":
-            select_notification()
+            gamelist_utilities_dialog()
         elif tag == "7":
-            toggle_autoclean()
+            select_notification()
         elif tag == "8":
+            toggle_autoclean()
+        elif tag == "9":
             toggle_countofficialonly()
 
     cls()
@@ -2357,14 +2478,13 @@ def main_dialog():
         update_available_result = update_available()
 
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Load Improvements"),    
-                             ("2", "Fix Known Bugs"),
-                             ("3", "Miscellaneous"),
-                             ("4", "Installation"),
-                             ("5", "Support")],
+                    choices=[("1", "Improvements"),    
+                             ("2", "System Tools and Utilities"),
+                             ("3", "Installation"),
+                             ("4", "Support")],
                              
                     title=check_update(),
-                    backtitle="Rick Dangerous Insanium Edition Update Tool",
+                    backtitle="Rick Dangerous Update Tool",
                     cancel_label=" Exit ")
     
     if code == d.OK:
@@ -2374,16 +2494,14 @@ def main_dialog():
             #official_improvements_dialog()
             improvements_dialog()
         elif tag == "2":
-            bugs_dialog()
-        elif tag == "3":
             misc_menu()
-        elif tag == "4":
+        elif tag == "3":
             if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 main_dialog()
             else:
                 installation_dialog()
-        elif tag == "5":
+        elif tag == "4":
             support_dialog()
 
     if code == d.CANCEL:
@@ -2789,19 +2907,19 @@ def overlays_dialog():
     return
 
 
-def bugs_dialog():
-    code, tag = d.menu("Bugs Menu", 
-                    choices=[("1", "Fix permissions")], 
-                    title="Fix Known Bugs")
-    
-    if code == d.OK:
-        if tag == "1":
-            fix_permissions()
-
-    if code == d.CANCEL:
-        main_dialog()
-
-    return
+#def bugs_dialog():
+#    code, tag = d.menu("Bugs Menu", 
+#                    choices=[("1", "Fix permissions")], 
+#                    title="Fix Known Bugs")
+#    
+#    if code == d.OK:
+#        if tag == "1":
+#            fix_permissions()
+#
+#    if code == d.CANCEL:
+#        main_dialog()
+#
+#    return
 
 
 def restore_retroarch_dialog():
