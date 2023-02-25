@@ -15,16 +15,15 @@ Join Ricks discord server to keep track on the latest changes.
 - [Usage](#usage)
 - [Warning](#attention)
 - [Features](#features)
-  - [Install Improvements](#improvements)
-  - [Fix known bugs](#fix-known-bugs)
-  - [Restore Retroarch configurations](#restore-retroarch-configurations)
-  - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
-  - [Enable/Disable System overlays](#system-overlay)
-  - [Enable/Disable Handheld mode](#handheld-mode)
-  - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
-  - [Select Update Notification](#select-update-notification)
-  - [Toggle Auto Clean](#toggle-auto-clean)
-  - [Toggle Count Official Only](#toggle-count-official)
+  - [Improvements](#improvements)
+  - [System Tools and Utilities](#system-tools-and-utilities)
+    - [Enable/Disable System overlays](#system-overlay)
+    - [Enable/Disable Handheld mode](#handheld-mode)
+    - [Reset Permissions](#reset-permissions)
+    - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
+    - [Select Update Notification](#select-update-notification)
+    - [Toggle Auto Clean](#toggle-auto-clean)
+    - [Toggle Count Official Only](#toggle-count-official)
   - [Installation](#installation)
   - [Support](#support)
 - [SSH Instructions](#ssh-usage)
@@ -65,40 +64,27 @@ your retropie. Therefore, use this at your own risk.
 
 # Features
 
-1. [Install Improvements](#improvements)
-2. [Fix known bugs](#fix-known-bugs)
-3. [Miscellaneous](#miscellaneous)
-   - [Restore Retroarch configurations](#restore-retroarch-configurations)
-   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
+1. [Improvements](#improvements)
+2. [System Tools and Utilities](#system-tools-and-utilities)
    - [Enable/Disable System overlays](#system-overlay)
    - [Enable/Disable Handheld mode](#handheld-mode)
+   - [Reset Permissions](#reset-permissions)
    - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
    - [Select Update Notification](#select-update-notification)
    - [Toggle Auto Clean](#toggle-auto-clean)
    - [Toggle Count Official Only](#toggle-count-official)
-4. [Installation](#installation)
-5. [Support](#support)
+3. [Installation](#installation)
+4. [Support](#support)
 
 ## Improvements
 
 This is the "main" feature and reason to create this tool. 
-This will allow you to easily select single or multiple updates to process, either; to download from a MEGA drive directory, or previously downloaded to a directory on the pi.
+This will allow you to easily select single or multiple updates to process, either; to download from the MEGA drive directory, or previously downloaded to a directory on the pi.
+There is also a facility to show what updates are available from the MEGA drive directory.
 
-## Fix known bugs
-
-The title is self-explanatory, this feature will easily fix known bugs for you. It is recommended to run these.
-
-## Miscellaneous
+## System Tools and Utilities
 
 Various settings, tools and resets.
-
-### Restore Retroarch configurations
-
-Only use this if you screwed up. This will reset all retroarch configuration files for every system to their original state.
-
-### Reset emulationstation configurations
-
-Only use this if you screwed up. This will reset all emulationstation configurations to their original state.
 
 ### System overlay
 
@@ -117,6 +103,10 @@ These systems will be adjusted:
 - gbc
 - ngpc
 - wonderswancolor
+
+### Reset Permissions
+
+Reset Permissions will correct the ownership of parts of the installation if they have been accidentally changed.
 
 ### Gamelist (Etc) Utilities
 
