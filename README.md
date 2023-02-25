@@ -17,8 +17,6 @@ Join Ricks discord server to keep track on the latest changes.
 - [Features](#features)
   - [Improvements](#improvements)
   - [System Tools and Utilities](#system-tools-and-utilities)
-    - [Restore Retroarch configurations](#restore-retroarch-configurations)
-    - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
     - [Enable/Disable System overlays](#system-overlay)
     - [Enable/Disable Handheld mode](#handheld-mode)
     - [Reset Permissions](#reset-permissions)
@@ -68,8 +66,6 @@ your retropie. Therefore, use this at your own risk.
 
 1. [Improvements](#improvements)
 2. [System Tools and Utilities](#system-tools-and-utilities)
-   - [Restore Retroarch configurations](#restore-retroarch-configurations)
-   - [Reset Emulationstation configrations](#reset-emulationstation-configurations)
    - [Enable/Disable System overlays](#system-overlay)
    - [Enable/Disable Handheld mode](#handheld-mode)
    - [Reset Permissions](#reset-permissions)
@@ -89,14 +85,6 @@ There is also a facility to show what updates are available from the MEGA drive 
 ## System Tools and Utilities
 
 Various settings, tools and resets.
-
-### Restore Retroarch configurations
-
-Only use this if you screwed up. This will reset all retroarch configuration files for every system to their original state.
-
-### Reset emulationstation configurations
-
-Only use this if you screwed up. This will reset all emulationstation configurations to their original state.
 
 ### System overlay
 
