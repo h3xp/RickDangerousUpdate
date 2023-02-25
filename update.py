@@ -2403,15 +2403,13 @@ def improvements_dialog():
 
 def misc_menu():
     code, tag = d.menu("Select Option",
-                    choices=[("1", "Restore Retroarch Configurations"),
-                             ("2", "Reset EmulationStation Configurations"),
-                             ("3", "System Overlays"),
-                             ("4", "Handheld Mode"),
-                             ("5", "Reset Permissions"),
-                             ("6", "Gamelist (Etc) Utilities"),
-                             ("7", "Select Update Notification"),
-                             ("8", "Toggle Auto Clean"),
-                             ("9", "Toggle Count Official Only")],
+                    choices=[("1", "System Overlays"),
+                             ("2", "Handheld Mode"),
+                             ("3", "Reset Permissions"),
+                             ("4", "Gamelist (Etc) Utilities"),
+                             ("5", "Select Update Notification"),
+                             ("6", "Toggle Auto Clean"),
+                             ("7", "Toggle Count Official Only")],
                     title="System Tools and Utilities")
 
     if code == d.OK:
@@ -2421,34 +2419,22 @@ def misc_menu():
                 d.msgbox("You need to be connected to the internet for this.")
                 misc_menu()
             else:
-                restore_retroarch_dialog()
+                overlays_dialog()
         elif tag == "2":
             if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 misc_menu()
             else:
-                reset_controls_dialog()
-        elif tag == "3":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                misc_menu()
-            else:
-                overlays_dialog()
-        elif tag == "4":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                misc_menu()
-            else:
                 handheld_dialog()
-        elif tag == "5":
+        elif tag == "3":
             fix_permissions()
-        elif tag == "6":
+        elif tag == "4":
             gamelist_utilities_dialog()
-        elif tag == "7":
+        elif tag == "5":
             select_notification()
-        elif tag == "8":
+        elif tag == "6":
             toggle_autoclean()
-        elif tag == "9":
+        elif tag == "7":
             toggle_countofficialonly()
 
     cls()
@@ -2918,66 +2904,66 @@ def overlays_dialog():
 #        main_dialog()
 #
 #    return
-
-
-def restore_retroarch_dialog():
-    code = d.yesno(text="Are you sure you want to reset all retroarch.cfgs?")
-
-    if code == d.OK:
-        do_retroarch_configs()
-
-    if code == d.CANCEL:
-        main_dialog()
-
-    return
-
-
-def do_retroarch_configs():
-    localpath = Path("/", "tmp")
-    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/retroarch_configs.zip", localpath / "retroarch_configs.zip")
-    f = os.path.join(localpath, "retroarch_configs.zip")
-    if os.path.isfile(f):
-        with zipfile.ZipFile(f, 'r') as zip_ref:
-            zip_ref.extractall(localpath / "retroarch_configs")
-        copydir(localpath / "retroarch_configs/", "/opt/retropie/configs/")
-        try:
-            shutil.rmtree(localpath / "retroarch_configs")
-        except OSError as e:
-            print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
-        os.remove(localpath / "retroarch_configs.zip")
-
-    return
-
-
-def reset_controls_dialog():
-    code = d.yesno(text="Are you sure you want to reset your emulationstation configs?")
-
-    if code == d.OK:
-        do_retroarch_configs()
-
-    if code == d.CANCEL:
-        main_dialog()
-
-    return
-
-
-def do_emulationstation_configs():
-    localpath = Path("/", "tmp")
-    urllib.request.urlretrieve(
-        "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/emulationstation_configs.zip",
-        localpath / "emulationstation_configs.zip")
-    f = os.path.join(localpath, "emulationstation_configs.zip")
-    if os.path.isfile(f):
-        with zipfile.ZipFile(f, 'r') as zip_ref:
-            zip_ref.extractall(localpath / "emulationstation_configs")
-        copydir(localpath / "emulationstation_configs/", "/home/pi/.emulationstation/")
-        try:
-            shutil.rmtree(localpath / "emulationstation_configs")
-        except OSError as e:
-            print("Error: %s : %s" % (localpath / "emulationstation_configs", e.strerror))
-        os.remove(localpath / "emulationstation_configs.zip")
-
-    return
+#
+#
+#def restore_retroarch_dialog():
+#    code = d.yesno(text="Are you sure you want to reset all retroarch.cfgs?")
+#
+#    if code == d.OK:
+#        do_retroarch_configs()
+#
+#    if code == d.CANCEL:
+#        main_dialog()
+#
+#    return
+#
+#
+#def do_retroarch_configs():
+#    localpath = Path("/", "tmp")
+#    urllib.request.urlretrieve("https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/retroarch_configs.zip", localpath / "retroarch_configs.zip")
+#    f = os.path.join(localpath, "retroarch_configs.zip")
+#    if os.path.isfile(f):
+#        with zipfile.ZipFile(f, 'r') as zip_ref:
+#            zip_ref.extractall(localpath / "retroarch_configs")
+#        copydir(localpath / "retroarch_configs/", "/opt/retropie/configs/")
+#        try:
+#            shutil.rmtree(localpath / "retroarch_configs")
+#        except OSError as e:
+#            print("Error: %s : %s" % (localpath / "retroarch_configs", e.strerror))
+#        os.remove(localpath / "retroarch_configs.zip")
+#
+#    return
+#
+#
+#def reset_controls_dialog():
+#    code = d.yesno(text="Are you sure you want to reset your emulationstation configs?")
+#
+#    if code == d.OK:
+#        do_retroarch_configs()
+#
+#    if code == d.CANCEL:
+#        main_dialog()
+#
+#    return
+#
+#
+#def do_emulationstation_configs():
+#    localpath = Path("/", "tmp")
+#    urllib.request.urlretrieve(
+#        "https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/configs/emulationstation_configs.zip",
+#        localpath / "emulationstation_configs.zip")
+#    f = os.path.join(localpath, "emulationstation_configs.zip")
+#    if os.path.isfile(f):
+#        with zipfile.ZipFile(f, 'r') as zip_ref:
+#            zip_ref.extractall(localpath / "emulationstation_configs")
+#        copydir(localpath / "emulationstation_configs/", "/home/pi/.emulationstation/")
+#        try:
+#            shutil.rmtree(localpath / "emulationstation_configs")
+#        except OSError as e:
+#            print("Error: %s : %s" % (localpath / "emulationstation_configs", e.strerror))
+#        os.remove(localpath / "emulationstation_configs.zip")
+#
+#    return
 
 
 def install_dialog():
