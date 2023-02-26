@@ -868,7 +868,8 @@ def look_for_supporting_files(rom_file: str, dir: str, file_types: str):
     for file_type in file_types:
         file_name = os.path.splitext(rom_file)[0] + file_type
         if os.path.exists(os.path.join(dir, file_name)):
-            return file_name
+            #return file_name
+            return os.path.join(dir, file_name)
 
     return ""
 
@@ -997,7 +998,8 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
                 if len(file) > 0:
                     log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
                     if clean == True:
-                        src_node.text = file
+                        #src_node.text = file
+                        src_node.text = file.replace(system_roms, ".")
                         _new_element(src_node, subelement_name, log_file)
                     else:
                         log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
@@ -1008,7 +1010,8 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             if len(file) > 0:
                 log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
                 if clean == True:
-                    src_node.text = file
+                    #src_node.text = file
+                    src_node.text = file.replace(system_roms, ".")
                     _new_element(src_node, subelement_name, log_file)
                 else:
                     log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
@@ -1020,7 +1023,8 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
             log_this(log_file, "-{} file found: \"{}\" for rom \"{}\"".format(subelement_name, file, rom_file))
             if clean == True:
                 child = ET.SubElement(src_game, subelement_name)
-                child.text = "./{}/{}".format(supporting_files_dir, file)
+                #child.text = "./{}/{}".format(supporting_files_dir, file)
+                child.text = file.replace(system_roms, ".")
                 _new_element(child, subelement_name, log_file)
             else:
                 log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
