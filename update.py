@@ -1030,6 +1030,7 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
                 log_this(log_file, "-clean would add new reference to {} tag".format(subelement_name))
 
     # delete validated files
+    file = os.path.basename(file)
     if len(file) > 0:
         if file not in found_files:
             found_files.append(file)
