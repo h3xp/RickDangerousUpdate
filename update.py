@@ -2381,6 +2381,17 @@ def check_update_status_dialog(available_updates=[]):
     return
 
 
+def space_warning():
+    d.msgbox(
+        'Content can only be added if you have adequate storage space.' +
+        '\n\nBe sure you have enough space before proceeding with updates.' +
+        '\n\nYou MUST keep some space free for correct operation of your system.' +
+        '\n\nCurrent free disk space on your root filesystem is' +
+        runcmd("df -h --output=avail / | tail -1"), 11, 72)
+    
+    return
+
+
 def improvements_dialog():
     code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
@@ -2394,8 +2405,10 @@ def improvements_dialog():
                 d.msgbox("You need to be connected to the internet for this.")
                 improvements_dialog()
             else:
+                space_warning()
                 official_improvements_dialog()
         elif tag == "2":
+            space_warning()
             downloaded_update_question_dialog()
         elif tag == "3":
             check_update_status_dialog()
@@ -3022,7 +3035,10 @@ def installation_dialog():
     
     if code == d.OK:
         if tag == "1":
-            install_dialog()
+            if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+                update_dialog()
+            else:
+                install_dialog()
         elif tag == "2":
             update_dialog()
         elif tag == "3":
