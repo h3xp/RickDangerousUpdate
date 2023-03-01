@@ -3035,7 +3035,10 @@ def installation_dialog():
     
     if code == d.OK:
         if tag == "1":
-            install_dialog()
+            if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+                update_dialog()
+            else:
+                install_dialog()
         elif tag == "2":
             update_dialog()
         elif tag == "3":
