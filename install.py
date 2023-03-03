@@ -239,6 +239,21 @@ def install(overwrite=True):
 
     with open(ini_file, 'w') as configfile:
         new_config.write(configfile)
+    
+    mega_ini_file = "{}/mega_{}.ini".format(home_dir, new_config["CONFIG_ITEMS"]["mega_dir"].split("/")[-1])
+
+    if os.path.exists(mega_ini_file) == False:
+        mega_config = configparser.ConfigParser()
+        mega_config.optionxform = str
+        if old_config.has_section("INSTALLED_UPDATES"):
+            mega_config["INSTALLED_UPDATES"] = old_config["INSTALLED_UPDATES"]
+        else:
+            mega_config.add_section("INSTALLED_UPDATES")
+
+        print("Writing mega_ini_file {}".format(mega_ini_file))
+
+        with open(mega_ini_file, 'w') as configfile:
+            mega_config.write(configfile)  
 
     #write script
     print("Writing bash script...")
