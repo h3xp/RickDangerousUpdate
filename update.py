@@ -209,7 +209,7 @@ def set_mega_config_value(section: str, key: str, value: str):
 def mega_ini_check():
     mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
     if mega_dir == None:
-        return None
+        return False
     
     mega_config_file = configparser.ConfigParser()
     mega_config_file.optionxform = str
@@ -220,7 +220,7 @@ def mega_ini_check():
         with open(mega_ini_file, 'w') as configfile:
             mega_config_file.write(configfile)
     
-    return
+    return True
 
     
 def restart_es():
