@@ -1,5 +1,5 @@
 """
-Update Script for Rick Dangerous' Minecraftium Edition
+Update Script for Rick Dangerous' Insanium/R.P Edition
 https://github.com/h3xp/RickDangerousUpdate
 """
 
