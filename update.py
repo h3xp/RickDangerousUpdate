@@ -189,7 +189,7 @@ def set_config_value(section: str, key: str, value: str):
 def set_mega_config_value(section: str, key: str, value: str):
     mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
     if mega_dir == None:
-        return None
+        return False
 
     mega_config_file = configparser.ConfigParser()
     mega_config_file.optionxform = str
