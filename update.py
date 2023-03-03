@@ -187,6 +187,10 @@ def set_config_value(section: str, key: str, value: str):
 
 
 def set_mega_config_value(section: str, key: str, value: str):
+    mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
+    if mega_dir == None:
+        return None
+
     mega_config_file = configparser.ConfigParser()
     mega_config_file.optionxform = str
     mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(get_config_value("CONFIG_ITEMS","mega_dir").split("/")[-1])
@@ -199,9 +203,7 @@ def set_mega_config_value(section: str, key: str, value: str):
     with open(mega_ini_file, 'w') as configfile:
         mega_config_file.write(configfile)
 
-            return True
-
-    return False
+    return True
 
 
 def mega_ini_check():
