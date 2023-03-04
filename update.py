@@ -112,113 +112,105 @@ def get_overlay_systems():
 
     return retval
 
-    
-def get_config_section(section: str):
+
+def read_config():
     if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
         if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
             config_file = configparser.ConfigParser()
             config_file.optionxform = str
             config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_section(section):
-                return config_file.items(section)
+            return config_file
+    return None
+    
+def get_config_section(section: str):
+    config_file = read_config()
+    if config_file is not None:
+        if config_file.has_section(section):
+            return config_file.items(section)
 
     return None
 
 
 def get_config_value(section: str, key: str):
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
-            config_file = configparser.ConfigParser()
-            config_file.optionxform = str
-            config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_option(section, key):
-                return config_file[section][key]
+    config_file = read_config()
+    if config_file is not None:
+        if config_file.has_option(section, key):
+            return config_file[section][key]
 
     return None
 
 
-def get_mega_config_section(section: str):
+def read_mega_config(filename_only: boolean):
     mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
-    if mega_dir == None:
-        return None
-    
-    mega_config_file = configparser.ConfigParser()
-    mega_config_file.optionxform = str
-    mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
-    mega_config_file.read(mega_ini_file)
-    if mega_config_file.has_section(section):
-        return mega_config_file.items(section)
+    if mega_dir is not None:
+        mega_config_file = configparser.ConfigParser()
+        mega_config_file.optionxform = str
+        mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
+        if filename_only == False:
+            mega_config_file.read(mega_ini_file)
+        return mega_config_file,mega_ini_file
+
+    return None,None
+
+
+def get_mega_config_section(section: str):
+    mega_config_file,mega_ini_file = read_mega_config(False)
+    if mega_config_file is not None:
+        if mega_config_file.has_section(section):
+            return mega_config_file.items(section)
 
     return None
 
 
 def get_mega_config_value(section: str, key: str):
-    mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
-    if mega_dir == None:
-        return None
-
-    mega_config_file = configparser.ConfigParser()
-    mega_config_file.optionxform = str
-    mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
-    mega_config_file.read(mega_ini_file)
-    if mega_config_file.has_option(section, key):
-        return mega_config_file[section][key]
+    mega_config_file,mega_ini_file = read_mega_config(False)
+    if mega_config_file is not None:
+        if mega_config_file.has_option(section, key):
+            return mega_config_file[section][key]
 
     return None
 
 
 def set_config_value(section: str, key: str, value: str):
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
-            config_file = configparser.ConfigParser()
-            config_file.optionxform = str
-            config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_section(section) == False:
-                config_file.add_section(section)
+    config_file = read_config()
+    if config_file is not None:
+        if config_file.has_section(section) == False:
+            config_file.add_section(section)
 
-            config_file[section][key] = value
+        config_file[section][key] = value
 
-            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                config_file.write(configfile)
+        with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
+            config_file.write(configfile)
 
-            return True
+        return True
 
     return False
 
 
 def set_mega_config_value(section: str, key: str, value: str):
-    mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
-    if mega_dir == None:
-        return False
+    mega_config_file,mega_ini_file = read_mega_config(False)
+    if mega_config_file is not None:
+        if mega_config_file.has_section(section) == False:
+            mega_config_file.add_section(section)
 
-    mega_config_file = configparser.ConfigParser()
-    mega_config_file.optionxform = str
-    mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(get_config_value("CONFIG_ITEMS","mega_dir").split("/")[-1])
-    mega_config_file.read(mega_ini_file)
-    if mega_config_file.has_section(section) == False:
-        mega_config_file.add_section(section)
+        mega_config_file[section][key] = value
 
-    mega_config_file[section][key] = value
+        with open(mega_ini_file, 'w') as configfile:
+            mega_config_file.write(configfile)
 
-    with open(mega_ini_file, 'w') as configfile:
-        mega_config_file.write(configfile)
+        return True
 
-    return True
+    return False
 
 
 def mega_ini_check():
-    mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
-    if mega_dir == None:
-        return False
-    
-    mega_config_file = configparser.ConfigParser()
-    mega_config_file.optionxform = str
-    mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
-    
-    if os.path.exists(mega_ini_file) == False:
-        mega_config_file.add_section("INSTALLED_UPDATES")
-        with open(mega_ini_file, 'w') as configfile:
-            mega_config_file.write(configfile)
+    mega_config_file,mega_ini_file = read_mega_config(True)
+    # check greater than 5 because of mega_ prefix
+    if len(mega_ini_file) > 5:
+        if os.path.exists(mega_ini_file) == False:
+            mega_config_file.add_section("INSTALLED_UPDATES")
+            with open(mega_ini_file, 'w') as configfile:
+                mega_config_file.write(configfile)
     
     return True
 
