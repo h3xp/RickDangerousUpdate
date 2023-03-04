@@ -328,7 +328,7 @@ def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
 
-    mega_config_content,mega_ini_file = read_mega_config()
+    mega_config_content,mega_ini_file = retrieve_mega_config()
     if mega_config_content.has_option("INSTALLED_UPDATES", key):
         return mega_config_content["INSTALLED_UPDATES"][key] == str(modified_timestamp)
 
