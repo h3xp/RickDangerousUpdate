@@ -140,7 +140,7 @@ def get_config_value(section: str, key: str):
     return None
 
 
-def retrieve_mega_config(read_config: boolean):
+def retrieve_mega_config(read_config: bool):
     mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
     if mega_dir is not None:
         mega_config_content = configparser.ConfigParser()
