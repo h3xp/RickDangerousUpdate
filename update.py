@@ -143,30 +143,30 @@ def get_config_value(section: str, key: str):
 def retrieve_mega_config(read_config: bool):
     mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
     if mega_dir is not None:
-        mega_config_content = configparser.ConfigParser()
-        mega_config_content.optionxform = str
-        mega_ini_file = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
+        mega_config = configparser.ConfigParser()
+        mega_config.optionxform = str
+        mega_ini = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
         if read_config:
-            mega_config_content.read(mega_ini_file)
-        return mega_config_content,mega_ini_file
+            mega_config.read(mega_ini)
+        return mega_config,mega_ini
 
     return None,None
 
 
 def get_mega_config_section(section: str):
-    mega_config_content,mega_ini_file = retrieve_mega_config(True)
-    if mega_config_content is not None:
-        if mega_config_content.has_section(section):
-            return mega_config_content.items(section)
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config is not None:
+        if mega_config.has_section(section):
+            return mega_config.items(section)
 
     return None
 
 
 def get_mega_config_value(section: str, key: str):
-    mega_config_content,mega_ini_file = retrieve_mega_config(True)
-    if mega_config_content is not None:
-        if mega_config_content.has_option(section, key):
-            return mega_config_content[section][key]
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config is not None:
+        if mega_config.has_option(section, key):
+            return mega_config[section][key]
 
     return None
 
@@ -188,15 +188,15 @@ def set_config_value(section: str, key: str, value: str):
 
 
 def set_mega_config_value(section: str, key: str, value: str):
-    mega_config_content,mega_ini_file = retrieve_mega_config(True)
-    if mega_config_content is not None:
-        if mega_config_content.has_section(section) == False:
-            mega_config_content.add_section(section)
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config is not None:
+        if mega_config.has_section(section) == False:
+            mega_config.add_section(section)
 
-        mega_config_content[section][key] = value
+        mega_config[section][key] = value
 
-        with open(mega_ini_file, 'w') as configfile:
-            mega_config_content.write(configfile)
+        with open(mega_ini, 'w') as configfile:
+            mega_config.write(configfile)
 
         return True
 
@@ -204,14 +204,14 @@ def set_mega_config_value(section: str, key: str, value: str):
 
 
 def mega_ini_check():
-    mega_config_content,mega_ini_file = retrieve_mega_config(False)
+    mega_config,mega_ini = retrieve_mega_config(False)
     # check greater than 5 because of mega_ prefix
-    if len(mega_ini_file) > 5:
+    if len(mega_ini) > 5:
         # if the mega ini files does not exist then initialize it
-        if os.path.exists(mega_ini_file) == False:
-            mega_config_content.add_section("INSTALLED_UPDATES")
-            with open(mega_ini_file, 'w') as configfile:
-                mega_config_content.write(configfile)
+        if os.path.exists(mega_ini) == False:
+            mega_config.add_section("INSTALLED_UPDATES")
+            with open(mega_ini, 'w') as configfile:
+                mega_config.write(configfile)
     
     return True
 
@@ -328,9 +328,9 @@ def is_update_applied(key: str, modified_timestamp: str):
     if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
         return False
 
-    mega_config_content,mega_ini_file = retrieve_mega_config(True)
-    if mega_config_content.has_option("INSTALLED_UPDATES", key):
-        return mega_config_content["INSTALLED_UPDATES"][key] == str(modified_timestamp)
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config.has_option("INSTALLED_UPDATES", key):
+        return mega_config["INSTALLED_UPDATES"][key] == str(modified_timestamp)
 
     return False
 
