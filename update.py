@@ -38,8 +38,6 @@ d = Dialog()
 d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
-config = configparser.ConfigParser()
-config.optionxform = str
 update_available_result = "no connection"
 tool_ini = "/home/pi/.update_tool/update_tool.ini"
 
@@ -118,26 +116,26 @@ def get_overlay_systems():
 def read_config():
     if os.path.exists(tool_ini):
         if os.path.isfile(tool_ini):
-            config_file = configparser.ConfigParser()
-            config_file.optionxform = str
-            config_file.read(tool_ini)
-            return config_file
+            config = configparser.ConfigParser()
+            config.optionxform = str
+            config.read(tool_ini)
+            return config
     return None
     
 def get_config_section(section: str):
-    config_file = read_config()
-    if config_file is not None:
-        if config_file.has_section(section):
-            return config_file.items(section)
+    config = read_config()
+    if config is not None:
+        if config.has_section(section):
+            return config.items(section)
 
     return None
 
 
 def get_config_value(section: str, key: str):
-    config_file = read_config()
-    if config_file is not None:
-        if config_file.has_option(section, key):
-            return config_file[section][key]
+    config = read_config()
+    if config is not None:
+        if config.has_option(section, key):
+            return config[section][key]
 
     return None
 
@@ -174,15 +172,15 @@ def get_mega_config_value(section: str, key: str):
 
 
 def set_config_value(section: str, key: str, value: str):
-    config_file = read_config()
-    if config_file is not None:
-        if config_file.has_section(section) == False:
-            config_file.add_section(section)
+    config = read_config()
+    if config is not None:
+        if config.has_section(section) == False:
+            config.add_section(section)
 
-        config_file[section][key] = value
+        config[section][key] = value
 
         with open(tool_ini, 'w') as configfile:
-            config_file.write(configfile)
+            config.write(configfile)
 
         return True
 
@@ -2739,23 +2737,23 @@ def update_config(extracted: str):
 
     new_config = configparser.ConfigParser()
     new_config.optionxform = str
-    config_file = configparser.ConfigParser()
-    config_file.optionxform = str
+    config = configparser.ConfigParser()
+    config.optionxform = str
 
     new_config.read(tmp_config)
-    config_file.read(tool_ini)
+    config.read(tool_ini)
 
     for section in new_config.sections():
         if len(new_config[section]) > 0:
-            if config_file.has_section(section):
-                config_file.remove_section(section)
+            if config.has_section(section):
+                config.remove_section(section)
 
-            config_file.add_section(section)
+            config.add_section(section)
             for key in new_config[section]:
-                config_file[section][key] = str(new_config[section][key]).strip()
+                config[section][key] = str(new_config[section][key]).strip()
 
     with open(tool_ini, 'w') as configfile:
-        config_file.write(configfile)
+        config.write(configfile)
 
     os.remove(tmp_config)
 
