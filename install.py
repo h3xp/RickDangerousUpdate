@@ -239,13 +239,28 @@ def install(overwrite=True):
 
     with open(ini_file, 'w') as configfile:
         new_config.write(configfile)
+    
+    mega_ini_file = "{}/mega_{}.ini".format(home_dir, new_config["CONFIG_ITEMS"]["mega_dir"].split("/")[-1])
+
+    if os.path.exists(mega_ini_file) == False:
+        mega_config = configparser.ConfigParser()
+        mega_config.optionxform = str
+        if old_config.has_section("INSTALLED_UPDATES"):
+            mega_config["INSTALLED_UPDATES"] = old_config["INSTALLED_UPDATES"]
+        else:
+            mega_config.add_section("INSTALLED_UPDATES")
+
+        print("Writing mega_ini_file {}".format(mega_ini_file))
+
+        with open(mega_ini_file, 'w') as configfile:
+            mega_config.write(configfile)  
 
     #write script
     print("Writing bash script...")
     with open("/home/pi/RetroPie/retropiemenu/{}".format("update_tool.sh"), "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
         #shellfile.write("source <(grep = {} | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
-        shellfile.write("source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("source <(sed '/GENRE_MAPPINGS/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
         shellfile.write("$home_exe $home_dir/$home_command $mega_dir $1")
 
     #create ES script dir
@@ -256,7 +271,7 @@ def install(overwrite=True):
     with open("/opt/retropie/configs/all/emulationstation/scripts/system-select/update_notification.sh", "w") as shellfile:
         shellfile.write("#!/bin/bash\n")
         shellfile.write("if [ $2 == \"gotostart\" ]; then\n")
-        shellfile.write("  source <(sed '/INSTALLED_UPDATES/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
+        shellfile.write("  source <(sed '/GENRE_MAPPINGS/q' {} | grep = | sed 's/ *= */=/g') 2>/dev/null\n".format(ini_file))
         shellfile.write("  if [ $display_notification == \"Theme\" ]; then\n")
         shellfile.write("    screen_width=$(fbset -s | grep '\".*\"' | grep -m 1 -o '[0-9][0-9][0-9]\+x' | tr -d 'x')\n")
         shellfile.write("    screen_height=$(fbset -s | grep '\".*\"' | grep -m 1 -o 'x[0-9][0-9][0-9]\+' | tr -d 'x')\n")
