@@ -140,9 +140,17 @@ def get_config_value(section: str, key: str):
     return None
 
 
+def is_valid_mega_link(url: str):
+    pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+    if pattern.match(url):
+        return True
+
+    return False
+
+
 def retrieve_mega_config(read_config: bool):
     mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
-    if mega_dir is not None:
+    if is_valid_mega_link(mega_dir):
         mega_config = configparser.ConfigParser()
         mega_config.optionxform = str
         mega_ini = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
@@ -2581,8 +2589,9 @@ def check_drive():
                 return config["CONFIG_ITEMS"]["mega_dir"]
 
         if len(sys.argv) > 1:
-            pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
-            if pattern.match(str(sys.argv[1])):
+            #pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+            #if pattern.match(str(sys.argv[1])):
+            if is_valid_mega_link(str(sys.argv[1])):
                 return str(sys.argv[1])
 
         print("You didnt provide a link to the mega drive.")
