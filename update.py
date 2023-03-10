@@ -3172,8 +3172,11 @@ def main():
     update_available_result = update_available()
 
     if os.path.isfile(tool_ini):
+        print("Yes")
         mega_ini_check()
-
+    else:
+        print("No")
+        
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
