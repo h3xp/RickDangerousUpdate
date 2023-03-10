@@ -57,7 +57,6 @@ Note that if you do not install the tool, it will not be able to track what upda
 
 # Attention - Important Things To Be Aware Of
 
-- Before installing any updates you should use the Fix known bugs option. It is very important that you do this or you will likely have unpredictable results if you process any updates before doing this.
 - It is strongly recommended to actually install the tool rather than just running it.
 - The script has been tested, however we can't give a 100% guarantee that it might not break something on
 your retropie. Therefore, use this at your own risk.

@@ -1,5 +1,5 @@
 """
-Update Script for Rick Dangerous' Minecraftium Edition
+Update Script for Rick Dangerous' Insanium/R.P.E
 https://github.com/h3xp/RickDangerousUpdate
 """
 
@@ -38,9 +38,9 @@ d = Dialog()
 d.autowidgetsize = True
 
 logger = logging.getLogger(__name__)
-config = configparser.ConfigParser()
-config.optionxform = str
 update_available_result = "no connection"
+tool_ini = "/home/pi/.update_tool/update_tool.ini"
+
 genres = {}
 
 def safe_write_backup(file_path: str, file_time=""):
@@ -64,7 +64,7 @@ def safe_write_check(file_path: str, file_time: str):
 
 
 def get_git_repo():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.exists(tool_ini):
         git_repo = get_config_value("CONFIG_ITEMS", "git_repo")
         if git_repo is not None:
             return git_repo
@@ -73,7 +73,7 @@ def get_git_repo():
 
 
 def get_git_branch():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.exists(tool_ini):
         git_branch = get_config_value("CONFIG_ITEMS", "git_branch")
         if git_branch is not None:
             return git_branch
@@ -113,49 +113,115 @@ def get_overlay_systems():
     return retval
 
 
+def read_config():
+    if os.path.exists(tool_ini):
+        if os.path.isfile(tool_ini):
+            config = configparser.ConfigParser()
+            config.optionxform = str
+            config.read(tool_ini)
+            return config
+    return None
+    
 def get_config_section(section: str):
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
-            config_file = configparser.ConfigParser()
-            config_file.optionxform = str
-            config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_section(section):
-                return config_file.items(section)
+    config = read_config()
+    if config is not None:
+        if config.has_section(section):
+            return config.items(section)
 
     return None
 
 
 def get_config_value(section: str, key: str):
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
-            config_file = configparser.ConfigParser()
-            config_file.optionxform = str
-            config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_option(section, key):
-                return config_file[section][key]
+    config = read_config()
+    if config is not None:
+        if config.has_option(section, key):
+            return config[section][key]
+
+    return None
+
+
+def is_valid_mega_link(url: str):
+    pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+    if pattern.match(url):
+        return True
+
+    return False
+
+
+def retrieve_mega_config(read_config: bool):
+    mega_dir = get_config_value("CONFIG_ITEMS","mega_dir")
+    if is_valid_mega_link(mega_dir):
+        mega_config = configparser.ConfigParser()
+        mega_config.optionxform = str
+        mega_ini = "/home/pi/.update_tool/mega_{}.ini".format(mega_dir.split("/")[-1])
+        if read_config:
+            mega_config.read(mega_ini)
+        return mega_config,mega_ini
+
+    return None,None
+
+
+def get_mega_config_section(section: str):
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config is not None:
+        if mega_config.has_section(section):
+            return mega_config.items(section)
+
+    return None
+
+
+def get_mega_config_value(section: str, key: str):
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config is not None:
+        if mega_config.has_option(section, key):
+            return mega_config[section][key]
 
     return None
 
 
 def set_config_value(section: str, key: str, value: str):
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
-        if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
-            config_file = configparser.ConfigParser()
-            config_file.optionxform = str
-            config_file.read("/home/pi/.update_tool/update_tool.ini")
-            if config_file.has_section(section) == False:
-                config_file.add_section(section)
+    config = read_config()
+    if config is not None:
+        if config.has_section(section) == False:
+            config.add_section(section)
 
-            config_file[section][key] = value
+        config[section][key] = value
 
-            with open("/home/pi/.update_tool/update_tool.ini", 'w') as configfile:
-                config_file.write(configfile)
+        with open(tool_ini, 'w') as configfile:
+            config.write(configfile)
 
-            return True
+        return True
 
     return False
 
 
+def set_mega_config_value(section: str, key: str, value: str):
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config is not None:
+        if mega_config.has_section(section) == False:
+            mega_config.add_section(section)
+
+        mega_config[section][key] = value
+
+        with open(mega_ini, 'w') as configfile:
+            mega_config.write(configfile)
+
+        return True
+
+    return False
+
+
+def mega_ini_check():
+    mega_config,mega_ini = retrieve_mega_config(False)
+    # if the mega ini files does not exist then initialize it
+    if os.path.exists(mega_ini) == False:
+        mega_config.add_section("INSTALLED_UPDATES")
+        with open(mega_ini, 'w') as configfile:
+            mega_config.write(configfile)
+    
+    return True
+
+    
 def restart_es():
     runcmd("sudo reboot")
     #runcmd("touch /tmp/es-restart && pkill -f \"/opt/retropie/supplementary/.*/emulationstation([^.]|$)\"")
@@ -180,7 +246,7 @@ def autostart_exists(unique):
 
 
 def toggle_countofficialonly():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.exists(tool_ini):
         if get_config_value('CONFIG_ITEMS', 'count_official_only') == "True":
             toggle = "False"
             toggle_msg = "disabled"
@@ -197,7 +263,7 @@ def toggle_countofficialonly():
 
 
 def toggle_autoclean():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.exists(tool_ini):
         if get_config_value('CONFIG_ITEMS', 'auto_clean') == "True":
             toggle = "False"
             toggle_msg = "disabled"
@@ -221,7 +287,7 @@ def remove_notification():
 
 
 def select_notification():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.exists(tool_ini):
         previous_method = get_config_value('CONFIG_ITEMS', 'display_notification')
 
         code, tag = d.radiolist("Choose which notification method you want to use",
@@ -265,13 +331,12 @@ def select_notification():
  
 
 def is_update_applied(key: str, modified_timestamp: str):
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini") == False:
+    if os.path.exists(tool_ini) == False:
         return False
 
-    config = configparser.ConfigParser()
-    config.read("/home/pi/.update_tool/update_tool.ini")
-    if config.has_option("INSTALLED_UPDATES", key):
-        return config["INSTALLED_UPDATES"][key] == str(modified_timestamp)
+    mega_config,mega_ini = retrieve_mega_config(True)
+    if mega_config.has_option("INSTALLED_UPDATES", key):
+        return mega_config["INSTALLED_UPDATES"][key] == str(modified_timestamp)
 
     return False
 
@@ -670,9 +735,9 @@ def update_available():
         latest_tag = resp.json().get('tag_name').replace("v","")
     except requests.exceptions.RequestException as e:
         return "no connection"
-    if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.isfile(tool_ini):
         config = configparser.ConfigParser()
-        config.read("/home/pi/.update_tool/update_tool.ini")
+        config.read(tool_ini)
         git_branch = config["CONFIG_ITEMS"]["git_branch"]
         if git_branch == "main":
             current_tag = config["CONFIG_ITEMS"]["tool_ver"].replace("v","")
@@ -688,9 +753,9 @@ def update_available():
 def check_update():
     title = ""
 
-    if os.path.isfile("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.isfile(tool_ini):
         config = configparser.ConfigParser()
-        config.read("/home/pi/.update_tool/update_tool.ini")
+        config.read(tool_ini)
         title = "Version " + config["CONFIG_ITEMS"]["tool_ver"] + " (latest)"
     else:
         title = "not installed"
@@ -2223,7 +2288,7 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
             if delete == True:
                 os.remove(file)
 
-            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+            set_mega_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
             installed_updates.append(update[0])
 
     if auto_clean == True:
@@ -2287,7 +2352,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
 
 def get_default_update_dir():
-    if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+    if os.path.exists(tool_ini):
         update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
         if update_dir is not None and os.path.exists(update_dir):
             return update_dir
@@ -2517,15 +2582,16 @@ def check_drive():
     if os.environ.get('RickDangerousUpdateTests') is not None:
        return "https://mega.nz/folder/tQpwhD7a#WA1sJBgOKJzQ4ybG4ozezQ"
     else:
-        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.exists(tool_ini):
             config = configparser.ConfigParser()
-            config.read("/home/pi/.update_tool/update_tool.ini")
+            config.read(tool_ini)
             if config.has_option("CONFIG_ITEMS", "mega_dir"):
                 return config["CONFIG_ITEMS"]["mega_dir"]
 
         if len(sys.argv) > 1:
-            pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
-            if pattern.match(str(sys.argv[1])):
+            #pattern = re.compile("^https://mega\.nz/((folder|file)/([^#]+)#(.+)|#(F?)!([^!]+)!(.+))$")
+            #if pattern.match(str(sys.argv[1])):
+            if is_valid_mega_link(str(sys.argv[1])):
                 return str(sys.argv[1])
 
         print("You didnt provide a link to the mega drive.")
@@ -2673,31 +2739,30 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
 
 def update_config(extracted: str):
     tmp_config = Path(extracted, "home", "pi", ".update_tool", "update_tool.ini")
-    ini_file = "/home/pi/.update_tool/update_tool.ini"
     if not os.path.exists(tmp_config):
         return
-    if not os.path.exists(ini_file):
+    if not os.path.exists(tool_ini):
         return
 
     new_config = configparser.ConfigParser()
     new_config.optionxform = str
-    config_file = configparser.ConfigParser()
-    config_file.optionxform = str
+    config = configparser.ConfigParser()
+    config.optionxform = str
 
     new_config.read(tmp_config)
-    config_file.read(ini_file)
+    config.read(tool_ini)
 
     for section in new_config.sections():
         if len(new_config[section]) > 0:
-            if config_file.has_section(section):
-                config_file.remove_section(section)
+            if config.has_section(section):
+                config.remove_section(section)
 
-            config_file.add_section(section)
+            config.add_section(section)
             for key in new_config[section]:
-                config_file[section][key] = str(new_config[section][key]).strip()
+                config[section][key] = str(new_config[section][key]).strip()
 
-    with open(ini_file, 'w') as configfile:
-        config_file.write(configfile)
+    with open(tool_ini, 'w') as configfile:
+        config.write(configfile)
 
     os.remove(tmp_config)
 
@@ -2748,7 +2813,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
 
         improvement_passed = process_improvement(file_path, extracted)
         if improvement_passed == True:
-            set_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
+            set_mega_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
             installed_updates.append(update[0])
     
         remove_improvements = remove_improvements & improvement_passed
@@ -3035,7 +3100,7 @@ def installation_dialog():
     
     if code == d.OK:
         if tag == "1":
-            if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+            if os.path.exists(tool_ini):
                 update_dialog()
             else:
                 install_dialog()
@@ -3106,6 +3171,8 @@ def main():
     global update_available_result
     update_available_result = update_available()
 
+    mega_ini_check()
+
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
@@ -3152,7 +3219,7 @@ if __name__ == "__main__":
         nothing = None
     except:
         title_text = ""
-        if os.path.exists("/home/pi/.update_tool/update_tool.ini"):
+        if os.path.exists(tool_ini):
             datetime.datetime.utcnow()
             log_this("/home/pi/.update_tool/exception.log", "*****{}\n{}".format(datetime.datetime.utcnow(), traceback.format_exc()))
             log_this("/home/pi/.update_tool/exception.log", "\n\n")
