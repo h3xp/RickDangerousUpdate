@@ -2241,20 +2241,14 @@ def get_zip_files(path: str):
 def get_manual_updates(path: str, available_updates: list, good=True):
     manual_updates = []
     files = get_zip_files(path)
+    base_path = os.path.dirname(path) + "/"
 
     files.sort()
-    for file in files:
-        for update in available_updates:
-#   file name check is not necessary so skip it
-#            if update[0] == os.path.basename(file):
-            #if update[3] == convert_filesize(os.path.getsize(file)):
-            if update[0] == os.path.basename(file):
-                if update[4] == os.path.getsize(file):
-                    if good == True:
-                        manual_updates.append(update)
-                else:
-                    if good == False:
-                        manual_updates.append(update)
+    for update in available_updates:
+        if base_path + update[0] in files:
+            index = files.index(base_path + update[0])
+            if (os.path.getsize(files[index]) == update[4]) == good:
+                manual_updates.append(update)
 
     return manual_updates
 
