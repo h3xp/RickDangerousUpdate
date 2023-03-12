@@ -1655,6 +1655,9 @@ def do_gamelist_genres(systems: list):
 
 
 def get_official_origins():
+    if not os.path.isfile(tool_ini):
+        return None
+    
     ret_val = []
 
     origins = get_config_value("CONFIG_ITEMS", "official_origin")
@@ -1665,12 +1668,13 @@ def get_official_origins():
 
 
 def is_game_official(game: ET.Element, origins=[]):
-    if len(origins) == 0:
-        origins = get_official_origins()
-    origin = game.find("origin")
-    if origin is not None:
-        if origin.text is not None:
-            return origin.text in origins
+    if os.path.isfile(tool_ini):
+        if len(origins) == 0:
+            origins = get_official_origins()
+        origin = game.find("origin")
+        if origin is not None:
+            if origin.text is not None:
+                return origin.text in origins
 
     return False
 
