@@ -7,7 +7,7 @@ This script aims to help people adding improvements, fixing known bugs or resett
 It can be run directly from the retropie and apply updates locally, or you can run it on a device in the same local network by providing ssh credentials.
 
 
-Join Ricks discord server to keep track on the latest changes.
+Join Rick's discord server to keep track on the latest changes.
 
 
 ![RickDangerousDiscordBanner](https://discordapp.com/api/guilds/857515631422603286/widget.png?style=banner2)
