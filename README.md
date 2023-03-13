@@ -205,13 +205,16 @@ Toggle Auto Clean allows you to turn on or off automatic cleaning of your gameli
 
 ### Toggle Count Official
 
-Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files. Unofficial games are those whose path entries in gamelist.xml is not ./ .
+Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files.
+Unofficial games are those whose path entries in gamelist.xml is not ./ .
 
 ## Installation
 
 ### Install
 
-This option will install the update tool fresh to the "Options" tab in EmulationStation. If an existing configuration exists then an Update operation is performed instead.
+This option will install the update tool fresh to the "Options" tab in EmulationStation.
+If an existing configuration exists then an Update operation is performed instead.
+This is done to avoid losing your installation history.
 
 ### Update
 
