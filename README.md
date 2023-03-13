@@ -37,9 +37,9 @@ Join Ricks discord server to keep track on the latest changes.
     - [Toggle Auto Clean](#toggle-auto-clean)
     - [Toggle Count Official Only](#toggle-count-official)
   - [Installation](#installation)
-    - [Install/Reinstall](#install-reinstall)
+    - [Install](#install)
     - [Update](#update)
-    - [Uninstall/Remove](#uninstall-remove)
+    - [Uninstall](#uninstall)
   - [Support](#support)
 - [SSH Instructions](#ssh-usage)
 
@@ -100,6 +100,9 @@ your retropie. Therefore, use this at your own risk.
    - [Toggle Auto Clean](#toggle-auto-clean)
    - [Toggle Count Official Only](#toggle-count-official)
 3. [Installation](#installation)
+   - [Install](#install)
+   - [Update](#update)
+   - [Uninstall](#uninstall)
 4. [Support](#support)
 
 ## Improvements
@@ -206,7 +209,7 @@ Toggle Count Offical allows to turn on or off inclusion of unofficial games with
 
 ## Installation
 
-### Install/Reinstall
+### Install
 
 This option will install the update tool fresh to the "Options" tab in EmulationStation. If an existing configuration exists then an Update operation is performed instead.
 
@@ -214,7 +217,7 @@ This option will install the update tool fresh to the "Options" tab in Emulation
 
 This option will update your version to the most current version of the tool available.
 
-### Uninstall/Remove
+### Uninstall
 
 This option will remove the tool entirely from the "Options" tab in EmulationStation and from your system.
 
