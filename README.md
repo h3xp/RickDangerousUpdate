@@ -28,7 +28,7 @@ Join Ricks discord server to keep track on the latest changes.
       - [Check Game Lists](#check-game-lists)
       - [Clean Game Lists](#clean-game-lists)
       - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
-      - [Remove Check/Clean Game List Logs](#remove-check-clean-game-list-logs)
+      - [Remove Game List Logs](#remove-game-list-logs)
       - [Manually Select Genres](#manually-select-genres)
       - [Sort Game Lists](#sort-game-lists)
       - [Clean Emulators Config](#clean-emulators-config)
@@ -91,7 +91,7 @@ your retropie. Therefore, use this at your own risk.
       - [Check Game Lists](#check-game-lists)
       - [Clean Game Lists](#clean-game-lists)
       - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
-      - [Remove Check/Clean Game List Logs](#remove-check-clean-game-list-logs)
+      - [Remove Game List Logs](#remove-game-list-logs)
       - [Manually Select Genres](#manually-select-genres)
       - [Sort Game Lists](#sort-game-lists)
       - [Clean Emulators Config](#clean-emulators-config)
@@ -167,9 +167,9 @@ This will clean your gamelist.xml files by removing invalid entries, it will als
 
 This will let you reverse the changes you applied with the "Clean Game Lists"-feature.
 
-#### Remove Check Clean Game List Logs
+#### Remove Game List Logs
 
-Allows you to delete (clean/check) log files left by previous gamelist utilities actions.
+Allows you to delete log files left by previous gamelist utilities clean or check actions.
 
 #### Manually Select Genres
 
