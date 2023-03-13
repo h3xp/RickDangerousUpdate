@@ -3172,9 +3172,9 @@ def uninstall_dialog():
 
 def installation_dialog():
     code, tag = d.menu("Select Option", 
-                    choices=[("1", "Install/Reinstall"),
+                    choices=[("1", "Install"),
                              ("2", "Update"), 
-                             ("3", "Uninstall/Remove")],
+                             ("3", "Uninstall")],
                     title="Installation",
                     cancel_label=" Cancel ")
     
