@@ -2508,27 +2508,27 @@ def validate_manual_updates():
         else:
             bad_list.append(os.path.basename(file))
 
-    if len(valid_list) > 0:
-        valid_list.sort()
-        dlg_text += "**********\nValid Files\n**********\n"
-        for item in valid_list:
-            dlg_text += item + "\n"
-        dlg_text += "\n"
-
     if len(invalid_list) > 0:
         invalid_list.sort()
-        dlg_text += "**********\nInvalid File Size\n**********\n"
+        dlg_text += "*****************\nInvalid File Size\n*****************\n"
         for item in invalid_list:
             dlg_text += item + "\n"
         dlg_text += "\n"
 
     if len(bad_list) > 0:
         bad_list.sort()
-        dlg_text += "**********\nInvalid File Name\n**********\n"
+        dlg_text += "*****************\nInvalid File Name\n*****************\n"
         for item in bad_list:
             dlg_text += item + "\n"
         dlg_text += "\n"
 
+    if len(valid_list) > 0:
+        valid_list.sort()
+        dlg_text += "***********\nValid Files\n***********\n"
+        for item in valid_list:
+            dlg_text += item + "\n"
+        dlg_text += "\n"
+        
     d.msgbox(dlg_text, title="Results From {}".format(update_dir))
 
     return
