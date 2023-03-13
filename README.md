@@ -16,6 +16,10 @@ Join Ricks discord server to keep track on the latest changes.
 - [Warning](#attention)
 - [Features](#features)
   - [Improvements](#improvements)
+    - [Download and Install Updates](#download-and-install-updates)
+    - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
+    - [Update Status](#update-status)
+    - [Validate Downloaded Updates](#validate-downloaded-updates)
   - [System Tools and Utilities](#system-tools-and-utilities)
     - [Enable/Disable System overlays](#system-overlay)
     - [Enable/Disable Handheld mode](#handheld-mode)
@@ -64,6 +68,10 @@ your retropie. Therefore, use this at your own risk.
 # Features
 
 1. [Improvements](#improvements)
+   - [Download and Install Updates](#download-and-install-updates)
+   - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
+   - [Update Status](#update-status)
+   - [Validate Downloaded Updates](#validate-downloaded-updates)
 2. [System Tools and Utilities](#system-tools-and-utilities)
    - [Enable/Disable System overlays](#system-overlay)
    - [Enable/Disable Handheld mode](#handheld-mode)
@@ -77,9 +85,23 @@ your retropie. Therefore, use this at your own risk.
 
 ## Improvements
 
-This is the "main" feature and reason to create this tool. 
-This will allow you to easily select single or multiple updates to process, either; to download from the MEGA drive directory, or previously downloaded to a directory on the pi.
-There is also a facility to show what updates are available from the MEGA drive directory.
+This is the "main" feature and reason to create this tool.
+
+### Download and Install Updates
+
+This will allow you to easily select single or multiple updates to download from the MEGA drive directory and install them.
+
+### Manually Install Downloaded Updates
+
+This allows you to install updates that you have manually downloaded from the MEGA drive directory.
+
+### Update Status
+
+This does a check of your exisiting installation and lets you know which updates you have installed and what other updates are available to you.
+
+### Validate Downloaded Updates
+
+This option checks the update files you have downloaded to confirm their validity for use.
 
 ## System Tools and Utilities
 
