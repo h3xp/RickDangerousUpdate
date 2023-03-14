@@ -198,7 +198,7 @@ Toggle Auto Clean allows you to turn on or off automatic cleaning of your gameli
 ### Toggle Count Official
 
 Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files.
-Unofficial games are those whose path entries in gamelist.xml is not ./ .
+Offical games are those provided by Rick. These are tagged noting their origin.
 
 ## Installation
 
