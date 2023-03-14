@@ -203,12 +203,12 @@ Unofficial games are those whose path entries in gamelist.xml is not ./ .
 
 ### Install
 
+N.B. This option is here for existing users who have not previously installed the tool who know how to directly run the tool.
+The method of operation is no longer officially recommended.
+
 This option will install the update tool fresh to the "Options" tab in EmulationStation.
 If an existing configuration exists then an Update operation is performed instead.
 This is done to avoid losing your installation history.
-
-N.B. This option is here for existing users who have not previously installed the tool who know how to directly run the tool.
-The method of operation is no longer officially recommended.
 
 ### Update
 
