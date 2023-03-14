@@ -13,7 +13,7 @@ Join Rick's discord server to keep track on the latest changes.
 ![RickDangerousDiscordBanner](https://discordapp.com/api/guilds/857515631422603286/widget.png?style=banner2)
 
 - [Installation of the Tool](#installation-of-the-tool)
-- [Warning](#attention)
+- [Warning](#warning)
 - [Features](#features)
   - [Improvements](#improvements)
     - [Download and Install Updates](#download-and-install-updates)
@@ -61,9 +61,10 @@ The script will also install a new command "update_tool" with which you can easi
 
 Note that if you do not install the tool, it will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the tool until you do properly install it.
 
-# Attention - Important Things To Be Aware Of
+# Warning
 
 - It is strongly recommended to actually install the tool rather than just running it.
+- Running the tool without installing it is at your own risk.
 - The script has been tested, however we can't give a 100% guarantee that it might not break something on
 your retropie. Therefore, use this at your own risk.
 
