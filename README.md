@@ -41,7 +41,7 @@ Join Rick's discord server to keep track on the latest changes.
     - [Update](#update)
     - [Uninstall](#uninstall)
   - [Support](#support)
-- [SSH Instructions](#ssh-usage)
+- [SSH Remote Installation](#ssh-remote-installation)
 
 
 # Installation of the Tool
@@ -207,6 +207,9 @@ This option will install the update tool fresh to the "Options" tab in Emulation
 If an existing configuration exists then an Update operation is performed instead.
 This is done to avoid losing your installation history.
 
+N.B. This option is here for existing users who have not previously installed the tool who know how to directly run the tool.
+The method of operation is no longer officially recommended.
+
 ### Update
 
 This option will update your version to the most current version of the tool available.
@@ -219,7 +222,7 @@ This option will remove the tool entirely from the "Options" tab in EmulationSta
 
 Displays links to the Discord server and the Update Tool project
 
-# SSH Usage
+# SSH Remote Installation
 
 1. Make sure your pi is connected to the same network as your personal computer.
 2. Make sure ssh is installed on your computer.
