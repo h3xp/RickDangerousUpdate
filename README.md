@@ -12,7 +12,7 @@ Join Rick's discord server to keep track on the latest changes.
 
 ![RickDangerousDiscordBanner](https://discordapp.com/api/guilds/857515631422603286/widget.png?style=banner2)
 
-- [Usage](#usage)
+- [Installation of the Tool](#installation-of-the-tool)
 - [Warning](#attention)
 - [Features](#features)
   - [Improvements](#improvements)
