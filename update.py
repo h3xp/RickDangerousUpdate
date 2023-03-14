@@ -1655,6 +1655,9 @@ def do_gamelist_genres(systems: list):
 
 
 def get_official_origins():
+    if not os.path.isfile(tool_ini):
+        return None
+    
     ret_val = []
 
     origins = get_config_value("CONFIG_ITEMS", "official_origin")
@@ -1665,12 +1668,13 @@ def get_official_origins():
 
 
 def is_game_official(game: ET.Element, origins=[]):
-    if len(origins) == 0:
-        origins = get_official_origins()
-    origin = game.find("origin")
-    if origin is not None:
-        if origin.text is not None:
-            return origin.text in origins
+    if os.path.isfile(tool_ini):
+        if len(origins) == 0:
+            origins = get_official_origins()
+        origin = game.find("origin")
+        if origin is not None:
+            if origin.text is not None:
+                return origin.text in origins
 
     return False
 
@@ -2220,10 +2224,8 @@ def gamelist_utilities_dialog():
     return
 
 
-def get_manual_updates(path: str, available_updates: list):
+def get_zip_files(path: str):
     files = []
-    manual_updates = []
-
     if os.path.isfile(path) == True:
         if os.path.splitext(path)[1] == ".zip":
             files.append(path)
@@ -2233,14 +2235,20 @@ def get_manual_updates(path: str, available_updates: list):
             if os.path.splitext(file)[1] == ".zip":
                 files.append(os.path.join(path, file))
 
+    return files
+
+
+def get_manual_updates(path: str, available_updates: list, good=True):
+    manual_updates = []
+    files = get_zip_files(path)
+    base_path = os.path.dirname(path) + "/"
+
     files.sort()
-    for file in files:
-        for update in available_updates:
-#   file name check is not necessary so skip it
-#            if update[0] == os.path.basename(file):
-            #if update[3] == convert_filesize(os.path.getsize(file)):
-            if update[4] == os.path.getsize(file):
-                  manual_updates.append(update)
+    for update in available_updates:
+        if base_path + update[0] in files:
+            index = files.index(base_path + update[0])
+            if (os.path.getsize(files[index]) == update[4]) == good:
+                manual_updates.append(update)
 
     return manual_updates
 
@@ -2321,6 +2329,7 @@ def get_valid_path_portion(path: str):
 
 
 def manual_updates_dialog(init_path: str, delete: bool):
+    path = None
     help_text = ("Type the path to directory or file directly into the text entry window."
                   "\nAs you type the directory or file will be highlighted, at this point you can press [Space] to add the highlighted item to the path."
                   "\n\nIf you are adding a directory to the text entry window, and the path ends with a \"/\", the files in that directory will automatically show in the \"Files\" window."
@@ -2330,7 +2339,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
             set_config_value("CONFIG_ITEMS", "update_dir", os.path.dirname(path))
-            official_improvements_dialog(path, delete)
+            #official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path " + path)
             path = get_valid_path_portion(path)
@@ -2346,9 +2355,9 @@ def manual_updates_dialog(init_path: str, delete: bool):
         manual_updates_dialog(path, delete)
     elif code == d.CANCEL:
         cls()
-        main_dialog()
+        #main_dialog()
 
-    return
+    return path
 
 
 def get_default_update_dir():
@@ -2375,10 +2384,15 @@ def downloaded_update_question_dialog():
     update_dir = get_valid_path_portion(update_dir)
 
     if code == d.OK:
-        manual_updates_dialog(update_dir, False)
+        update_dir = manual_updates_dialog(update_dir, False)
+        if update_dir is not None:
+            official_improvements_dialog(update_dir, False)
+        
 
     if code == d.CANCEL:
-        manual_updates_dialog(update_dir, True)
+        update_dir = manual_updates_dialog(update_dir, True)
+        if update_dir is not None:
+            official_improvements_dialog(update_dir, True)
 
     return
 
@@ -2457,11 +2471,75 @@ def space_warning():
     return
 
 
+def validate_manual_updates():
+    dlg_text = ""
+
+    valid_list = []
+    invalid_list = []
+    bad_list = []
+
+    megadrive = check_drive()
+
+    update_dir = get_valid_path_portion(get_default_update_dir())
+    update_dir = manual_updates_dialog(update_dir, False)
+
+    available_updates = get_available_updates(megadrive, status=True)
+    if len(available_updates) == 0:
+        d.msgbox("No available updates!")
+        return
+
+    if update_dir is None:
+        d.msgbox("No update directory!")
+        return
+    
+    valid_updates = get_manual_updates(update_dir, available_updates, good=True)
+    invalid_updates = get_manual_updates(update_dir, available_updates, good=False)
+
+    all_files = get_zip_files(update_dir)
+    if len(all_files) == 0:
+        d.msgbox("No files in dirctory!")
+        return
+
+    for file in all_files:
+        if os.path.basename(file) in [item[0] for item in valid_updates]:
+            valid_list.append(os.path.basename(file))
+        elif os.path.basename(file) in [item[0] for item in invalid_updates]:
+            invalid_list.append(os.path.basename(file))
+        else:
+            bad_list.append(os.path.basename(file))
+
+    if len(invalid_list) > 0:
+        invalid_list.sort()
+        dlg_text += "*****************\nInvalid File Size\n*****************\n"
+        for item in invalid_list:
+            dlg_text += item + "\n"
+        dlg_text += "\n"
+
+    if len(bad_list) > 0:
+        bad_list.sort()
+        dlg_text += "*****************\nInvalid File Name\n*****************\n"
+        for item in bad_list:
+            dlg_text += item + "\n"
+        dlg_text += "\n"
+
+    if len(valid_list) > 0:
+        valid_list.sort()
+        dlg_text += "***********\nValid Files\n***********\n"
+        for item in valid_list:
+            dlg_text += item + "\n"
+        dlg_text += "\n"
+        
+    d.msgbox(dlg_text, title="Results From {}".format(update_dir))
+
+    return
+
+
 def improvements_dialog():
     code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
                              ("2", "Manually Install Downloaded Updates"), 
-                             ("3", "Update Status")],
+                             ("3", "Update Status"), 
+                             ("4", "Validate Downloaded Updates")],
                     title="Improvements")
 
     if code == d.OK:
@@ -2477,6 +2555,8 @@ def improvements_dialog():
             downloaded_update_question_dialog()
         elif tag == "3":
             check_update_status_dialog()
+        elif tag == "4":
+            validate_manual_updates()
 
     cls()
     main_dialog()
@@ -3092,9 +3172,9 @@ def uninstall_dialog():
 
 def installation_dialog():
     code, tag = d.menu("Select Option", 
-                    choices=[("1", "Install/Reinstall"),
+                    choices=[("1", "Install"),
                              ("2", "Update"), 
-                             ("3", "Uninstall/Remove")],
+                             ("3", "Uninstall")],
                     title="Installation",
                     cancel_label=" Cancel ")
     
