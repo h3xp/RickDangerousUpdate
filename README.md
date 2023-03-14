@@ -64,7 +64,7 @@ Note that if you do not install the tool, it will not be able to track what upda
 # Warning
 
 - It is strongly recommended to actually install the tool rather than just running it.
-- Running the tool without installing it is at your own risk.
+- Running the tool without installing it is at your own risk and is no longer supported.
 - The script has been tested, however we can't give a 100% guarantee that it might not break something on
 your retropie. Therefore, use this at your own risk.
 
