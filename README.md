@@ -44,26 +44,17 @@ Join Rick's discord server to keep track on the latest changes.
 - [SSH Instructions](#ssh-usage)
 
 
-# Usage
+# Installation of the Tool
 
 Simply run the following command on your Retropie via SSH (this is the recommended way, click [here](#ssh-usage) for further instruction) or access a terminal by connecting a keyboard and pressing F4
 (Replace [link] with a URL to the MEGA storage containing the updates):
 
 ```
-bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
+bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) [link]
 ```
-
-The script is self-explanatory, and it will guide you through the whole process.
-
-## It is recommended to install the tool.
 
 Installation will make the tool available from the "Options" tab in EmulationStation.
 
-Simply select "Installation" in the main menu of the tool to open the "Installation menu".
-Now hit "Install/Reinstall" and enjoy the comfort of having the tool directly in EmulationStation.
-
-
-### After installation you will find a new "Update Tool" entry inside of EmulationStations "Options" tab:
 ![screenshot of the tools options entry inside of emulationstation](docs/screenshot_menu.png)
 
 The script will also install a new command "update_tool" with which you can easily run the script from the CLI.
@@ -254,7 +245,6 @@ usage: ssh [-46AaCfGgKkMNnqsTtVvXxYy] [-B bind_interface]
 
 Replace [IP] with the IP adress you just found out and [link] with a URL to the MEGA storage containing the updates.
 ```
-ssh pi@[IP] bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/run.sh' -s -N) [link]
+ssh pi@[IP] bash <(curl 'https://raw.githubusercontent.com/h3xp/RickDangerousUpdate/main/install.sh' -s -N) [link]
 ```
-5. It is strongly recommended that you use the "Installation menu" to properly install the update tool to the "Options" tab in EmulationStation.  If you do not then the tool will not be able to track what updates you have applied to your system and you will be prompted the install all available updates each time you run the update tool until you properly install it.
-6. Enjoy !
+5. Enjoy !
