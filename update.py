@@ -2476,7 +2476,6 @@ def validate_manual_updates():
 
     valid_list = []
     invalid_list = []
-    bad_list = []
 
     megadrive = check_drive()
 
@@ -2494,36 +2493,48 @@ def validate_manual_updates():
     
     valid_updates = get_manual_updates(update_dir, available_updates, good=True)
     invalid_updates = get_manual_updates(update_dir, available_updates, good=False)
+    valid_updates = sort_official_updates(valid_updates)
+    invalid_updates = sort_official_updates(invalid_updates)
 
     all_files = get_zip_files(update_dir)
     if len(all_files) == 0:
         d.msgbox("No files in dirctory!")
         return
 
-    for file in all_files:
-        if os.path.basename(file) in [item[0] for item in valid_updates]:
-            valid_list.append(os.path.basename(file))
-        elif os.path.basename(file) in [item[0] for item in invalid_updates]:
-            invalid_list.append(os.path.basename(file))
-        else:
-            bad_list.append(os.path.basename(file))
+    for update in valid_updates:
+        full_path = os.path.join(update_dir, update[0])
+        if full_path in all_files:
+            valid_list.append(update[0])
+            index = all_files.index(full_path)
+            del all_files[index]
+    for update in invalid_updates:
+        full_path = os.path.join(update_dir, update[0])
+        if full_path in all_files:
+            invalid_list.append(update[0])
+            index = all_files.index(full_path)
+            del all_files[index]
+
+    dlg_text += "Total Files: {}\n".format(len(valid_list) + len(invalid_list) + len(all_files))
+    dlg_text += "Valid Files: {}\n".format(len(valid_list))
+    dlg_text += "\n"
+    dlg_text += "Invalid File Sizes: {}\n".format(len(invalid_list))
+    dlg_text += "Invalid File Names: {}\n".format(len(all_files))
+    dlg_text += "\n\n"
 
     if len(invalid_list) > 0:
-        invalid_list.sort()
         dlg_text += "*****************\nInvalid File Size\n*****************\n"
         for item in invalid_list:
             dlg_text += item + "\n"
         dlg_text += "\n"
 
-    if len(bad_list) > 0:
-        bad_list.sort()
+    if len(all_files) > 0:
+        all_files.sort()
         dlg_text += "*****************\nInvalid File Name\n*****************\n"
-        for item in bad_list:
-            dlg_text += item + "\n"
+        for item in all_files:
+            dlg_text += os.path.basename(item) + "\n"
         dlg_text += "\n"
 
     if len(valid_list) > 0:
-        valid_list.sort()
         dlg_text += "***********\nValid Files\n***********\n"
         for item in valid_list:
             dlg_text += item + "\n"
