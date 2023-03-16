@@ -2355,7 +2355,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
         manual_updates_dialog(path, delete)
     elif code == d.CANCEL:
         cls()
-        #main_dialog()
+        main_dialog()
 
     return path
 
