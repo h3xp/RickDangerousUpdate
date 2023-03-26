@@ -616,13 +616,46 @@ def check_wrong_permissions():
             permissions_dialog()
 
 
+def get_node(element: ET.Element, name: str, return_none=False):
+    ret_val = None if return_none == True else ""
+    src_node = element.find(name)
+    if src_node is not None:
+        if src_node.text is not None:
+            return str(src_node.text)
+
+    return ret_val
+
+
+def write_origins(gamelist: str, origin: str):
+    paths = []
+    src_tree = ET.parse(gamelist)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        path = get_node(src_game, "path", return_none=True).strip()
+        if path is not None:
+            paths.append(path + "\n")
+
+    paths.sort()
+
+    with open(origin, 'w', encoding='utf-8') as file:
+        file.writelines(paths)
+
+    return
+
+
 def merge_gamelist(directory):
+    # get origin file
+    origin = get_config_value("CONFIG_ITEMS", "origin_file")
+    
     # check if gamelist.xml has been updated
     for gamelist in Path(directory).rglob('gamelist.xml'):
         # find corresponding xmls
         corr = gamelist.parts
         corr = corr[corr.index('extracted')+1:]
         corr = Path("/", *corr)
+        if origin is not None:
+            write_origins(str(gamelist), str(corr).replace("gamelist.xml", origin))
         if os.path.isfile(corr):
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
@@ -1212,6 +1245,31 @@ def remove_duplicate_gamelist_entries(src_xml: str, log_file: str):
     return
 
 
+def kill_origins(src_xml: str, log_file: str):
+    # origin tags sucked, they did not work.
+    # this cleans that mess.
+    src_tree = ET.parse(src_xml)
+    src_root = src_tree.getroot()
+
+    parents = src_tree.findall(".//game[origin]")
+    for parent in parents:
+        origin = parent.find("origin")
+        if origin is not None:
+            parent.remove(origin)
+
+    # write file
+    file_time = safe_write_backup(src_xml)
+    
+    indent(src_root, space="\t", level=0)
+    with open(src_xml, "wb") as fh:
+        src_tree.write(fh, "utf-8")
+
+    if safe_write_check(src_xml, file_time) == False:
+        log_this(log_file, "-writing to {} FAILED".format(src_xml))
+
+    return
+
+
 def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, auto_clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
@@ -1302,7 +1360,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     #if clean == True:
     #    remove_duplicate_gamelist_entries(src_xml, log_file)
     remove_duplicate_gamelist_entries(src_xml, log_file)
-
+    kill_origins(src_xml, log_file)
     # start scanning gamelist.xml
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
@@ -1654,29 +1712,20 @@ def do_gamelist_genres(systems: list):
     return
 
 
-def get_official_origins():
-    if not os.path.isfile(tool_ini):
-        return None
-    
-    ret_val = []
+def get_official_origins(origin: str):
+    origins = []
+    if os.path.isfile(origin):
+        with open(origin, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            for line in lines:
+                if len(line.strip()) > 0:
+                    origins.append(line.strip())
 
-    origins = get_config_value("CONFIG_ITEMS", "official_origin")
-    for origin in origins.split(","):
-        ret_val.append(origin.strip())
-
-    return ret_val
+    return origins
 
 
-def is_game_official(game: ET.Element, origins=[]):
-    if os.path.isfile(tool_ini):
-        if len(origins) == 0:
-            origins = get_official_origins()
-        origin = game.find("origin")
-        if origin is not None:
-            if origin.text is not None:
-                return origin.text in origins
-
-    return False
+def is_game_official(game: str, origins=[]):
+    return game in origins
 
 
 def count_games(system: str, games: list, official_only = True, additional_columns = []):
@@ -1691,7 +1740,10 @@ def count_games(system: str, games: list, official_only = True, additional_colum
 
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
-    origins = get_official_origins()
+    origins = []
+    origin = get_config_value("CONFIG_ITEMS", "origin_file")
+    if origin is not None:
+        origins = get_official_origins(os.path.join(system_dir, origin))
 
     for src_game in src_root.iter("game"):
         game_list = []
@@ -1700,7 +1752,7 @@ def count_games(system: str, games: list, official_only = True, additional_colum
             path = src_game.find("path")
             if path.text is not None:
                 game_path = path.text.replace("./", system_dir + "/").strip()
-                official = is_game_official(src_game, origins)
+                official = is_game_official(path.text, origins)
                 if official:
                     official_count += 1
                 else:
@@ -3312,9 +3364,11 @@ if __name__ == "__main__":
     except:
         title_text = ""
         if os.path.exists(tool_ini):
-            datetime.datetime.utcnow()
-            log_this("/home/pi/.update_tool/exception.log", "*****{}\n{}".format(datetime.datetime.utcnow(), traceback.format_exc()))
-            log_this("/home/pi/.update_tool/exception.log", "\n\n")
             title_text = "A copy of this exception is logged in /home/pi/.update_tool/exception.log for your records\n\n"
+            version = get_config_value("CONFIG_ITEMS", "tool_ver")
+            if version is not None:
+                title_text += "Version: " + version + "\n\n"
+            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nVersion: {}\n\n{}".format(datetime.datetime.utcnow(), version, traceback.format_exc()))
+            log_this("/home/pi/.update_tool/exception.log", "\n\n")
 
         d.msgbox(title_text + traceback.format_exc(), title="Something has gone really bad...")
