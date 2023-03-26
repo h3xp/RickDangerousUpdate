@@ -632,7 +632,7 @@ def write_origins(gamelist: str, origin: str):
     src_root = src_tree.getroot()
 
     for src_game in src_root.iter("game"):
-        path = get_node(src_game, "path", return_none=True).strip().lower()
+        path = get_node(src_game, "path", return_none=True).strip()
         if path is not None:
             paths.append(path + "\n")
 
@@ -1725,7 +1725,7 @@ def get_official_origins(origin: str):
 
 
 def is_game_official(game: str, origins=[]):
-    return str in origins
+    return game in origins
 
 
 def count_games(system: str, games: list, official_only = True, additional_columns = []):
