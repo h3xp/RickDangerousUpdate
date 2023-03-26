@@ -2242,7 +2242,7 @@ def check_clean_utilities_dialog():
                              ("2", "Clean Game Lists"), 
                              ("3", "Restore Clean Game List Logs"), 
                              ("4", "Remove Check/Clean Game List Logs")],
-                    title="Check/Clean Game List Utiltiies")
+                    title="Check/Clean Game List Utilities")
     
     if code == d.OK:
         if tag == "1":
@@ -2282,7 +2282,7 @@ def genre_utilities_dialog():
 
 def gamelist_utilities_dialog():
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Check/Clean Game List Utiltiies"), 
+                    choices=[("1", "Check/Clean Game List Utilities"), 
                              ("2", "Genre Utilities"), 
                              ("3", "Sort Game Lists"), 
                              ("4", "Clean Emulators Config"), 
