@@ -646,7 +646,7 @@ def write_origins(gamelist: str, origin: str):
 
 def merge_gamelist(directory):
     # get origin file
-    origin = get_config_value("config_item", "official_origin")
+    origin = get_config_value("CONFIG_ITEMS", "origin_file")
     
     # check if gamelist.xml has been updated
     for gamelist in Path(directory).rglob('gamelist.xml'):
@@ -1741,7 +1741,7 @@ def count_games(system: str, games: list, official_only = True, additional_colum
     src_tree = ET.parse(src_xml)
     src_root = src_tree.getroot()
     origins = []
-    origin = get_config_value("CONFIG_ITEMS", "official_origin")
+    origin = get_config_value("CONFIG_ITEMS", "origin_file")
     if origin is not None:
         origins = get_official_origins(os.path.join(system_dir, origin))
 
