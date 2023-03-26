@@ -43,6 +43,233 @@ tool_ini = "/home/pi/.update_tool/update_tool.ini"
 
 genres = {}
 
+
+def print_files(current_files: dict, file_list: list, log_file: str, spacer="\t", starter="-"):
+    for file in file_list:
+        if file in current_files:
+            values = current_files[file]
+            file_sizes = ""
+            if values[0] == "ADDED":
+                file_sizes = "(current size: {})".format(values[2])
+            elif values[0] == "UPDATED":
+                file_sizes = "(current size: {}, previous size: {})".format(values[2], values[3])
+            elif values[0] == "DELETED":
+                file_sizes = "(previous size: {})".format(values[3])
+
+            log_this(log_file, "{}\"{}\"{}{}".format(starter, file, spacer, file_sizes))
+
+    return
+
+
+def list_info_in_update(current_files: dict, path: str, log_file: str):
+    files = {}
+    files_added = []
+    files_deleted = []
+    files_updated = []
+
+    log_this(log_file, "")
+    log_this(log_file, "")
+    log_this(log_file, "**********")
+    log_this(log_file, "Now Processing: \"{}\" [{}]".format(os.path.basename(path), convert_filesize(str(os.path.getsize(path)))))
+    log_this(log_file, "**********")
+
+    with zipfile.ZipFile(path, 'r') as zip_ref:
+        if "read me do this first!.txt" in zip_ref.namelist():
+            zip_ref.extract("read me do this first!.txt", "/tmp")
+            with open("/tmp/read me do this first!.txt", 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines:
+                    line = line.strip()
+                    previous_size = None
+                    if line not in current_files.keys():
+                        continue
+                    file_dir = get_file_dir(line)
+                    if len(file_dir) > 0:
+                        if line in current_files:
+                            values = current_files[line]
+                            previous_size = convert_filesize(values[2])
+
+                        current_files[line] = ["DELETED", os.path.basename(path), None, previous_size]
+                        files_deleted.append(line)
+
+        for file_listing in zip_ref.infolist():
+            #info_dict = parse_zipinfo(file_listing)
+            #print("{}\t{}".format(file_listing.filename, file_listing.file_size))
+            file = "/" + file_listing.filename
+            if file not in current_files.keys():
+                continue
+            file_dir = get_file_dir(file)
+            
+            if len(file_dir) > 0:
+                print(file)
+                status = ""
+                file_size = convert_filesize(str(file_listing.file_size))
+                if file in current_files:
+                    values = current_files[file]
+                    if values[0] == "DELETED":
+                        files_added.append(file)
+                        current_files[file] = ["ADDED", os.path.basename(file), file_size, None]
+                    else:
+                        files_updated.append(file)
+                        current_files[file] = ["UPDATED", os.path.basename(file), file_size, values[2]]
+                else:
+                    files_added.append(file)
+                    current_files[file] = ["ADDED", os.path.basename(file), file_size, None]
+
+    if len(files_deleted) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"DELETED")
+        files_deleted = print_sort(files_deleted)
+        print_files(current_files, files_deleted, log_file)
+
+    if len(files_added) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"ADDED")
+        files_added = print_sort(files_added)
+        print_files(current_files, files_added, log_file)
+
+    if len(files_updated) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"UPDATED")
+        files_updated = print_sort(files_updated)
+        print_files(current_files, files_updated, log_file)
+
+    return
+
+def get_org_files(dirs: list):
+    files = {}
+
+    for dir in dirs:
+        print("Getting {}...".format(dir))
+        os.chdir(dir)
+        subprocess.check_output(["/bin/bash","-c","find . -ls > /tmp/full_dir_listing.txt"])
+
+        with open("/tmp/full_dir_listing.txt", 'r') as file:
+            lines = file.readlines()
+            for line in lines:
+                loc = line.find("./")
+                if loc >= 0:
+                    str = line[loc:].replace("\\ ", " ").replace("./", dir).strip()
+                    if os.path.isfile(str):
+                        size = convert_filesize(get_parsed_part(line, 7))
+                        files[str] = size
+                        log_this("/tmp/org_full_dir_listing.txt", str + "\t" + files[str])           
+
+    files = {}
+
+    with open("/tmp/org_full_dir_listing.txt", 'r', encoding='utf-8') as f:
+        lines = f.readlines()
+        for line in lines:
+            line = line.strip()
+            file = line.split("\t")
+            files[file[0]] = ("ADDED", "Current Filesystem State", file[1], None)
+            #file_dir = get_file_dir(file[0])
+            #if len(file_dir) > 0:
+                #print(file[0])
+                #files[file[0]] = ("ADDED", "Current Filesystem State", file[1], None)
+
+    if os.path.isfile("/tmp/full_dir_listing.txt"):
+        os.remove("/tmp/full_dir_listing.txt")
+    if os.path.isfile("/tmp/org_full_dir_listing.txt"):
+        os.remove("/tmp/org_full_dir_listing.txt")
+
+    return files
+
+
+def print_sort(file_list: list):
+    retval = []
+    dirs = {}
+    for file in file_list:
+        file_dir = get_file_dir(file)
+        if len(file_dir) > 0:
+            files = []
+            if file_dir in dirs:
+                files = dirs[file_dir]
+            files.append(file)
+            dirs[file_dir] = files
+
+    sorted_dirs = sorted(dirs.keys())
+    for sorted_dir in sorted_dirs:
+        files = dirs[sorted_dir]
+        files.sort()
+        for file in files:
+            retval.append(file)
+
+    return retval
+
+
+def get_file_dir(filename):
+    #rom_path = "/home/pi/RetroPie/roms/"
+    #if rom_path in filename:
+    current_file = filename.replace(os.path.basename(filename), "")
+    if current_file.find("/") >= 0:
+        #rom_dir = rom_path + current_file[0:current_file.find("/")]
+        file_dir = filename[0:filename.rindex("/") + 1]
+        file_name = filename.replace(file_dir, "")
+        if len(file_name.strip()) == 0:
+            return ""
+
+        return file_dir
+
+    return ""
+
+
+def get_parsed_part(line: str, part: int):
+    retval = ""
+    i = 0
+    pos = 0
+
+    while i < part:
+        retval = ""
+        while line[pos:pos+1] == " ":
+            pos += 1
+        i += 1
+        while line[pos:pos+1] != " ":
+            retval += line[pos:pos+1]
+            pos += 1
+
+    return retval.strip()
+
+
+def get_manual_updates_story():
+    log_file = "/home/pi/.update_tool/manual_updates_story.txt"
+    directories = ["/etc/emulationstation/", "/home/pi/RetroPie/roms/", "/opt/retropie/configs/"]
+
+    megadrive = check_drive()
+
+    update_dir = get_valid_path_portion(get_default_update_dir())
+    update_dir = manual_updates_dialog(update_dir, False)
+
+    updates = official_improvements_dialog(update_dir=update_dir, process_improvements=False)
+    updates = sort_official_updates(updates)
+
+    print("Getting current filesystem state, then processing...")
+    current_files = get_org_files(directories)
+
+    log_this(log_file, "**********", overwrite=True)
+    log_this(log_file, "Manual Updates Story!")
+    log_this(log_file, "**********")
+
+    log_this(log_file, "Directories processed:")
+    for directory in directories:
+        log_this(log_file, "-" + directory)
+    log_this(log_file, "")
+
+    log_this(log_file, "Updates evaulated:")
+    for update in updates:
+        log_this(log_file, "-" + os.path.join(update_dir, update[0]))
+    log_this(log_file, "\n")
+    
+    for update in updates:
+        print("Processing \"" + os.path.join(update_dir, update[0]) + "\"...")
+        list_info_in_update(current_files, os.path.join(update_dir, update[0]), log_file)
+
+    cls()
+    d.textbox(log_file, title="Contents of {0}".format(log_file))        
+
+    return
+
+
 def safe_write_backup(file_path: str, file_time=""):
     if file_time == "":
         file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
@@ -860,11 +1087,11 @@ def do_handheld(mode):
     cls()
 
 
-def log_this(log_file: str, log_text: str):
+def log_this(log_file: str, log_text: str, overwrite=False):
     if log_file is None:
         return
 
-    if not os.path.isfile(log_file):
+    if overwrite == True or not os.path.isfile(log_file):
         with open(log_file, 'w', encoding='utf-8') as logfile:
             logfile.write(log_text.strip() + "\n")
     else:
@@ -2637,7 +2864,8 @@ def improvements_dialog():
                     choices=[("1", "Download and Install Updates"),
                              ("2", "Manually Install Downloaded Updates"), 
                              ("3", "Update Status"), 
-                             ("4", "Validate Downloaded Updates")],
+                             ("4", "Validate Downloaded Updates"), 
+                             ("5", "Manual Updates Story")],
                     title="Improvements")
 
     if code == d.OK:
@@ -2655,6 +2883,8 @@ def improvements_dialog():
             check_update_status_dialog()
         elif tag == "4":
             validate_manual_updates()
+        elif tag == "5":
+            get_manual_updates_story()
 
         cls()
         improvements_dialog()
@@ -2830,7 +3060,7 @@ def get_total_size_of_updates(updates: list):
     return convert_filesize(str(total_size))
 
 
-def official_improvements_dialog(update_dir=None, delete=False, available_updates=[]):
+def official_improvements_dialog(update_dir=None, delete=False, available_updates=[], process_improvements=True):
     megadrive = check_drive()
     check_wrong_permissions()
 
@@ -2926,6 +3156,9 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
         d.msgbox("No updates selected!")
         official_improvements_dialog(update_dir, delete, available_updates)
     else:
+        if process_improvements == False:
+            return selected_updates
+
         print()
         if update_dir is None:
             do_improvements(selected_updates, megadrive, auto_clean=auto_clean)
