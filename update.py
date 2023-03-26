@@ -131,11 +131,14 @@ def get_config_section(section: str):
     return None
 
 
-def get_config_value(section: str, key: str):
+def get_config_value(section: str, key: str, return_none=True):
     config = read_config()
     if config is not None:
         if config.has_option(section, key):
             return config[section][key]
+
+    if return_none == False:
+        return ""
 
     return None
 
@@ -327,7 +330,7 @@ def select_notification():
         #    d.msgbox('Display Notification ' + tag + '!\n\n Reboot to apply changes')
     else:
         d.msgbox('To use this feature make sure to install the tool.')
-    main_dialog()
+    return
  
 
 def is_update_applied(key: str, modified_timestamp: str):
@@ -2233,18 +2236,13 @@ def do_clean_emulators_cfg():
     return
 
 
-def gamelist_utilities_dialog():
+def check_clean_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
                              ("2", "Clean Game Lists"), 
                              ("3", "Restore Clean Game List Logs"), 
-                             ("4", "Remove Check/Clean Game List Logs"), 
-                             ("5", "Manually Select Genres"), 
-                             ("6", "Realign Genre Collections"), 
-                             ("7", "Sort Game Lists"), 
-                             ("8", "Clean Emulators Config"), 
-                             ("9", "Count of Games")],
-                    title="Gamelist (Etc) Utilities")
+                             ("4", "Remove Check/Clean Game List Logs")],
+                    title="Check/Clean Game List Utiltiies")
     
     if code == d.OK:
         if tag == "1":
@@ -2255,15 +2253,52 @@ def gamelist_utilities_dialog():
             logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
         elif tag == "4":
             logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
-        elif tag == "5":
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    return
+
+
+def genre_utilities_dialog():
+    code, tag = d.menu("Main Menu", 
+                    choices=[("1", "Manually Select Genres"), 
+                             ("2", "Realign Genre Collections")],
+                    title="Genre Utilities")
+    
+    if code == d.OK:
+        if tag == "1":
             gamelists_dialog("Genre")
-        elif tag == "6":
+        elif tag == "2":
             gamelists_dialog("Realign")
-        elif tag == "7":
+
+    if code == d.CANCEL:
+        cls()
+        main_dialog()
+
+    return
+
+
+def gamelist_utilities_dialog():
+    code, tag = d.menu("Main Menu", 
+                    choices=[("1", "Check/Clean Game List Utiltiies"), 
+                             ("2", "Genre Utilities"), 
+                             ("3", "Sort Game Lists"), 
+                             ("4", "Clean Emulators Config"), 
+                             ("5", "Count of Games")],
+                    title="Gamelist (Etc) Utilities")
+    
+    if code == d.OK:
+        if tag == "1":
+            check_clean_utilities_dialog()
+        elif tag == "2":
+            genre_utilities_dialog()
+        elif tag == "3":
             gamelists_dialog("Sort")
-        elif tag == "8":
+        elif tag == "4":
             do_clean_emulators_cfg()
-        elif tag == "9":
+        elif tag == "5":
             gamelists_dialog("Count")
 
     if code == d.CANCEL:
@@ -2621,50 +2656,40 @@ def improvements_dialog():
         elif tag == "4":
             validate_manual_updates()
 
-    cls()
-    main_dialog()
+        cls()
+        improvements_dialog()
 
     return
 
 
 def misc_menu():
     code, tag = d.menu("Select Option",
-                    choices=[("1", "System Overlays"),
-                             ("2", "Handheld Mode"),
-                             ("3", "Reset Permissions"),
-                             ("4", "Gamelist (Etc) Utilities"),
-                             ("5", "Select Update Notification"),
-                             ("6", "Toggle Auto Clean"),
-                             ("7", "Toggle Count Official Only")],
+                    choices=[("1", "Gamelist (Etc) Utilities"), 
+                             ("2", "System Overlays"),
+                             ("3", "Handheld Mode"),
+                             ("4", "Reset Permissions")],
                     title="System Tools and Utilities")
 
     if code == d.OK:
-
         if tag == "1":
-            if not check_internet():
-                d.msgbox("You need to be connected to the internet for this.")
-                misc_menu()
-            else:
-                overlays_dialog()
+            gamelist_utilities_dialog()
         elif tag == "2":
             if not check_internet():
                 d.msgbox("You need to be connected to the internet for this.")
                 misc_menu()
             else:
-                handheld_dialog()
+                overlays_dialog()
         elif tag == "3":
-            fix_permissions()
+            if not check_internet():
+                d.msgbox("You need to be connected to the internet for this.")
+                misc_menu()
+            else:
+                handheld_dialog()
         elif tag == "4":
-            gamelist_utilities_dialog()
-        elif tag == "5":
-            select_notification()
-        elif tag == "6":
-            toggle_autoclean()
-        elif tag == "7":
-            toggle_countofficialonly()
+            fix_permissions()
 
-    cls()
-    main_dialog()
+        cls()
+        misc_menu()
 
     return
 
@@ -2677,7 +2702,34 @@ def support_dialog():
              "\n\nhttps://github.com/h3xp/RickDangerousUpdate"
              "\n\nPlease use Google Lens to grab these links to avoid typing mistakes.")
 
-    main_dialog()
+    return
+
+
+def settings_dialog():
+    if not os.path.exists(tool_ini):
+        d.msgbox("Tool is not installed, you can not set configurations!")
+        return
+
+    update_notification = get_config_value('CONFIG_ITEMS', 'display_notification', return_none=False)
+    auto_clean = get_config_value('CONFIG_ITEMS', 'auto_clean', return_none=False)
+    count_official_only = get_config_value('CONFIG_ITEMS', 'count_official_only', return_none=False)
+
+    code, tag = d.radiolist("Choose which notification method you want to use",
+                choices=[("Select Update Notification", update_notification, True),
+                            ("Toggle Auto Clean", auto_clean, False),
+                            ("Toggle Count Official Only", count_official_only, False)],
+                title="Settings")
+
+    if code == d.OK:
+        if tag == "Select Update Notification":
+            select_notification()
+        elif tag == "Toggle Auto Clean":
+            toggle_autoclean()
+        elif tag == "Toggle Count Official Only":
+            toggle_countofficialonly()
+
+        cls()
+        #settings_dialog()
 
     return
 
@@ -2691,7 +2743,8 @@ def main_dialog():
                     choices=[("1", "Improvements"),    
                              ("2", "System Tools and Utilities"),
                              ("3", "Installation"),
-                             ("4", "Support")],
+                             ("4", "Settings"), 
+                             ("5", "Support")],
                              
                     title=check_update(),
                     backtitle="Rick Dangerous Update Tool",
@@ -2712,11 +2765,14 @@ def main_dialog():
             else:
                 installation_dialog()
         elif tag == "4":
+            settings_dialog()
+        elif tag == "5":
             support_dialog()
-
     if code == d.CANCEL:
         cls()
         exit(0)
+
+    main_dialog()
 
     return
 
