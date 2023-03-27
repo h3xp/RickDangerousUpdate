@@ -85,7 +85,8 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
                     if len(file_dir) > 0:
                         if line in current_files:
                             values = current_files[line]
-                            previous_size = convert_filesize(values[2])
+                            #previous_size = convert_filesize(values[2])
+                            previous_size = values[2]
 
                         current_files[line] = ["DELETED", os.path.basename(path), None, previous_size]
                         files_deleted.append(line)
@@ -94,15 +95,13 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
             #info_dict = parse_zipinfo(file_listing)
             #print("{}\t{}".format(file_listing.filename, file_listing.file_size))
             file = "/" + file_listing.filename
-            if file not in current_files.keys():
-                continue
             file_dir = get_file_dir(file, directories)
             
             if len(file_dir) > 0:
                 print(file)
                 status = ""
                 file_size = convert_filesize(str(file_listing.file_size))
-                if file in current_files:
+                if file in current_files.keys():
                     values = current_files[file]
                     if values[0] == "DELETED":
                         files_added.append(file)
@@ -234,7 +233,8 @@ def get_parsed_part(line: str, part: int):
 
 def get_manual_updates_story():
     log_file = "/home/pi/.update_tool/manual_updates_story.txt"
-    directories = ["/etc/emulationstation/", "/home/pi/RetroPie/roms/", "/opt/retropie/configs/"]
+    dir_list = get_config_value("CONFIG_ITEMS", "relevant_directories")
+    directories = dir_list.strip().split(",")
 
     megadrive = check_drive()
 
@@ -888,7 +888,7 @@ def merge_gamelist(directory):
         corr = corr[corr.index('extracted')+1:]
         corr = Path("/", *corr)
         if origin is not None:
-            write_origins(str(gamelist), str(corr).replace("gamelist.xml", origin))
+            write_origins(str(gamelist), str(gamelist).replace("gamelist.xml", origin))
         if os.path.isfile(corr):
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
