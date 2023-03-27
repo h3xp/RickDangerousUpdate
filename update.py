@@ -61,7 +61,7 @@ def print_files(current_files: dict, file_list: list, log_file: str, spacer="\t"
     return
 
 
-def list_info_in_update(current_files: dict, path: str, log_file: str):
+def list_info_in_update(current_files: dict, path: str, log_file: str, directories: list):
     files = {}
     files_added = []
     files_deleted = []
@@ -81,9 +81,7 @@ def list_info_in_update(current_files: dict, path: str, log_file: str):
                 for line in lines:
                     line = line.strip()
                     previous_size = None
-                    if line not in current_files.keys():
-                        continue
-                    file_dir = get_file_dir(line)
+                    file_dir = get_file_dir(line, directories)
                     if len(file_dir) > 0:
                         if line in current_files:
                             values = current_files[line]
@@ -98,7 +96,7 @@ def list_info_in_update(current_files: dict, path: str, log_file: str):
             file = "/" + file_listing.filename
             if file not in current_files.keys():
                 continue
-            file_dir = get_file_dir(file)
+            file_dir = get_file_dir(file, directories)
             
             if len(file_dir) > 0:
                 print(file)
@@ -119,19 +117,19 @@ def list_info_in_update(current_files: dict, path: str, log_file: str):
     if len(files_deleted) > 0:
         log_this(log_file, "")
         log_this(log_file,"DELETED")
-        files_deleted = print_sort(files_deleted)
+        files_deleted = print_sort(files_deleted, directories)
         print_files(current_files, files_deleted, log_file)
 
     if len(files_added) > 0:
         log_this(log_file, "")
         log_this(log_file,"ADDED")
-        files_added = print_sort(files_added)
+        files_added = print_sort(files_added, directories)
         print_files(current_files, files_added, log_file)
 
     if len(files_updated) > 0:
         log_this(log_file, "")
         log_this(log_file,"UPDATED")
-        files_updated = print_sort(files_updated)
+        files_updated = print_sort(files_updated, directories)
         print_files(current_files, files_updated, log_file)
 
     return
@@ -176,11 +174,11 @@ def get_org_files(dirs: list):
     return files
 
 
-def print_sort(file_list: list):
+def print_sort(file_list: list, directories: list):
     retval = []
     dirs = {}
     for file in file_list:
-        file_dir = get_file_dir(file)
+        file_dir = get_file_dir(file, directories)
         if len(file_dir) > 0:
             files = []
             if file_dir in dirs:
@@ -198,18 +196,21 @@ def print_sort(file_list: list):
     return retval
 
 
-def get_file_dir(filename):
+def get_file_dir(filename: str, directories: list):
     #rom_path = "/home/pi/RetroPie/roms/"
     #if rom_path in filename:
-    current_file = filename.replace(os.path.basename(filename), "")
-    if current_file.find("/") >= 0:
-        #rom_dir = rom_path + current_file[0:current_file.find("/")]
-        file_dir = filename[0:filename.rindex("/") + 1]
-        file_name = filename.replace(file_dir, "")
-        if len(file_name.strip()) == 0:
-            return ""
+    for directory in directories:
+        if directory not in filename:
+            continue
+        current_file = filename.replace(os.path.basename(filename), "")
+        if current_file.find("/") >= 0:
+            #rom_dir = rom_path + current_file[0:current_file.find("/")]
+            file_dir = filename[0:filename.rindex("/") + 1]
+            file_name = filename.replace(file_dir, "")
+            if len(file_name.strip()) == 0:
+                return ""
 
-        return file_dir
+            return file_dir
 
     return ""
 
@@ -249,20 +250,22 @@ def get_manual_updates_story():
     log_this(log_file, "**********", overwrite=True)
     log_this(log_file, "Manual Updates Story!")
     log_this(log_file, "**********")
+    log_this(log_file, "")
+    log_this(log_file, "These are the changes to your filesystem that would happen from applying these updates...")
+    log_this(log_file, "")
 
     log_this(log_file, "Directories processed:")
     for directory in directories:
-        log_this(log_file, "-" + directory)
+        log_this(log_file, "- " + directory)
     log_this(log_file, "")
 
     log_this(log_file, "Updates evaulated:")
     for update in updates:
-        log_this(log_file, "-" + os.path.join(update_dir, update[0]))
-    log_this(log_file, "\n")
+        log_this(log_file, "- " + os.path.join(update_dir, update[0]))
     
     for update in updates:
         print("Processing \"" + os.path.join(update_dir, update[0]) + "\"...")
-        list_info_in_update(current_files, os.path.join(update_dir, update[0]), log_file)
+        list_info_in_update(current_files, os.path.join(update_dir, update[0]), log_file, directories)
 
     cls()
     d.textbox(log_file, title="Contents of {0}".format(log_file))        
@@ -3140,7 +3143,10 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
                     break
 
     if code == d.EXTRA:
-        if d.yesno(text="Are you sure you want to apply all available updates?") == d.OK:
+        if process_improvements == True:
+            if d.yesno(text="Are you sure you want to apply all available updates?") == d.OK:
+                selected_updates = all_updates
+        else:
             selected_updates = all_updates
 
     if code == d.CANCEL:
