@@ -655,7 +655,7 @@ def merge_gamelist(directory):
         corr = corr[corr.index('extracted')+1:]
         corr = Path("/", *corr)
         if origin is not None:
-            write_origins(str(gamelist), str(corr).replace("gamelist.xml", origin))
+            write_origins(str(gamelist), str(gamelist).replace("gamelist.xml", origin))
         if os.path.isfile(corr):
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
