@@ -233,15 +233,20 @@ def get_parsed_part(line: str, part: int):
 
 def get_manual_updates_story():
     log_file = "/home/pi/.update_tool/manual_updates_story.txt"
-    dir_list = get_config_value("CONFIG_ITEMS", "relevant_directories")
+    dir_list = get_config_value("ALWAYS_OVERWRITE", "relevant_directories")
     directories = dir_list.strip().split(",")
 
     megadrive = check_drive()
 
     update_dir = get_valid_path_portion(get_default_update_dir())
     update_dir = manual_updates_dialog(update_dir, False)
-
-    updates = official_improvements_dialog(update_dir=update_dir, process_improvements=False)
+    update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+    
+    # forcing this to a directory
+    updates = official_improvements_dialog(update_dir=get_config_value("CONFIG_ITEMS", "update_dir"), process_improvements=False)
+    if updates is None or len(updates) == 0:
+        d.msgbox("No updates selected!")
+        return
     updates = sort_official_updates(updates)
 
     print("Getting current filesystem state, then processing...")
@@ -2636,7 +2641,7 @@ def get_valid_path_portion(path: str):
     parts = path.split("/")
     for part in parts:
         if len(part) > 0:
-            if os.path.isdir(os.path.join(return_path, part)) == True or os.path.isfile(os.path.join(return_path, part)) == True:
+            if os.path.isdir(os.path.join(return_path, part)) == True:
                 return_path = os.path.join(return_path, part)
 
     #will add the trailing slash if it's not already there.
@@ -2655,7 +2660,7 @@ def manual_updates_dialog(init_path: str, delete: bool):
 
     if code == d.OK:
         if os.path.isdir(path) or os.path.isfile(path):
-            set_config_value("CONFIG_ITEMS", "update_dir", os.path.dirname(path))
+            set_config_value("CONFIG_ITEMS", "update_dir", get_valid_path_portion(path))
             #official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path " + path)
@@ -2798,7 +2803,7 @@ def validate_manual_updates():
 
     update_dir = get_valid_path_portion(get_default_update_dir())
     update_dir = manual_updates_dialog(update_dir, False)
-    set_config_value("CONFIG_ITEMS", "update_dir")
+    update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
 
     available_updates = get_available_updates(megadrive, status=True)
     if len(available_updates) == 0:
