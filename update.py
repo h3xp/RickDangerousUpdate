@@ -2798,6 +2798,7 @@ def validate_manual_updates():
 
     update_dir = get_valid_path_portion(get_default_update_dir())
     update_dir = manual_updates_dialog(update_dir, False)
+    set_config_value("CONFIG_ITEMS", "update_dir")
 
     available_updates = get_available_updates(megadrive, status=True)
     if len(available_updates) == 0:
