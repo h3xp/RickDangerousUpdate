@@ -122,7 +122,7 @@ This does a check of your exisiting installation and lets you know which updates
 
 This option checks the update files you have downloaded to confirm their validity for use.
 
-## Manual Updates Story
+### Manual Updates Story
 
 This option will describe the effects of applying manually downloaded updates before they are applied.
 
