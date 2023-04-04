@@ -20,10 +20,8 @@ Join Rick's discord server to keep track on the latest changes.
     - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
     - [Update Status](#update-status)
     - [Validate Downloaded Updates](#validate-downloaded-updates)
+    - [Manual Updates Story](#manual-updates-story)
   - [System Tools and Utilities](#system-tools-and-utilities)
-    - [Enable/Disable System overlays](#system-overlay)
-    - [Enable/Disable Handheld mode](#handheld-mode)
-    - [Reset Permissions](#reset-permissions)
     - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
       - [Check Game Lists](#check-game-lists)
       - [Clean Game Lists](#clean-game-lists)
@@ -33,13 +31,17 @@ Join Rick's discord server to keep track on the latest changes.
       - [Sort Game Lists](#sort-game-lists)
       - [Clean Emulators Config](#clean-emulators-config)
       - [Count of Games](#count-of-games)
-    - [Select Update Notification](#select-update-notification)
-    - [Toggle Auto Clean](#toggle-auto-clean)
-    - [Toggle Count Official Only](#toggle-count-official)
+    - [System overlays](#system-overlay)
+    - [Handheld Mode](#handheld-mode)
+    - [Reset Permissions](#reset-permissions)
   - [Installation](#installation)
     - [Install](#install)
     - [Update](#update)
     - [Uninstall](#uninstall)
+  - [Settings](#settings)
+    - [Select Update Notification](#select-update-notification)
+    - [Toggle Auto Clean](#toggle-auto-clean)
+    - [Toggle Count Official Only](#toggle-count-official)
   - [Support](#support)
 - [SSH Remote Installation](#ssh-remote-installation)
 
@@ -71,31 +73,34 @@ your retropie. Therefore, use this at your own risk.
 # Features
 
 1. [Improvements](#improvements)
-   - [Download and Install Updates](#download-and-install-updates)
-   - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
-   - [Update Status](#update-status)
-   - [Validate Downloaded Updates](#validate-downloaded-updates)
+  - [Download and Install Updates](#download-and-install-updates)
+  - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
+  - [Update Status](#update-status)
+  - [Validate Downloaded Updates](#validate-downloaded-updates)
+  - [Manual Updates Story](#manual-updates-story)
 2. [System Tools and Utilities](#system-tools-and-utilities)
-   - [Enable/Disable System overlays](#system-overlay)
-   - [Enable/Disable Handheld mode](#handheld-mode)
-   - [Reset Permissions](#reset-permissions)
-   - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
-      - [Check Game Lists](#check-game-lists)
-      - [Clean Game Lists](#clean-game-lists)
-      - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
-      - [Remove Check/Clean Game List Logs](#remove-check-or-clean-game-list-logs)
-      - [Manually Select Genres](#manually-select-genres)
-      - [Sort Game Lists](#sort-game-lists)
-      - [Clean Emulators Config](#clean-emulators-config)
-      - [Count of Games](#count-of-games)
-   - [Select Update Notification](#select-update-notification)
-   - [Toggle Auto Clean](#toggle-auto-clean)
-   - [Toggle Count Official Only](#toggle-count-official)
+  - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
+    - [Check Game Lists](#check-game-lists)
+    - [Clean Game Lists](#clean-game-lists)
+    - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
+    - [Remove Check/Clean Game List Logs](#remove-check-or-clean-game-list-logs)
+    - [Manually Select Genres](#manually-select-genres)
+    - [Sort Game Lists](#sort-game-lists)
+    - [Clean Emulators Config](#clean-emulators-config)
+    - [Count of Games](#count-of-games)
+  - [System overlays](#system-overlay)
+  - [Handheld Mode](#handheld-mode)
+  - [Reset Permissions](#reset-permissions)
 3. [Installation](#installation)
-   - [Install](#install)
-   - [Update](#update)
-   - [Uninstall](#uninstall)
-4. [Support](#support)
+  - [Install](#install)
+  - [Update](#update)
+  - [Uninstall](#uninstall)
+4. [Settings](#settings)
+  - [Select Update Notification](#select-update-notification)
+  - [Toggle Auto Clean](#toggle-auto-clean)
+  - [Toggle Count Official Only](#toggle-count-official)
+5. [Support](#support)
+
 
 ## Improvements
 
@@ -117,31 +122,13 @@ This does a check of your exisiting installation and lets you know which updates
 
 This option checks the update files you have downloaded to confirm their validity for use.
 
+### Manual Updates Story
+
+This option will describe the effects of applying manually downloaded updates before they are applied.
+
 ## System Tools and Utilities
 
 Various settings, tools and resets.
-
-### System overlay
-
-This lets you easily activate and deactivate the bezels/overlays for each system.
-
-### Handheld mode
-
-This will reset the video settings and deactivate the bezels for these systems to make them more enjoyable on a handheld screen.
-Don't use this if you have your retropie connected to a TV.
-These systems will be adjusted:
-
-- atarylynx
-- gamegear
-- gb
-- gba
-- gbc
-- ngpc
-- wonderswancolor
-
-### Reset Permissions
-
-Reset Permissions will correct the ownership of parts of the installation if they have been accidentally changed.
 
 ### Gamelist (Etc) Utilities
 
@@ -184,21 +171,27 @@ Sorts your emulators.cfg file, removing duplicate entries.
 Displays the total game count within gamelist.xml files from selected systems.
 When you count all systems this will also drop a counts.txt file and a games_list.txt file, so you can easily validate against official game counts and view a comprehensive listing of all games.
 
-### Select Update Notification
+### System overlay
 
-Select Update Notification allows you to set what method is used to notify you of image updates and tool updates
-- False - No notifications of updates or upgrades are displayed
-- Theme - A message is displayed on the system selection screen when image updates or an upgrade to the tool is available
-- Tool - At boot time the update tool can be optionally executed when image updates are available. This option should only be set if you have a keyboard attached to your Pi. This option includes the behaviour of the Theme notification.
+This lets you easily activate and deactivate the bezels/overlays for each system.
 
-### Toggle Auto Clean
+### Handheld mode
 
-Toggle Auto Clean allows you to turn on or off automatic cleaning of your gamelist files after any updates are loaded.
+This will reset the video settings and deactivate the bezels for these systems to make them more enjoyable on a handheld screen.
+Don't use this if you have your retropie connected to a TV.
+These systems will be adjusted:
 
-### Toggle Count Official
+- atarylynx
+- gamegear
+- gb
+- gba
+- gbc
+- ngpc
+- wonderswancolor
 
-Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files.
-Offical games are those provided by Rick. These are tagged noting their origin.
+### Reset Permissions
+
+Reset Permissions will correct the ownership of parts of the installation if they have been accidentally changed.
 
 ## Installation
 
@@ -218,6 +211,24 @@ This option will update your version to the most current version of the tool ava
 ### Uninstall
 
 This option will remove the tool entirely from the "Options" tab in EmulationStation and from your system.
+
+## Settings
+
+### Select Update Notification
+
+Select Update Notification allows you to set what method is used to notify you of image updates and tool updates
+- False - No notifications of updates or upgrades are displayed
+- Theme - A message is displayed on the system selection screen when image updates or an upgrade to the tool is available
+- Tool - At boot time the update tool can be optionally executed when image updates are available. This option should only be set if you have a keyboard attached to your Pi. This option includes the behaviour of the Theme notification.
+
+### Toggle Auto Clean
+
+Toggle Auto Clean allows you to turn on or off automatic cleaning of your gamelist files after any updates are loaded.
+
+### Toggle Count Official
+
+Toggle Count Offical allows to turn on or off inclusion of unofficial games within gamelist.xml files.
+Offical games are those provided by Rick. These are tagged noting their origin.
 
 ## Support
 
