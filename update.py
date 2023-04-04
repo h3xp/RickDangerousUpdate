@@ -864,6 +864,19 @@ def get_node(element: ET.Element, name: str, return_none=False):
     return ret_val
 
 
+def clear_do_not_overwrite_tags(gamelist: str):
+    org_gamelist = gamelist + "-pre"
+
+    if os.path.isfile(gamelist):
+        os.rename(gamelist, org_gamelist)
+        if os.path.isfile(org_gamelist):
+            runcmd("grep -e lastplayed -e playcount -e favorite -v {} > {}".format(org_gamelist, gamelist))
+            if os.path.isfile(gamelist):
+                os.remove(org_gamelist)
+
+    return
+
+
 def write_origins(gamelist: str, origin: str):
     paths = []
     src_tree = ET.parse(gamelist)
@@ -888,6 +901,7 @@ def merge_gamelist(directory):
     
     # check if gamelist.xml has been updated
     for gamelist in Path(directory).rglob('gamelist.xml'):
+        clear_do_not_overwrite_tags(str(gamelist))
         # find corresponding xmls
         corr = gamelist.parts
         corr = corr[corr.index('extracted')+1:]
@@ -980,7 +994,6 @@ def make_deletions(directory):
     directory = directory / "read me do this first!.txt"
     if os.path.isfile(directory):
         f = open(directory, 'r' )
-        next(f)
         for lines in f:
             if os.path.isfile(lines.rstrip()):
                 os.remove(lines.rstrip())
