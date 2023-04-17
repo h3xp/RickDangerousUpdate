@@ -895,6 +895,25 @@ def write_origins(gamelist: str, origin: str):
     return
 
 
+def merge_emulators_cfg(directory):
+    emulators_cfg = os.path.join(str(directory), "opt/retropie/configs/all/emulators.cfg")
+
+    if not os.path.isfile(emulators_cfg):
+        return
+    
+    items, duplicate_counter = get_emulators_cfg()
+
+    with open(emulators_cfg, 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            parts = line.split("=")
+            items[parts[0].strip()] = parts[1].strip()    
+
+    game_counter = write_sorted_emulators_cfg(items)
+    
+    return
+
+
 def merge_gamelist(directory):
     # get origin file
     origin = get_config_value("CONFIG_ITEMS", "origin_file")
@@ -912,6 +931,7 @@ def merge_gamelist(directory):
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
 
+    return
 
 def indent(tree, space="  ", level=0):
     # Reduce the memory consumption by reusing indentation strings.
@@ -2450,15 +2470,13 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
     return
 
 
-def do_clean_emulators_cfg():
+def get_emulators_cfg():
     emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
     items = {}
-    lines_out = ""
-    game_counter = 0
     duplicate_counter = 0
 
     if not os.path.exists(emulator_cfg):
-        return
+        return items, duplicate_counter
 
     with open(emulator_cfg, 'r') as configfile:
         lines_in = configfile.readlines()
@@ -2468,9 +2486,18 @@ def do_clean_emulators_cfg():
                 duplicate_counter += 1
             items[parts[0].strip()] = parts[1].strip()
 
-        for item in sorted(items.keys()):
-            lines_out += "{} = {}\n".format(item, items[item])
-            game_counter += 1
+    return items, duplicate_counter
+
+
+def write_sorted_emulators_cfg(items: dict):
+    emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
+    lines_out = ""
+    game_counter = 0
+    
+    
+    for item in sorted(items.keys()):
+        lines_out += "{} = {}\n".format(item, items[item])
+        game_counter += 1
 
     file_time = safe_write_backup(emulator_cfg)
 
@@ -2478,6 +2505,17 @@ def do_clean_emulators_cfg():
         configfile.write(lines_out)
 
     safe_write_check(emulator_cfg, file_time)
+
+    return game_counter
+
+
+def do_clean_emulators_cfg():
+    items = {}
+    game_counter = 0
+    duplicate_counter = 0
+
+    items, duplicate_counter = get_emulators_cfg()
+    game_counter = write_sorted_emulators_cfg(items)
 
     d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.".format(game_counter, duplicate_counter))
 
@@ -3237,6 +3275,7 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
     update_config(extracted)
     make_deletions(extracted)
     merge_gamelist(extracted)
+    merge_emulators_cfg(extracted)
     copydir(extracted, "/")
 
     if check_root(extracted):
@@ -3627,7 +3666,6 @@ def check_for_updates():
 def main():
     global update_available_result
     update_available_result = update_available()
-
     if os.path.isfile(tool_ini):
         mega_ini_check()
 
