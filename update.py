@@ -911,6 +911,8 @@ def merge_emulators_cfg(directory):
 
     game_counter = write_sorted_emulators_cfg(items)
     
+    os.remove(emulators_cfg)
+    
     return
 
 
