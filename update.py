@@ -916,6 +916,49 @@ def merge_emulators_cfg(directory):
     return
 
 
+def datetime_valid(dt: str):
+    try:
+        datetime.datetime.fromisoformat(dt)
+    except:
+        return False
+    return True
+
+
+def get_package_date(file: str):
+    with open(file, 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            parts = line.split("=")
+            if parts[0].strip() == "pkg_date":
+                if datetime_valid(parts[1].replace("\"", "").replace("'", "").strip()):
+                    return datetime.datetime.fromisoformat(parts[1].replace("\"", "").replace("'", "").strip())
+
+    return datetime.datetime.fromisoformat("1900-01-01T00:00:00")
+
+
+def install_emulators(directory):
+    # check if retropie.pkg files exist
+    for package in Path(directory).rglob('retropie.pkg'):
+        local_package = str(package).replace(str(directory), "")
+        if os.path.isfile(local_package):
+            if get_package_date(str(package)) <= get_package_date(local_package):
+                os.remove(str(package))
+                continue
+        else:
+            os.remove(str(package))
+            continue
+
+        # get the core
+        dirs = str(package).split("/")
+        core = dirs[len(dirs) - 2]
+        print("Now installing {} from bin...".format(core))
+        runcmd("sudo /home/pi/RetroPie-Setup/retropie_packages.sh {} depends".format(core))
+        runcmd("sudo /home/pi/RetroPie-Setup/retropie_packages.sh {} install_bin".format(core))
+        os.remove(str(package))
+
+    return
+
+
 def merge_gamelist(directory):
     # get origin file
     origin = get_config_value("CONFIG_ITEMS", "origin_file")
@@ -3093,6 +3136,8 @@ def check_root(directory):
     for files in os.listdir(directory):
         if os.path.exists(directory / "etc" / "emulationstation"):
             return True
+        if os.path.exists(directory / "opt" / "retropie"):
+            return True
     return False
 
 
@@ -3272,16 +3317,20 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
         zip_ref.extractall(extracted)
 
     if check_root(extracted):
+        os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
         os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+        os.system("sudo chown -R pi:pi /opt/retropie/ > /tmp/test")
 
     update_config(extracted)
     make_deletions(extracted)
+    install_emulators(extracted)
     merge_gamelist(extracted)
     merge_emulators_cfg(extracted)
     copydir(extracted, "/")
 
     if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
+        os.system("sudo chown -R root:root /opt/retropie/")
 
     try:
         shutil.rmtree(extracted)
@@ -3642,9 +3691,11 @@ def reboot_dialog(reboot_msg):
 def clean_failures():
     if os.path.exists("/tmp/improvements"):
         if os.path.isdir("/tmp/improvements"):
+            os.system("sudo chown -R pi:pi /tmp/improvements/")
             shutil.rmtree("/tmp/improvements")
     if os.path.exists("/tmp/extracted"):
         if os.path.isdir("/tmp/extracted"):
+            os.system("sudo chown -R pi:pi /tmp/extracted/")
             shutil.rmtree("/tmp/extracted")
 
     return
@@ -3716,6 +3767,10 @@ if __name__ == "__main__":
         #print("")
         nothing = None
     except:
+        # need to clean this up if we changed it
+        os.system("sudo chown -R root:root /etc/emulationstation/")
+        os.system("sudo chown -R root:root /opt/retropie/")
+
         title_text = ""
         if os.path.exists(tool_ini):
             title_text = "A copy of this exception is logged in /home/pi/.update_tool/exception.log for your records\n\n"
