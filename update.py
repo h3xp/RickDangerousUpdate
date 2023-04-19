@@ -3331,6 +3331,7 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
     if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/")
+        os.system("sudo chown -R pi:pi /opt/retropie/configs/")
 
     try:
         shutil.rmtree(extracted)
@@ -3770,6 +3771,7 @@ if __name__ == "__main__":
         # need to clean this up if we changed it
         os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/")
+        os.system("sudo chown -R pi:pi /opt/retropie/configs/")
 
         title_text = ""
         if os.path.exists(tool_ini):
