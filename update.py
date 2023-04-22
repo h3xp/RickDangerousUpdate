@@ -939,14 +939,12 @@ def get_package_date(file: str):
 def install_emulators(directory):
     # check if retropie.pkg files exist
     for package in Path(directory).rglob('retropie.pkg'):
+        os.system("sudo chown -R pi:pi {} > /tmp/test".format(os.path.dirname(package)))
         local_package = str(package).replace(str(directory), "")
         if os.path.isfile(local_package):
             if get_package_date(str(package)) <= get_package_date(local_package):
                 os.remove(str(package))
                 continue
-        else:
-            os.remove(str(package))
-            continue
 
         # get the core
         dirs = str(package).split("/")
@@ -3136,8 +3134,7 @@ def check_root(directory):
     for files in os.listdir(directory):
         if os.path.exists(directory / "etc" / "emulationstation"):
             return True
-        if os.path.exists(directory / "opt" / "retropie"):
-            return True
+
     return False
 
 
@@ -3319,7 +3316,6 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
     if check_root(extracted):
         os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
         os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
-        os.system("sudo chown -R pi:pi /opt/retropie/ > /tmp/test")
 
     update_config(extracted)
     make_deletions(extracted)
@@ -3330,8 +3326,6 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
 
     if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
-        os.system("sudo chown -R root:root /opt/retropie/")
-        os.system("sudo chown -R pi:pi /opt/retropie/configs/")
 
     try:
         shutil.rmtree(extracted)
@@ -3770,8 +3764,6 @@ if __name__ == "__main__":
     except:
         # need to clean this up if we changed it
         os.system("sudo chown -R root:root /etc/emulationstation/")
-        os.system("sudo chown -R root:root /opt/retropie/")
-        os.system("sudo chown -R pi:pi /opt/retropie/configs/")
 
         title_text = ""
         if os.path.exists(tool_ini):
