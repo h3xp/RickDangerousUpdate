@@ -895,6 +895,68 @@ def write_origins(gamelist: str, origin: str):
     return
 
 
+def merge_emulators_cfg(directory):
+    emulators_cfg = os.path.join(str(directory), "opt/retropie/configs/all/emulators.cfg")
+
+    if not os.path.isfile(emulators_cfg):
+        return
+    
+    items, duplicate_counter = get_emulators_cfg()
+
+    with open(emulators_cfg, 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            parts = line.split("=")
+            items[parts[0].strip()] = parts[1].strip()    
+
+    game_counter = write_sorted_emulators_cfg(items)
+    
+    os.remove(emulators_cfg)
+    
+    return
+
+
+def datetime_valid(dt: str):
+    try:
+        datetime.datetime.fromisoformat(dt)
+    except:
+        return False
+    return True
+
+
+def get_package_date(file: str):
+    with open(file, 'r') as configfile:
+        lines_in = configfile.readlines()
+        for line in lines_in:
+            parts = line.split("=")
+            if parts[0].strip() == "pkg_date":
+                if datetime_valid(parts[1].replace("\"", "").replace("'", "").strip()):
+                    return datetime.datetime.fromisoformat(parts[1].replace("\"", "").replace("'", "").strip())
+
+    return datetime.datetime.fromisoformat("1900-01-01T00:00:00")
+
+
+def install_emulators(directory):
+    # check if retropie.pkg files exist
+    for package in Path(directory).rglob('retropie.pkg'):
+        os.system("sudo chown -R pi:pi {} > /tmp/test".format(os.path.dirname(package)))
+        local_package = str(package).replace(str(directory), "")
+        if os.path.isfile(local_package):
+            if get_package_date(str(package)) <= get_package_date(local_package):
+                os.remove(str(package))
+                continue
+
+        # get the core
+        dirs = str(package).split("/")
+        core = dirs[len(dirs) - 2]
+        print("Now installing {} from bin...".format(core))
+        runcmd("sudo /home/pi/RetroPie-Setup/retropie_packages.sh {} depends".format(core))
+        runcmd("sudo /home/pi/RetroPie-Setup/retropie_packages.sh {} install_bin".format(core))
+        os.remove(str(package))
+
+    return
+
+
 def merge_gamelist(directory):
     # get origin file
     origin = get_config_value("CONFIG_ITEMS", "origin_file")
@@ -912,6 +974,7 @@ def merge_gamelist(directory):
             merge_xml(str(gamelist), str(corr))
             os.remove(str(gamelist))
 
+    return
 
 def indent(tree, space="  ", level=0):
     # Reduce the memory consumption by reusing indentation strings.
@@ -2450,15 +2513,13 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
     return
 
 
-def do_clean_emulators_cfg():
+def get_emulators_cfg():
     emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
     items = {}
-    lines_out = ""
-    game_counter = 0
     duplicate_counter = 0
 
     if not os.path.exists(emulator_cfg):
-        return
+        return items, duplicate_counter
 
     with open(emulator_cfg, 'r') as configfile:
         lines_in = configfile.readlines()
@@ -2468,9 +2529,18 @@ def do_clean_emulators_cfg():
                 duplicate_counter += 1
             items[parts[0].strip()] = parts[1].strip()
 
-        for item in sorted(items.keys()):
-            lines_out += "{} = {}\n".format(item, items[item])
-            game_counter += 1
+    return items, duplicate_counter
+
+
+def write_sorted_emulators_cfg(items: dict):
+    emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
+    lines_out = ""
+    game_counter = 0
+    
+    
+    for item in sorted(items.keys()):
+        lines_out += "{} = {}\n".format(item, items[item])
+        game_counter += 1
 
     file_time = safe_write_backup(emulator_cfg)
 
@@ -2478,6 +2548,17 @@ def do_clean_emulators_cfg():
         configfile.write(lines_out)
 
     safe_write_check(emulator_cfg, file_time)
+
+    return game_counter
+
+
+def do_clean_emulators_cfg():
+    items = {}
+    game_counter = 0
+    duplicate_counter = 0
+
+    items, duplicate_counter = get_emulators_cfg()
+    game_counter = write_sorted_emulators_cfg(items)
 
     d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.".format(game_counter, duplicate_counter))
 
@@ -3053,6 +3134,7 @@ def check_root(directory):
     for files in os.listdir(directory):
         if os.path.exists(directory / "etc" / "emulationstation"):
             return True
+
     return False
 
 
@@ -3232,11 +3314,14 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
         zip_ref.extractall(extracted)
 
     if check_root(extracted):
+        os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
         os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
 
     update_config(extracted)
     make_deletions(extracted)
+    install_emulators(extracted)
     merge_gamelist(extracted)
+    merge_emulators_cfg(extracted)
     copydir(extracted, "/")
 
     if check_root(extracted):
@@ -3601,9 +3686,11 @@ def reboot_dialog(reboot_msg):
 def clean_failures():
     if os.path.exists("/tmp/improvements"):
         if os.path.isdir("/tmp/improvements"):
+            os.system("sudo chown -R pi:pi /tmp/improvements/")
             shutil.rmtree("/tmp/improvements")
     if os.path.exists("/tmp/extracted"):
         if os.path.isdir("/tmp/extracted"):
+            os.system("sudo chown -R pi:pi /tmp/extracted/")
             shutil.rmtree("/tmp/extracted")
 
     return
@@ -3627,7 +3714,6 @@ def check_for_updates():
 def main():
     global update_available_result
     update_available_result = update_available()
-
     if os.path.isfile(tool_ini):
         mega_ini_check()
 
@@ -3676,6 +3762,9 @@ if __name__ == "__main__":
         #print("")
         nothing = None
     except:
+        # need to clean this up if we changed it
+        os.system("sudo chown -R root:root /etc/emulationstation/")
+
         title_text = ""
         if os.path.exists(tool_ini):
             title_text = "A copy of this exception is logged in /home/pi/.update_tool/exception.log for your records\n\n"
