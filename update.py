@@ -907,7 +907,8 @@ def merge_emulators_cfg(directory):
         lines_in = configfile.readlines()
         for line in lines_in:
             parts = line.split("=")
-            items[parts[0].strip()] = parts[1].strip()    
+            if len(parts) == 2:
+                items[parts[0].strip()] = parts[1].strip()    
 
     game_counter = write_sorted_emulators_cfg(items)
     
@@ -2527,7 +2528,8 @@ def get_emulators_cfg():
             parts = line.split("=")
             if parts[0].strip() in items.keys():
                 duplicate_counter += 1
-            items[parts[0].strip()] = parts[1].strip()
+            if len(parts) == 2:
+                items[parts[0].strip()] = parts[1].strip()
 
     return items, duplicate_counter
 
