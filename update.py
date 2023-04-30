@@ -870,7 +870,7 @@ def clear_do_not_overwrite_tags(gamelist: str):
     if os.path.isfile(gamelist):
         os.rename(gamelist, org_gamelist)
         if os.path.isfile(org_gamelist):
-            runcmd("grep -e lastplayed -e playcount -e favorite -v {} > {}".format(org_gamelist, gamelist))
+            runcmd("grep -e \<lastplayed\> -e \<playcount\> -e \<favorite\> -v {} > {}".format(org_gamelist, gamelist))
             if os.path.isfile(gamelist):
                 os.remove(org_gamelist)
 
