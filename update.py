@@ -895,6 +895,26 @@ def write_origins(gamelist: str, origin: str):
     return
 
 
+def clean_official_emulators(items: list):
+    cleaned = {}
+    last_system = ""
+    origins = []
+    system_dir = ""
+    origin = get_config_value("CONFIG_ITEMS", "origin_file")
+
+    for item in sorted(items.keys()):
+        parts = item.split("_")
+        if parts[0] != last_system:
+            last_system = parts[0]
+            system_dir = os.path.join("/home/pi/RetroPie/roms", parts[0])
+            if origin is not None:
+                origins = get_official_emulators_origins(os.path.join(system_dir, origin))
+        if item[len(parts[0]) + 1:].replace("./", "") not in origins:
+            cleaned[item] = items[item]
+
+    return cleaned
+
+
 def merge_emulators_cfg(directory):
     emulators_cfg = os.path.join(str(directory), "opt/retropie/configs/all/emulators.cfg")
 
@@ -902,6 +922,7 @@ def merge_emulators_cfg(directory):
         return
     
     items, duplicate_counter = get_emulators_cfg()
+    items = clean_official_emulators(items)
 
     with open(emulators_cfg, 'r') as configfile:
         lines_in = configfile.readlines()
@@ -2025,6 +2046,19 @@ def do_gamelist_genres(systems: list):
     gamelists_dialog("Genre")
 
     return
+
+
+def get_official_emulators_origins(origin: str):
+    origins = []
+    if os.path.isfile(origin):
+        with open(origin, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            for line in lines:
+                if len(line.strip()) > 0:
+                    pos = line.rfind(".")
+                    origins.append(line.strip()[:pos].replace("./", "").replace(".", ""))
+
+    return origins
 
 
 def get_official_origins(origin: str):
