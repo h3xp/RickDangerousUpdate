@@ -895,6 +895,59 @@ def write_origins(gamelist: str, origin: str):
     return
 
 
+def clean_emulators_cfg(items: dict, log_file: str):
+    cleaned = {}
+    last_system = ""
+    system_dir = ""
+    system_roms = []
+    bad_entries = 0
+
+    for item in sorted(items.keys()):
+        parts = item.split("_")
+        if len(parts) == 0 or len(parts[0]) == 0:
+            continue
+        if parts[0] != last_system:
+            system_roms = []
+            last_system = parts[0]
+            system_dir = os.path.join("/home/pi/RetroPie/roms", parts[0])
+            if not os.path.isdir(system_dir):
+                bad_entries += 1
+                log_this(log_file, "Removed Entry: \"{}\" (invalid directory \"{}\")".format(item, system_dir))
+                continue
+            for file in os.scandir(system_dir):
+                if os.path.isfile(file.path):
+                    pos = file.path.rfind(".")
+                    emulator_cfg_name = get_emulators_cfg_filename(file.path[:pos].strip().replace(system_dir + "/", ""))
+                    system_roms.append(emulator_cfg_name)
+        if item[len(parts[0]) + 1:] in system_roms:
+            cleaned[item] = items[item]
+        else:
+            bad_entries += 1
+            log_this(log_file, "Removed Entry: \"{}\" (rom for \"{}\" does not exist)".format(item, item[len(parts[0]) + 1:]))
+
+    return cleaned, bad_entries
+
+
+def filter_official_emulators_cfg(items: list):
+    filtered = {}
+    last_system = ""
+    origins = []
+    system_dir = ""
+    origin = get_config_value("CONFIG_ITEMS", "origin_file")
+
+    for item in sorted(items.keys()):
+        parts = item.split("_")
+        if parts[0] != last_system:
+            last_system = parts[0]
+            system_dir = os.path.join("/home/pi/RetroPie/roms", parts[0])
+            if origin is not None:
+                origins = get_official_emulators_origins(os.path.join(system_dir, origin))
+        if item[len(parts[0]) + 1:].replace("./", "") not in origins:
+            filtered[item] = items[item]
+
+    return filtered
+
+
 def merge_emulators_cfg(directory):
     emulators_cfg = os.path.join(str(directory), "opt/retropie/configs/all/emulators.cfg")
 
@@ -902,6 +955,7 @@ def merge_emulators_cfg(directory):
         return
     
     items, duplicate_counter = get_emulators_cfg()
+    items = filter_official_emulators_cfg(items)
 
     with open(emulators_cfg, 'r') as configfile:
         lines_in = configfile.readlines()
@@ -1175,6 +1229,9 @@ def do_handheld(mode):
 def log_this(log_file: str, log_text: str, overwrite=False):
     if log_file is None:
         return
+
+    if not os.path.isdir(os.path.dirname(log_file)):
+        os.makedirs(os.path.dirname(log_file))
 
     if overwrite == True or not os.path.isfile(log_file):
         with open(log_file, 'w', encoding='utf-8') as logfile:
@@ -2027,6 +2084,28 @@ def do_gamelist_genres(systems: list):
     return
 
 
+def get_emulators_cfg_filename(filename: str):
+    # this will return only number, letter, and - or _ characters
+    # this seems to be the logic...
+    parts = list([val for val in filename if val.isalnum() or val == '-' or val == '_' ])
+ 
+    return "".join(parts)
+
+
+def get_official_emulators_origins(origin: str):
+    origins = []
+    if os.path.isfile(origin):
+        with open(origin, 'r', encoding='utf-8') as f:
+            lines = f.readlines()
+            for line in lines:
+                if len(line.strip()) > 0:
+                    pos = line.rfind(".")
+                    emulator_cfg_name = get_emulators_cfg_filename(line.strip()[:pos])
+                    origins.append(emulator_cfg_name)
+
+    return origins
+
+
 def get_official_origins(origin: str):
     origins = []
     if os.path.isfile(origin):
@@ -2514,7 +2593,7 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
     return
 
 
-def get_emulators_cfg():
+def get_emulators_cfg(log_file=""):
     emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
     items = {}
     duplicate_counter = 0
@@ -2527,6 +2606,8 @@ def get_emulators_cfg():
         for line in lines_in:
             parts = line.split("=")
             if parts[0].strip() in items.keys():
+                if len(log_file) > 0:
+                    log_this(log_file, "-Removed duplicate entry for \"{}\"".format(parts[0].strip()))
                 duplicate_counter += 1
             if len(parts) == 2:
                 items[parts[0].strip()] = parts[1].strip()
@@ -2554,15 +2635,28 @@ def write_sorted_emulators_cfg(items: dict):
     return game_counter
 
 
-def do_clean_emulators_cfg():
+def do_clean_emulators_cfg(auto_clean=False):
     items = {}
     game_counter = 0
     duplicate_counter = 0
+    file_time = datetime.datetime.utcnow()
+    process_type = "auto_clean" if auto_clean == True else "clean"
+    log_file = "/home/pi/.update_tool/emulators_logs/{}_emulators-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+
+    if auto_clean == True:
+        log_this(log_file, "AUTO ")
+    log_this(log_file, "CLEANING emulators.cfg: started at {}\n\n".format(file_time.strftime("%Y%m%d-%H%M%S")))
 
     items, duplicate_counter = get_emulators_cfg()
+    items, bad_entries = clean_emulators_cfg(items, log_file)
     game_counter = write_sorted_emulators_cfg(items)
 
-    d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.".format(game_counter, duplicate_counter))
+    log_this(log_file, "\n")
+    if auto_clean == True:
+        log_this(log_file, "AUTO ")
+    log_this(log_file, "CLEANING emulators.cfg: ended at {}".format(datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")))
+
+    d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.\n\nRemoved {} bad entries.".format(game_counter, duplicate_counter, bad_entries))
 
     return
 
