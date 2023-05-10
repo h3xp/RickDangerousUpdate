@@ -2641,7 +2641,7 @@ def do_clean_emulators_cfg(auto_clean=False):
     duplicate_counter = 0
     file_time = datetime.datetime.utcnow()
     process_type = "auto_clean" if auto_clean == True else "clean"
-    log_file = "/home/pi/.update_tool/emulator_logs/{}_emulators-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
+    log_file = "/home/pi/.update_tool/emulators_logs/{}_emulators-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
 
     if auto_clean == True:
         log_this(log_file, "AUTO ")
