@@ -3837,6 +3837,12 @@ def main():
             exit(0)
 
     clean_failures()
+    
+    if update_available_result == "update available":
+        code = d.yesno('\nWe always recommend upgrading to the latest release of this tool.\n\nDo you want to upgrade now?\n', title="Newer Release Available" )
+        
+        if code == d.OK:
+            update_dialog()
 
     global genres
     section = get_config_section("GENRE_MAPPINGS")
