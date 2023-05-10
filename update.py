@@ -950,6 +950,7 @@ def filter_official_emulators_cfg(items: list):
 
 def merge_emulators_cfg(directory):
     emulators_cfg = os.path.join(str(directory), "opt/retropie/configs/all/emulators.cfg")
+    override_cfg = "/home/pi/.update_tool/override_emulators.cfg"
 
     if not os.path.isfile(emulators_cfg):
         return
@@ -963,6 +964,15 @@ def merge_emulators_cfg(directory):
             parts = line.split("=")
             if len(parts) == 2:
                 items[parts[0].strip()] = parts[1].strip()    
+
+    # apply overrides
+    if os.path.isfile(override_cfg):
+        with open(override_cfg, 'r') as configfile:
+            lines_in = configfile.readlines()
+            for line in lines_in:
+                parts = line.split("=")
+                if len(parts) == 2:
+                    items[parts[0].strip()] = parts[1].strip()    
 
     game_counter = write_sorted_emulators_cfg(items)
     
@@ -3813,6 +3823,9 @@ def main():
     if os.path.isfile(tool_ini):
         mega_ini_check()
 
+    if not os.path.isfile("/home/pi/.update_tool/override_emulators.cfg"):
+        log_this("/home/pi/.update_tool/override_emulators.cfg", "# place emulators.cfg entries here that you ABSOLUTELY do not want to get overwritten")
+        
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
