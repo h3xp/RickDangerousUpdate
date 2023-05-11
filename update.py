@@ -238,7 +238,7 @@ def get_manual_updates_story():
 
     megadrive = check_drive()
 
-    update_dir = get_valid_path_portion(())
+    update_dir = get_valid_path_portion(get_default_update_dir())
     update_dir = manual_updates_dialog(update_dir, False)
     update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
     
