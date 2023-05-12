@@ -2862,6 +2862,7 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=True)
+        do_clean_emulators_cfg(check=False, auto_clean=True)
 
 #    if os.path.isdir(path):
 #        if delete == True:
@@ -3471,9 +3472,6 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
     merge_emulators_cfg(extracted)
     copydir(extracted, "/")
     
-    if auto_clean == True:
-        do_clean_emulators_cfg(auto_clean)
-
     if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
 
@@ -3519,6 +3517,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
 
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=False)
+        do_clean_emulators_cfg(check=False, auto_clean=True)
 
     if remove_improvements == True:
         try:
