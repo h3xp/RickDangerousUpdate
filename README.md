@@ -35,7 +35,7 @@ Join Rick's discord server to keep track on the latest changes.
       - [Check or Clean Emulators Config Utilities](#check-or-clean-emulators-config-utilities)
         - [Check Emulators Config](#check-emulators-config)
         - [Clean Emulators Config](#clean-emulators-config)
-        - [Remove Check/Clean Emulators Config Logs](#remove-check-or-clean-emulators-config-logs)
+        - [Remove Check or Clean Emulators Config Logs](#remove-check-or-clean-emulators-config-logs)
       - [Count of Games](#count-of-games)
     - [System overlays](#system-overlay)
     - [Handheld Mode](#handheld-mode)
