@@ -23,16 +23,16 @@ Join Rick's discord server to keep track on the latest changes.
     - [Manual Updates Story](#manual-updates-story)
   - [System Tools and Utilities](#system-tools-and-utilities)
     - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
-      - [Check/Clean Game List Utilities](#check-clean-game-list-utilities)
+      - [Check or Clean Game List Utilities](#check-or-clean-game-list-utilities)
         - [Check Game Lists](#check-game-lists)
         - [Clean Game Lists](#clean-game-lists)
         - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
-        - [Remove Check/Clean Game List Logs](#remove-check-or-clean-game-list-logs)
+        - [Remove Check or Clean Game List Logs](#remove-check-or-clean-game-list-logs)
       - [Genre Utilities](#genre-utilities)
         - [Manually Select Genres](#manually-select-genres)
         - [Realign Genre Collections]($realign-genre-collections)
       - [Sort Game Lists](#sort-game-lists)
-      - [Check/Clean Emulators Config Utilities](#check-clean-emulators-config-utilities)
+      - [Check or Clean Emulators Config Utilities](#check-or-clean-emulators-config-utilities)
         - [Check Emulators Config](#check-emulators-config)
         - [Clean Emulators Config](#clean-emulators-config)
         - [Remove Check/Clean Emulators Config Logs](#remove-check-or-clean-emulators-config-logs)
@@ -78,50 +78,6 @@ your retropie. Therefore, use this at your own risk.
 
 # Features
 
-1. [Improvements](#improvements)
-  - [Download and Install Updates](#download-and-install-updates)
-  - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
-  - [Update Status](#update-status)
-  - [Validate Downloaded Updates](#validate-downloaded-updates)
-  - [Manual Updates Story](#manual-updates-story)
-2. [System Tools and Utilities](#system-tools-and-utilities)
-  - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
-    - [Check/Clean Game List Utilities](#check-clean-game-list-utilities)
-      - [Check Game Lists](#check-game-lists)
-      - [Clean Game Lists](#clean-game-lists)
-      - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
-      - [Remove Check/Clean Game List Logs](#remove-check-or-clean-game-list-logs)
-    - [Genre Utilities](#genre-utilities)
-      - [Manually Select Genres](#manually-select-genres)
-      - [Realign Genre Collections]($realign-genre-collections)
-    - [Sort Game Lists](#sort-game-lists)
-      - [Check/Clean Emulators Config Utilities](#check-clean-emulators-config-utilities)
-      - [Check Emulators Config](#check-emulators-config)
-      - [Clean Emulators Config](#clean-emulators-config)
-      - [Remove Check/Clean Emulators Config Logs](#remove-check-or-clean-emulators-config-logs)
-  - [Gamelist (Etc) Utilities](#gamelist-etc-utilities)
-    - [Check Game Lists](#check-game-lists)
-    - [Clean Game Lists](#clean-game-lists)
-    - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
-    - [Remove Check/Clean Game List Logs](#remove-check-or-clean-game-list-logs)
-    - [Manually Select Genres](#manually-select-genres)
-    - [Sort Game Lists](#sort-game-lists)
-    - [Clean Emulators Config](#clean-emulators-config)
-    - [Count of Games](#count-of-games)
-  - [System overlays](#system-overlay)
-  - [Handheld Mode](#handheld-mode)
-  - [Reset Permissions](#reset-permissions)
-3. [Installation](#installation)
-  - [Install](#install)
-  - [Update](#update)
-  - [Uninstall](#uninstall)
-4. [Settings](#settings)
-  - [Select Update Notification](#select-update-notification)
-  - [Toggle Auto Clean](#toggle-auto-clean)
-  - [Toggle Count Official Only](#toggle-count-official)
-5. [Support](#support)
-
-
 ## Improvements
 
 This is the "main" feature and reason to create this tool.
@@ -154,7 +110,7 @@ Various settings, tools and resets.
 
 Gamelist (Etc) Utilities provide a lot of functions to clean up, in general, and work with your gamelist.xml files.
 
-#### Check/Clean Game List Utilities
+#### Check or Clean Game List Utilities
 
 ##### Check Game Lists
 
@@ -186,7 +142,7 @@ Scans gamelist.xml files and completely rebuilds genre collections from gamelist
 
 Sorts your gamelist.xml files by Name for easier readability.
 
-#### Check/Clean Emulators Config Utilities
+#### Check or Clean Emulators Config Utilities
 
 ##### Check Emulators Config
 
@@ -195,6 +151,11 @@ This will check your emulators.cfg file for duplicate or invalid entries.
 ##### Clean Emulators Config
 
 Sorts your emulators.cfg file, removing duplicate or invalid entries.
+
+##### Remove Check or Clean Emulators Config Logs
+
+Allows you to delete log files left by previous gamelist utilities clean or check actions.
+
 
 #### Count of Games
 
