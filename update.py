@@ -3470,6 +3470,9 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
     merge_gamelist(extracted)
     merge_emulators_cfg(extracted)
     copydir(extracted, "/")
+    
+    if auto_clean == True:
+        do_clean_emulators_cfg(auto_clean)
 
     if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
