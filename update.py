@@ -895,7 +895,7 @@ def write_origins(gamelist: str, origin: str):
     return
 
 
-def clean_emulators_cfg(items: dict, log_file: str):
+def clean_emulators_cfg(items: dict, log_file: str, check=False):
     cleaned = {}
     last_system = ""
     system_dir = ""
@@ -912,7 +912,11 @@ def clean_emulators_cfg(items: dict, log_file: str):
             system_dir = os.path.join("/home/pi/RetroPie/roms", parts[0])
             if not os.path.isdir(system_dir):
                 bad_entries += 1
-                log_this(log_file, "Removed Entry: \"{}\" (invalid directory \"{}\")".format(item, system_dir))
+                if check == False:
+                    log_this(log_file, "Removed Entry: \"{}\" (invalid directory \"{}\")".format(item, system_dir))
+                else:
+                    log_this(log_file, "Invalid Entry: \"{}\" (invalid directory \"{}\")".format(item, system_dir))
+
                 continue
             for file in os.scandir(system_dir):
                 if os.path.isfile(file.path):
@@ -923,7 +927,10 @@ def clean_emulators_cfg(items: dict, log_file: str):
             cleaned[item] = items[item]
         else:
             bad_entries += 1
-            log_this(log_file, "Removed Entry: \"{}\" (rom for \"{}\" does not exist)".format(item, item[len(parts[0]) + 1:]))
+            if check == False:
+                log_this(log_file, "Removed Entry: \"{}\" (rom for \"{}\" does not exist)".format(item, item[len(parts[0]) + 1:]))
+            else:
+                log_this(log_file, "Invalid Entry: \"{}\" (rom for \"{}\" does not exist)".format(item, item[len(parts[0]) + 1:]))
 
     return cleaned, bad_entries
 
@@ -950,6 +957,7 @@ def filter_official_emulators_cfg(items: list):
 
 def merge_emulators_cfg(directory):
     emulators_cfg = os.path.join(str(directory), "opt/retropie/configs/all/emulators.cfg")
+    override_cfg = "/home/pi/.update_tool/override_emulators.cfg"
 
     if not os.path.isfile(emulators_cfg):
         return
@@ -963,6 +971,15 @@ def merge_emulators_cfg(directory):
             parts = line.split("=")
             if len(parts) == 2:
                 items[parts[0].strip()] = parts[1].strip()    
+
+    # apply overrides
+    if os.path.isfile(override_cfg):
+        with open(override_cfg, 'r') as configfile:
+            lines_in = configfile.readlines()
+            for line in lines_in:
+                parts = line.split("=")
+                if len(parts) == 2:
+                    items[parts[0].strip()] = parts[1].strip()    
 
     game_counter = write_sorted_emulators_cfg(items)
     
@@ -2474,9 +2491,9 @@ def gamelists_dialog(function: str):
     return
 
 
-def do_remove_logs(logs: list):
+def do_remove_logs(logs: list, logsdir: str):
     for log in logs:
-        log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
+        log_file = os.path.join("/home/pi/.update_tool/{}".format(logsdir), log)
         log_dir = os.path.splitext(log_file)[0]
         if os.path.exists(log_file):
             if os.path.isfile(log_file):
@@ -2511,8 +2528,8 @@ def get_total_path_size(dir: str):
     return None
 
 
-def get_log_size(log: str):
-    log_file = os.path.join("/home/pi/.update_tool/gamelist_logs", log)
+def get_log_size(log: str, subdir: str):
+    log_file = os.path.join("/home/pi/.update_tool/{}".format(subdir), log)
     log_dir = os.path.splitext(log_file)[0]
 
     if os.path.exists(log_file):
@@ -2527,29 +2544,30 @@ def get_log_size(log: str):
     return log_size
 
 
-def logs_dialog(function: str, title: str, patterns: list, multi=True):
+def logs_dialog(logsdir: str, function: str, title: str, patterns: list, multi=True):
     menu_choices = []
     logs = []
     total_size = 0
 
     for pattern in patterns:
-        for log in Path("/home/pi/.update_tool/gamelist_logs").glob(pattern):
+        for log in Path("/home/pi/.update_tool/{}".format(logsdir)).glob(pattern):
             if os.path.exists(log):
                 if os.path.isfile(log):
                     logs.append(os.path.basename(log))
 
     if len(logs) == 0:
         d.msgbox("There are no logs to {}!".format(function.lower()))
-        cls()
-        gamelist_utilities_dialog()
+        #cls()
+        #gamelist_utilities_dialog()
+        return
         
     logs.sort(reverse=True)
     for menu_choice in logs:
-        log_size = get_log_size(menu_choice)
+        log_size = get_log_size(menu_choice, logsdir)
         total_size += log_size
         menu_choices.append((menu_choice + " ({})".format(convert_filesize(str(log_size))), "", False))
 
-    dlg_text = "Log Files in \"/home/pi/.update_tool/gamelist_logs\" ({}):".format(convert_filesize(str(total_size)))
+    dlg_text = "Log Files in \"/home/pi/.update_tool/{}\" ({}):".format(logsdir, convert_filesize(str(total_size)))
     if multi == True:
         code, tags = d.checklist(text=dlg_text,
                                 choices=menu_choices,
@@ -2566,8 +2584,7 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
     selected_logs = []
     selected_items = []
     if code == d.CANCEL:
-        cls()
-        gamelist_utilities_dialog()
+        return
 
     if code == d.OK:
         selected_items = tags
@@ -2583,17 +2600,17 @@ def logs_dialog(function: str, title: str, patterns: list, multi=True):
                 selected_logs.append(selected_item.split(" ")[0])
 
         if function == "Remove":
-            do_remove_logs(selected_logs)
+            do_remove_logs(selected_logs, logsdir)
         elif function == "Restore":
             do_restore_logs(selected_logs)
 
-    cls()
-    gamelist_utilities_dialog()
+    #cls()
+    #gamelist_utilities_dialog()
 
     return
 
 
-def get_emulators_cfg(log_file=""):
+def get_emulators_cfg(log_file="", check=False):
     emulator_cfg = "/opt/retropie/configs/all/emulators.cfg"
     items = {}
     duplicate_counter = 0
@@ -2607,7 +2624,7 @@ def get_emulators_cfg(log_file=""):
             parts = line.split("=")
             if parts[0].strip() in items.keys():
                 if len(log_file) > 0:
-                    log_this(log_file, "-Removed duplicate entry for \"{}\"".format(parts[0].strip()))
+                    log_this(log_file, "-{} duplicate entry for \"{}\"".format("Identified" if check == True else "Removed", parts[0].strip()))
                 duplicate_counter += 1
             if len(parts) == 2:
                 items[parts[0].strip()] = parts[1].strip()
@@ -2635,31 +2652,63 @@ def write_sorted_emulators_cfg(items: dict):
     return game_counter
 
 
-def do_clean_emulators_cfg(auto_clean=False):
+def do_clean_emulators_cfg(check=False, auto_clean=False):
     items = {}
     game_counter = 0
     duplicate_counter = 0
     file_time = datetime.datetime.utcnow()
-    process_type = "auto_clean" if auto_clean == True else "clean"
+    results = ""
+    process_type = "clean"
+    if check == True:
+        process_type = "check"
+    elif auto_clean == True:
+        process_type = "auto_clean"
+
     log_file = "/home/pi/.update_tool/emulators_logs/{}_emulators-{}.log".format(process_type, file_time.strftime("%Y%m%d-%H%M%S"))
 
     if auto_clean == True:
         log_this(log_file, "AUTO ")
-    log_this(log_file, "CLEANING emulators.cfg: started at {}\n\n".format(file_time.strftime("%Y%m%d-%H%M%S")))
+    log_this(log_file, "{}ING emulators.cfg: started at {}\n\n".format("CHECK" if check == True else "CLEAN", file_time.strftime("%Y%m%d-%H%M%S")))
+    log_this(log_file, "\n")
+    
+    items, duplicate_counter = get_emulators_cfg(log_file=log_file, check=check)
+    items, bad_entries = clean_emulators_cfg(items, log_file, check=check)
+    if check == False:
+        game_counter = write_sorted_emulators_cfg(items)
 
-    items, duplicate_counter = get_emulators_cfg()
-    items, bad_entries = clean_emulators_cfg(items, log_file)
-    game_counter = write_sorted_emulators_cfg(items)
+    if check == True:
+        results = "Clean would sort {} game entries.\nIdentified {} duplicate entries.\nIdentified {} bad entries.".format(len(items), duplicate_counter, bad_entries)
+    else:
+        results = "Sorted {} game entries.\nRemoved {} duplicate entries.\nRemoved {} bad entries.".format(len(items), duplicate_counter, bad_entries)
 
+    log_this(log_file, "\n")
+    log_this(log_file, results)
     log_this(log_file, "\n")
     if auto_clean == True:
         log_this(log_file, "AUTO ")
-    log_this(log_file, "CLEANING emulators.cfg: ended at {}".format(datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")))
+    log_this(log_file, "{}ING emulators.cfg: ended at {}".format("CHECK" if check == True else "CLEAN", datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")))
 
-    d.msgbox("Sorted {} game entries.\n\nRemoved {} duplicate entries.\n\nRemoved {} bad entries.".format(game_counter, duplicate_counter, bad_entries))
+    d.msgbox(results)
 
     return
 
+
+def check_clean_emulators_dialog():
+    code, tag = d.menu("Main Menu", 
+                    choices=[("1", "Check Emulators Config"), 
+                             ("2", "Clean Emulators Config"), 
+                             ("3", "Remove Check/Clean Emulators Config Logs")],
+                    title="Check/Clean Emulators Config Utilities")
+    
+    if code == d.OK:
+        if tag == "1":
+            do_clean_emulators_cfg(check=True)
+        elif tag == "2":
+            do_clean_emulators_cfg()
+        elif tag == "3":
+            logs_dialog("emulators_logs", "Remove", "Remove Check/Clean Emulators Config Logs", ["check_emulators*", "clean_emulators*", "auto_clean_emulators*"], multi=True)
+
+    return
 
 def check_clean_utilities_dialog():
     code, tag = d.menu("Main Menu", 
@@ -2675,9 +2724,9 @@ def check_clean_utilities_dialog():
         elif tag == "2":
             gamelists_dialog("Clean")
         elif tag == "3":
-            logs_dialog("Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
+            logs_dialog("gamelist_logs", "Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
         elif tag == "4":
-            logs_dialog("Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
+            logs_dialog("gamelist_logs", "Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
 
     if code == d.CANCEL:
         cls()
@@ -2710,7 +2759,7 @@ def gamelist_utilities_dialog():
                     choices=[("1", "Check/Clean Game List Utilities"), 
                              ("2", "Genre Utilities"), 
                              ("3", "Sort Game Lists"), 
-                             ("4", "Clean Emulators Config"), 
+                             ("4", "Check/Clean Emulators Config Utilities"), 
                              ("5", "Count of Games")],
                     title="Gamelist (Etc) Utilities")
     
@@ -2722,7 +2771,7 @@ def gamelist_utilities_dialog():
         elif tag == "3":
             gamelists_dialog("Sort")
         elif tag == "4":
-            do_clean_emulators_cfg()
+            check_clean_emulators_dialog()
         elif tag == "5":
             gamelists_dialog("Count")
 
@@ -2813,6 +2862,7 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
 
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=True)
+        do_clean_emulators_cfg(check=False, auto_clean=True)
 
 #    if os.path.isdir(path):
 #        if delete == True:
@@ -2876,6 +2926,8 @@ def get_default_update_dir():
     if os.path.exists(tool_ini):
         update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
         if update_dir is not None and os.path.exists(update_dir):
+            if update_dir[-1] != "/":
+                update_dir = update_dir + "/"
             return update_dir
         else:
             if update_dir is not None:
@@ -3419,7 +3471,7 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
     merge_gamelist(extracted)
     merge_emulators_cfg(extracted)
     copydir(extracted, "/")
-
+    
     if check_root(extracted):
         os.system("sudo chown -R root:root /etc/emulationstation/")
 
@@ -3465,6 +3517,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
 
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=False)
+        do_clean_emulators_cfg(check=False, auto_clean=True)
 
     if remove_improvements == True:
         try:
@@ -3813,6 +3866,9 @@ def main():
     if os.path.isfile(tool_ini):
         mega_ini_check()
 
+    if not os.path.isfile("/home/pi/.update_tool/override_emulators.cfg"):
+        log_this("/home/pi/.update_tool/override_emulators.cfg", "# place emulators.cfg entries here that you ABSOLUTELY do not want to get overwritten")
+        
     if len(sys.argv) > 2 and sys.argv[2] == "notify":
         if get_config_value('CONFIG_ITEMS', 'display_notification') not in ["Theme", "Tool"]:
             remove_notification()
@@ -3837,6 +3893,12 @@ def main():
             exit(0)
 
     clean_failures()
+    
+    if update_available_result == "update available":
+        code = d.yesno('\nWe always recommend upgrading to the latest release of this tool.\n\nDo you want to upgrade now?\n', title="Newer Release Available" )
+        
+        if code == d.OK:
+            update_dialog()
 
     global genres
     section = get_config_section("GENRE_MAPPINGS")
