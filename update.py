@@ -2371,7 +2371,7 @@ def do_genre_realignment(systems: list, overwrite=False):
 
     for system in systems:
         system_genre_realignment(system)
-    d.msgbox('done!')
+    d.msgbox('Genre realignment done!')
     main_dialog()
 
     return
@@ -2873,6 +2873,7 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=True)
         do_clean_emulators_cfg(check=False, auto_clean=True)
+        do_genre_realignment(get_all_systems_from_cfg(), True)
 
 #    if os.path.isdir(path):
 #        if delete == True:
@@ -3528,6 +3529,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=False)
         do_clean_emulators_cfg(check=False, auto_clean=True)
+        do_genre_realignment(get_all_systems_from_cfg(), True)
 
     if remove_improvements == True:
         try:
