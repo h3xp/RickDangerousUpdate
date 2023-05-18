@@ -2255,10 +2255,17 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
                         "This utility is currently set to count " + display_count + ".\n"
                         "Because you have chosen to count all systems:\n"
                         "\t-a compiled list af all games, by system, is located in /home/pi/.update_tool/games_list.txt for your reference.\n"
+                        "\t-a a list of games added or removed, by system, is located in /home/pi/.update_tool/games_list_changes.txt for your reference.\n"
                         "\t-a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
         with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
             f.write(systems_text)
 
+        games_list_file = "/home/pi/.update_tool/games_list.txt"
+        games_list_previous = "/tmp/games_list.previous"
+        
+        if os.path.exists(games_list_file):
+            shutil.copy2(games_list_file, games_list_previous)
+            
         for game in games:
             line_text = ""
             #game_list = list(game)
@@ -2267,8 +2274,11 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
                 line_text += game_text + "\t"
             games_text += line_text[:-1] + "\n"
             #games_text += "{}\t{}\t{}\t{}\t{}\t{}\n".format(game[0], game[1], game[2], game[3], game[4], game[5])
-        with open("/home/pi/.update_tool/games_list.txt", 'w', encoding='utf-8') as f:
+        with open(games_list_file, 'w', encoding='utf-8') as f:
             f.write(games_text)
+
+        if os.path.exists(games_list_previous):
+            runcmd("( echo \"System\tGame\n\"; diff --suppress-common-lines -y {} {} | sed -e 's/</- Removed/' -e 's/^[\t ]*>\t\(.*\)/\\1 - Added/' ) >/home/pi/.update_tool/games_list_changes.txt".format(games_list_previous, games_list_file))
 
     d.msgbox(display_text)
 
