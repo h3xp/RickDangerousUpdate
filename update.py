@@ -2746,8 +2746,9 @@ def check_clean_utilities_dialog():
 
 def genre_utilities_dialog():
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Manually Select Genres"), 
-                             ("2", "Realign Genre Collections")],
+                    choices=[("1", "Manually Select Genres"),
+                             ("2", "Realign Genre Collections"),
+                             ("3", "Clear Recent Additions Collection")],
                     title="Genre Utilities")
     
     if code == d.OK:
@@ -2755,6 +2756,8 @@ def genre_utilities_dialog():
             gamelists_dialog("Genre")
         elif tag == "2":
             gamelists_dialog("Realign")
+        elif tag == "3":
+            clear_recently_added_collection()
 
     if code == d.CANCEL:
         cls()
@@ -2845,11 +2848,30 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
     return
     
 
+def get_roms_list(outfile: str):
+    runcmd("find /home/pi/RetroPie/roms -name gamelist.xml | xargs grep '<path>' | sed -e 's/gamelist.xml:\t*<path>\.\///' -e 's/<\/path>//' | sort > {}".format(outfile))
+    
+    return
+
+def update_recently_added_collection():
+    runcmd("diff -y --suppress-common-lines -W 400 /tmp/roms_before /tmp/roms_after | sed -e '/<$/d' -e 's/^[\t ]*>\t//' >> /opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
+    
+    return
+
+def clear_recently_added_collection():
+    if d.yesno(text="Are you sure you want to clear the Recent Additions collection?") == d.OK:
+        runcmd("cat /dev/null > /opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
+    
+    return
+
+
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
     log_file = "/home/pi/.update_tool/process_manual_updates.log"
 
+    get_roms_list("/tmp/roms_before")
+    
     installed_updates = []
     for update in updates:
         if os.path.isdir(path):
@@ -2869,6 +2891,9 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
             set_mega_config_value("INSTALLED_UPDATES", update[0], str(update[2]))
             installed_updates.append(update[0])
 
+    get_roms_list("/tmp/roms_after")
+    update_recently_added_collection()
+    
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=True)
         do_clean_emulators_cfg(check=False, auto_clean=True)
@@ -3500,6 +3525,8 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
     os.makedirs(improvements_dir, exist_ok=True)
     extracted = improvements_dir / "extracted"
 
+    get_roms_list("/tmp/roms_before")
+    
     remove_improvements = True
     installed_updates = []
 #    selected_updates.sort(reverse=True)
@@ -3525,6 +3552,9 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
                 except OSError as e:
                     print("Error: %s : %s" % (extracted, e.strerror))
 
+    get_roms_list("/tmp/roms_after")
+    update_recently_added_collection()
+    
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=False)
         do_clean_emulators_cfg(check=False, auto_clean=True)
