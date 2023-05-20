@@ -2473,7 +2473,6 @@ def gamelists_dialog(function: str):
             gamelist_counts_dialog(tags)
         elif function == "Realign":
             do_genre_realignment(tags)
-            main_dialog()
         elif function == "Sort":
             do_sort_gamelists(tags)
         else:
@@ -2486,7 +2485,6 @@ def gamelists_dialog(function: str):
             gamelist_counts_dialog(systems, True)
         elif function == "Realign":
             do_genre_realignment(systems, True)
-            main_dialog()
         elif function == "Sort":
             do_sort_gamelists(systems)
         else:
