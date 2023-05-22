@@ -877,6 +877,43 @@ def clear_do_not_overwrite_tags(gamelist: str):
     return
 
 
+def clean_recent(collection: str):
+    paths = []
+
+    with open(collection, 'r', encoding='utf-8') as file:
+        lines = file.readlines()
+
+    for line in lines:
+        line = line.strip()
+        if line + "\n" not in paths and os.path.isfile(line):
+            paths.append(line + "\n")
+
+    paths.sort()
+
+    with open(collection, 'w', encoding='utf-8') as file:
+        file.writelines(paths)
+
+    return
+
+
+def write_all_roms(gamelist: str, full_path: str, collection: str):
+    paths = []
+    src_tree = ET.parse(gamelist)
+    src_root = src_tree.getroot()
+
+    for src_game in src_root.iter("game"):
+        path = get_node(src_game, "path", return_none=True).strip()
+        if path is not None:
+            paths.append(os.path.join(full_path, os.path.basename(path)) + "\n")
+
+    paths.sort()
+
+    with open(collection, 'a', encoding='utf-8') as file:
+        file.writelines(paths)
+
+    return
+
+
 def write_origins(gamelist: str, origin: str):
     paths = []
     src_tree = ET.parse(gamelist)
@@ -1043,8 +1080,14 @@ def merge_gamelist(directory):
         if origin is not None:
             write_origins(str(gamelist), str(gamelist).replace("gamelist.xml", origin))
         if os.path.isfile(corr):
-            merge_xml(str(gamelist), str(corr))
+            if "/home/pi/RetroPie/roms/" in str(corr):
+                merge_xml(str(gamelist), str(corr), "/opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
+            else:
+                merge_xml(str(gamelist), str(corr))
+            
             os.remove(str(gamelist))
+        else:
+            write_all_roms(str(gamelist), str(corr).replace("gamelist.xml", ""), "/opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
 
     return
 
@@ -1075,7 +1118,7 @@ def indent(tree, space="  ", level=0):
     _indent_children(tree, 0)
     
 
-def merge_xml(src_xml: str, dest_xml: str):
+def merge_xml(src_xml: str, dest_xml: str, collection=None):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
 
     do_not_overwrite = ["favorite", "lastplayed", "playcount"]
@@ -1095,6 +1138,11 @@ def merge_xml(src_xml: str, dest_xml: str):
             
             parents = dest_tree.findall(".//game[path=\"{}\"]".format(src_path.text))
             if len(parents) == 0:
+                # add the new game to the recently added collection if it is passed
+                if collection is not None:
+                    with open(collection, 'a', encoding='utf-8') as additions:
+                        additions.write(str(dest_xml).replace("gamelist.xml", str(src_path.text).replace("./", "")) + "\n")
+                    
                 dest_root.append(ET.fromstring("<game></game>"))
                 parent = dest_root[len(dest_root) -1]
                 for src_node in src_game:
@@ -2255,10 +2303,17 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
                         "This utility is currently set to count " + display_count + ".\n"
                         "Because you have chosen to count all systems:\n"
                         "\t-a compiled list af all games, by system, is located in /home/pi/.update_tool/games_list.txt for your reference.\n"
+#                        "\t-a a list of games added or removed, by system, is located in /home/pi/.update_tool/games_list_changes.txt for your reference.\n"
                         "\t-a copy of this count is located in /home/pi/.update_tool/counts.txt for your reference.\n\n" + display_text)
         with open("/home/pi/.update_tool/counts.txt", 'w', encoding='utf-8') as f:
             f.write(systems_text)
 
+        games_list_file = "/home/pi/.update_tool/games_list.txt"
+#        games_list_previous = "/tmp/games_list.previous"
+#        
+#        if os.path.exists(games_list_file):
+#            shutil.copy2(games_list_file, games_list_previous)
+            
         for game in games:
             line_text = ""
             #game_list = list(game)
@@ -2267,8 +2322,11 @@ def gamelist_counts_dialog(systems: list, all_systems=False):
                 line_text += game_text + "\t"
             games_text += line_text[:-1] + "\n"
             #games_text += "{}\t{}\t{}\t{}\t{}\t{}\n".format(game[0], game[1], game[2], game[3], game[4], game[5])
-        with open("/home/pi/.update_tool/games_list.txt", 'w', encoding='utf-8') as f:
+        with open(games_list_file, 'w', encoding='utf-8') as f:
             f.write(games_text)
+
+#        if os.path.exists(games_list_previous):
+#            runcmd("( echo \"System\tGame\n\"; diff --suppress-common-lines -y {} {} | sed -e 's/</- Removed/' -e 's/^[\t ]*>\t\(.*\)/\\1 - Added/' ) >/home/pi/.update_tool/games_list_changes.txt".format(games_list_previous, games_list_file))
 
     d.msgbox(display_text)
 
@@ -2361,8 +2419,7 @@ def do_genre_realignment(systems: list, overwrite=False):
 
     for system in systems:
         system_genre_realignment(system)
-    d.msgbox('done!')
-    main_dialog()
+    d.msgbox('Genre realignment done!')
 
     return
 
@@ -2737,8 +2794,9 @@ def check_clean_utilities_dialog():
 
 def genre_utilities_dialog():
     code, tag = d.menu("Main Menu", 
-                    choices=[("1", "Manually Select Genres"), 
-                             ("2", "Realign Genre Collections")],
+                    choices=[("1", "Manually Select Genres"),
+                             ("2", "Realign Genre Collections"),
+                             ("3", "Clear Recent Additions Collection")],
                     title="Genre Utilities")
     
     if code == d.OK:
@@ -2746,6 +2804,8 @@ def genre_utilities_dialog():
             gamelists_dialog("Genre")
         elif tag == "2":
             gamelists_dialog("Realign")
+        elif tag == "3":
+            clear_recently_added_collection()
 
     if code == d.CANCEL:
         cls()
@@ -2836,6 +2896,13 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
     return
     
 
+def clear_recently_added_collection():
+    if d.yesno(text="Are you sure you want to clear the Recent Additions collection?") == d.OK:
+        runcmd("cat /dev/null > /opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
+    
+    return
+
+
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
@@ -2863,6 +2930,8 @@ def process_manual_updates(path: str, updates: list, delete=False, auto_clean=Fa
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=True)
         do_clean_emulators_cfg(check=False, auto_clean=True)
+        do_genre_realignment(get_all_systems_from_cfg(), True)
+        clean_recent("/opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
 
 #    if os.path.isdir(path):
 #        if delete == True:
@@ -3518,6 +3587,8 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
     if auto_clean == True:
         auto_clean_gamelists(installed_updates, manual=False)
         do_clean_emulators_cfg(check=False, auto_clean=True)
+        do_genre_realignment(get_all_systems_from_cfg(), True)
+        clean_recent("/opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
 
     if remove_improvements == True:
         try:

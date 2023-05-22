@@ -30,7 +30,8 @@ Join Rick's discord server to keep track on the latest changes.
         - [Remove Check or Clean Game List Logs](#remove-check-or-clean-game-list-logs)
       - [Genre Utilities](#genre-utilities)
         - [Manually Select Genres](#manually-select-genres)
-        - [Realign Genre Collections]($realign-genre-collections)
+        - [Realign Genre Collections](#realign-genre-collections)
+        - [Clear Recent Additions Collection](#clear-recent-additions-collection)
       - [Sort Game Lists](#sort-game-lists)
       - [Check or Clean Emulators Config Utilities](#check-or-clean-emulators-config-utilities)
         - [Check Emulators Config](#check-emulators-config)
@@ -137,6 +138,10 @@ Allows you to manually select official Rick Dangerous genres for roms that you h
 ##### Realign Genre Collections
 
 Scans gamelist.xml files and completely rebuilds genre collections from gamelist entries.
+
+##### Clear Recent Additions Collection
+
+Resets Recent Additions collection to empty.
 
 #### Sort Game Lists
 
