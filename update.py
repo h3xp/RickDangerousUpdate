@@ -880,18 +880,19 @@ def clear_do_not_overwrite_tags(gamelist: str):
 def clean_recent(collection: str):
     paths = []
 
-    with open(collection, 'r', encoding='utf-8') as file:
-        lines = file.readlines()
+    if os.path.exists(collection):
+        with open(collection, 'r', encoding='utf-8') as file:
+            lines = file.readlines()
 
-    for line in lines:
-        line = line.strip()
-        if line + "\n" not in paths and os.path.isfile(line):
-            paths.append(line + "\n")
+        for line in lines:
+            line = line.strip()
+            if line + "\n" not in paths and os.path.isfile(line):
+                paths.append(line + "\n")
 
-    paths.sort()
+        paths.sort()
 
-    with open(collection, 'w', encoding='utf-8') as file:
-        file.writelines(paths)
+        with open(collection, 'w', encoding='utf-8') as file:
+            file.writelines(paths)
 
     return
 
