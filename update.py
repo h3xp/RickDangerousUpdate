@@ -1067,7 +1067,7 @@ def install_emulators(directory):
     return
 
 
-def merge_gamelist(directory):
+def merge_gamelist(directory: str, official: bool):
     # get origin file
     origin = get_config_value("CONFIG_ITEMS", "origin_file")
     
@@ -1078,7 +1078,7 @@ def merge_gamelist(directory):
         corr = gamelist.parts
         corr = corr[corr.index('extracted')+1:]
         corr = Path("/", *corr)
-        if origin is not None:
+        if official and origin is not None:
             write_origins(str(gamelist), str(gamelist).replace("gamelist.xml", origin))
         if os.path.isfile(corr):
             if "/home/pi/RetroPie/roms/" in str(corr):
@@ -1455,6 +1455,20 @@ def process_cue_file(cue_file: str, src_game: ET.Element, src_tree: ET.ElementTr
                 del cue_files[index]    
 
     return True
+
+
+def get_recursive_m3u_files(m3u_file: str, system_rom_directory: str):
+    # this function get's all files, including .cue files contents, of an .m3u file
+    files = []
+    files = parse_m3u_file(m3u_file, system_rom_directory)
+
+    for file in files:
+        if os.path.splitext(file)[1] == ".cue":
+            cue_files = parse_cue_file(file)
+            if len(cue_files) > 0:
+                files.extend(cue_files)
+
+    return files
 
 
 def parse_m3u_file(m3u_file: str, system_rom_directory: str):
@@ -2875,7 +2889,7 @@ def get_manual_updates(path: str, available_updates: list, good=True):
     return manual_updates
 
 
-def auto_clean_gamelists(installed_updates: list, manual=False):
+def auto_clean_gamelists(installed_updates: list, manual=False, official=True):
     if len(installed_updates) > 0:
         systems = get_all_systems_from_cfg()
         type = "" if manual == False else "MANUAL "
@@ -2886,7 +2900,7 @@ def auto_clean_gamelists(installed_updates: list, manual=False):
             os.mkdir("/home/pi/.update_tool/gamelist_logs")
 
         log_file = "/home/pi/.update_tool/gamelist_logs/auto_clean_gamelists-{}.log".format(file_time.strftime("%Y%m%d-%H%M%S"))
-        log_this(log_file, "AUTO CLEANING {}UPDATES INSTALLED:".format(type))
+        log_this(log_file, "AUTO CLEANING {}{}UPDATES INSTALLED:".format("" if official else "UNOFFICIAL", type))
         for installed_update in installed_updates:
             log_this(log_file, "-{}".format(installed_update))
         log_this(log_file, "")
@@ -2903,6 +2917,43 @@ def clear_recently_added_collection():
     
     return
 
+
+def process_unofficial_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    start_time = datetime.datetime.utcnow()
+    extracted = Path("/", "tmp", "extracted")
+    log_file = "/home/pi/.update_tool/process_manual_updates.log"
+
+    installed_updates = []
+    for update in updates:
+        if os.path.isdir(path):
+            file = os.path.join(path, update)
+            if not os.path.isfile(file):
+                log_this(log_file, "Filename " + file + " can't be located, search for same filename without double spaces")
+                file = re.sub(' +', ' ', file)
+        else:
+            # singular file selected so no need to add filename again
+            file = path
+        if not os.path.isfile(file):
+            log_this(log_file, "Filename " + file + " can't be located, skip update for this")
+        else:
+            if validate_unofficial_update(update):
+                if process_improvement(file, extracted, auto_clean=True, official=False) == True:
+                    if delete == True:
+                        os.remove(file)
+
+            installed_updates.append(update)
+
+    if auto_clean == True:
+        auto_clean_gamelists(installed_updates, manual=True, official=False)
+        #do_clean_emulators_cfg(check=False, auto_clean=True)
+        do_genre_realignment(get_all_systems_from_cfg(), True)
+        clean_recent("/opt/retropie/configs/all/emulationstation/collections/custom-zzz-recent.cfg")
+
+    d.msgbox("{} of {} selected unofficial manual updates installed.\n\nTotal time to process: {}".format(len(installed_updates), len(updates), str(datetime.datetime.utcnow() - start_time)[:-7]))
+    reboot_msg = "\nReboot required for these changes to take effect. Rebooting now.!\n"
+    reboot_dialog(reboot_msg)
+
+    return
 
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
     start_time = datetime.datetime.utcnow()
@@ -2960,7 +3011,7 @@ def get_valid_path_portion(path: str):
     return return_path
 
 
-def manual_updates_dialog(init_path: str, delete: bool):
+def manual_updates_dialog(init_path: str, delete: bool, official=True):
     path = None
     help_text = ("Type the path to directory or file directly into the text entry window."
                   "\nAs you type the directory or file will be highlighted, at this point you can press [Space] to add the highlighted item to the path."
@@ -2969,8 +3020,15 @@ def manual_updates_dialog(init_path: str, delete: bool):
     code, path = d.fselect(init_path, height=10, width=60, help_button=True)
 
     if code == d.OK:
-        if os.path.isdir(path) or os.path.isfile(path):
-            set_config_value("CONFIG_ITEMS", "update_dir", get_valid_path_portion(path))
+        keep_moving = True
+        if not official:
+            official_update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+            keep_moving = not (path == official_update_dir)
+        if keep_moving and (os.path.isdir(path) or os.path.isfile(path)):
+            if official:
+                set_config_value("CONFIG_ITEMS", "update_dir", get_valid_path_portion(path))
+            else:
+                set_config_value("CONFIG_ITEMS", "unofficial_update_dir", get_valid_path_portion(path))
             #official_improvements_dialog(path, delete)
         else:
             d.msgbox("Invalid path " + path)
@@ -2978,13 +3036,13 @@ def manual_updates_dialog(init_path: str, delete: bool):
             path = "/" if len(path) == 0 else path
             d.msgbox("Path is now set to " + path)
             cls()
-            manual_updates_dialog(path, delete)
+            manual_updates_dialog(path, delete, official)
     elif code == d.HELP:
         d.msgbox(help_text)
         path = get_valid_path_portion(path)
         path = "/" if len(path) == 0 else path
         cls()
-        manual_updates_dialog(path, delete)
+        manual_updates_dialog(path, delete, official)
     elif code == d.CANCEL:
         cls()
         main_dialog()
@@ -2992,9 +3050,12 @@ def manual_updates_dialog(init_path: str, delete: bool):
     return path
 
 
-def get_default_update_dir():
+def get_default_update_dir(official=True):
     if os.path.exists(tool_ini):
-        update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+        if official:
+            update_dir = get_config_value("CONFIG_ITEMS", "update_dir")
+        else:
+            update_dir = get_config_value("CONFIG_ITEMS", "unofficial_update_dir")
         if update_dir is not None and os.path.exists(update_dir):
             if update_dir[-1] != "/":
                 update_dir = update_dir + "/"
@@ -3184,9 +3245,10 @@ def improvements_dialog():
     code, tag = d.menu("Select Option", 
                     choices=[("1", "Download and Install Updates"),
                              ("2", "Manually Install Downloaded Updates"), 
-                             ("3", "Update Status"), 
-                             ("4", "Validate Downloaded Updates"), 
-                             ("5", "Manual Updates Story")],
+                             ("3", "Manually Install Downloaded Unofficial Updates"), 
+                             ("4", "Update Status"), 
+                             ("5", "Validate Downloaded Updates"), 
+                             ("6", "Manual Updates Story")],
                     title="Improvements")
 
     if code == d.OK:
@@ -3201,10 +3263,16 @@ def improvements_dialog():
             space_warning()
             downloaded_update_question_dialog()
         elif tag == "3":
-            check_update_status_dialog()
+            update_dir = get_default_update_dir(official=False)
+            update_dir = get_valid_path_portion(update_dir)            
+            update_dir = manual_updates_dialog(update_dir, False, official=False)
+            if update_dir is not None:
+                unofficial_improvements_dialog(update_dir=update_dir, delete=True)
         elif tag == "4":
-            validate_manual_updates()
+            check_update_status_dialog()
         elif tag == "5":
+            validate_manual_updates()
+        elif tag == "6":
             get_manual_updates_story()
 
         cls()
@@ -3373,6 +3441,16 @@ def sort_official_updates(updates: list):
     return retval
 
 
+def get_total_size_of_unofficial_updates(updates: list):
+    total_size = 0
+
+    for update in updates:
+        if os.path.isfile(update):
+            total_size += os.path.getsize(update)
+
+    return convert_filesize(str(total_size))
+
+
 def get_total_size_of_updates(updates: list):
     total_size = 0
 
@@ -3380,6 +3458,47 @@ def get_total_size_of_updates(updates: list):
         total_size += int(update[4])
 
     return convert_filesize(str(total_size))
+
+
+def unofficial_improvements_dialog(update_dir=None, delete=False, available_updates=[], process_improvements=True):
+    selected_updates = []
+    title_msg  = "Manually Install Unofficial Updates"
+    if len(available_updates) == 0:
+        available_updates = get_zip_files(update_dir)
+
+    if len(available_updates) == 0:
+        d.msgbox("No unofficial updates available.")
+        return
+
+    available_updates.sort()
+
+    auto_clean = get_config_value("CONFIG_ITEMS", "auto_clean")
+    auto_clean = False if auto_clean is None else auto_clean == "True"
+
+    menu_choices = []
+    for update in available_updates:
+        menu_choices.append(("{} ({})".format(os.path.basename(update), get_total_size_of_unofficial_updates([update])), "", False))
+
+    code, tags = d.checklist(text="Auto Clean is {}\n\n\nNumber of available updates: {} ({})\n\nAvailable Updates".format("on" if auto_clean == True else "off", len(available_updates), get_total_size_of_unofficial_updates(available_updates)),
+                             choices=menu_choices,
+                             ok_label="Apply Selected", 
+                             extra_button=True, 
+                             extra_label="Apply All", 
+                             title=title_msg)
+
+    if code == d.OK:
+        for tag in tags:
+            for update in available_updates:
+                if "{} ({})".format(os.path.basename(update), get_total_size_of_unofficial_updates([update])) == tag:
+                    selected_updates.append(update)
+                    break        
+    if code == d.EXTRA:
+        selected_updates = available_updates
+    
+    if len(selected_updates) > 0:
+        process_unofficial_manual_updates(update_dir, selected_updates, delete=True, auto_clean=auto_clean)
+
+    return
 
 
 def official_improvements_dialog(update_dir=None, delete=False, available_updates=[], process_improvements=True):
@@ -3526,24 +3645,170 @@ def update_config(extracted: str):
     return
 
 
-def process_improvement(file: str, extracted: str, auto_clean=False):
-    print("Processing official update: {}...".format(os.path.basename(file)))
+def validate_unofficial_update(update):
+    with zipfile.ZipFile(update, 'r') as zip_ref:
+        for file_listing in zip_ref.infolist():
+            file = "/" + file_listing.filename
+            if os.path.isdir(file):
+                continue
+            if "/home/pi/RetroPie/roms" not in file:
+                return False
+
+    return True
+
+
+def is_unofficial_media_official(system: str, media: str, tag: str, media_dir: str):
+    rickdangerous_file = "/home/pi/RetroPie/roms/{}/.RickDangerous".format(system)
+    gamelist = "/home/pi/RetroPie/roms/{}/gamelist.xml".format(system)
+    official_roms = []
+
+    if not os.path.isfile(gamelist):
+        return False
+
+    if os.path.isfile(rickdangerous_file):
+        with open(rickdangerous_file, 'r') as file:
+            official_roms = file.readlines()
+
+    src_tree = ET.parse(gamelist)
+    src_root = src_tree.getroot()
+
+    parents = src_tree.findall(".//game[{}=\"./{}/{}\"]".format(tag, media_dir, media))
+    for parent in parents:
+        rom_file = ""
+        # get rom file
+        src_node = parent.find("path")
+        if src_node is not None:
+            if src_node.text is not None:
+                rom_file = os.path.basename(src_node.text)        
+                # check if rom is in official roms
+                if "./" + rom_file + "\n" in official_roms:
+                    return True
+                
+    return False
+
+
+def prepare_unofficial_update(directory):
+    roms_dir = "/home/pi/RetroPie/roms/"
+    bad_roms = []
+    # check if gamelist.xml has been updated
+    for gamelist in Path(directory).rglob('gamelist.xml'):
+        system = ""
+        offical_roms = []
+        parts = str(gamelist).split("/")
+        if len(parts) > 1:
+            system = parts[len(parts) - 2]
+
+        if len(system) == 0:
+            continue
+
+        rickdangerous_file = "{}/{}/.RickDangerous".format(roms_dir, system)
+        if os.path.isfile(rickdangerous_file):
+            with open(rickdangerous_file, 'r') as file:
+                official_roms = file.readlines()
+
+        src_tree = ET.parse(gamelist)
+        src_root = src_tree.getroot()
+
+        for src_game in src_root.iter("game"):
+            rom_file = ""
+            img_file = ""
+            snap_file = ""
+
+            # get rom file
+            src_node = src_game.find("path")
+            if src_node is not None:
+                if src_node.text is not None:
+                    rom_file = os.path.basename(src_node.text)
+            # get img file
+            src_node = src_game.find("image")
+            if src_node is not None:
+                if src_node.text is not None:
+                    img_file = os.path.basename(src_node.text)
+            # get snap file
+            src_node = src_game.find("video")
+            if src_node is not None:
+                if src_node.text is not None:
+                    snap_file = os.path.basename(src_node.text)
+
+            # check if rom is in official roms
+            if "./" + rom_file + "\n" in official_roms:
+                bad_roms.append([rom_file, img_file, snap_file])
+
+        # remove entry that shouldn't be there
+        for rom in bad_roms:
+            rom_file = rom[0]
+            img_file = rom[1]
+            snap_file = rom[2]
+            m3u_files = []
+            parents = src_tree.findall(".//game[path=\"./{}\"]".format(rom_file))
+            for parent in parents:
+                src_root.remove(parent)
+
+            # remove rom file
+            file = "{}/{}/{}/{}".format(directory, roms_dir, system, rom_file)
+            file = file.replace("//", "/")
+            if os.path.isfile(file):
+                # deal with .cue files
+                if os.path.splitext(file)[1] == ".cue":
+                    cue_files = parse_cue_file(file)
+                    for cue_file in cue_files:
+                        if os.path.isfile(cue_file):
+                            os.remove(cue_file)
+                # deal with .m3u files
+                if os.path.splitext(file)[1] == ".m3u":
+                    m3u_files = get_recursive_m3u_files(file, os.path.dirname(file))
+                    for m3u_file in m3u_files:
+                        if os.path.isfile(m3u_file):
+                            os.remove(m3u_file)
+                os.remove(file)
+            # remove img file
+            file = "{}/{}/{}/boxart/{}".format(directory, roms_dir, system, img_file)
+            file = file.replace("//", "/")
+            if os.path.isfile(file):
+                os.remove(file)
+            # remove snaps file
+            file = "{}/{}/{}/snaps/{}".format(directory, roms_dir, system, rom_file)
+            file = file.replace("//", "/")
+            if os.path.isfile(file):
+                os.remove(file)
+            
+        with open(gamelist, "wb") as file:
+            src_tree.write(file, "utf-8")
+
+        # we will check all remaining image/video files...
+        # check img files
+        for img_file in os.listdir(os.path.dirname(str(gamelist)) + "/boxart"):
+            if is_unofficial_media_official(system, os.path.basename(img_file), "image", "boxart"):
+                os.remove(os.path.dirname(str(gamelist)) + "/boxart/" + img_file)
+        # check snap files
+        for snap_file in os.listdir(os.path.dirname(str(gamelist)) + "/snaps"):
+            if is_unofficial_media_official(system, os.path.basename(snap_file), "video", "snaps"):
+                os.remove(os.path.dirname(str(gamelist)) + "/snaps/" + snap_file)
+
+    return
+
+
+def process_improvement(file: str, extracted: str, auto_clean=False, official=True):
+    print("Processing {}official update: {}...".format("un" if not official else "", os.path.basename(file)))
     with zipfile.ZipFile(file, 'r') as zip_ref:
         zip_ref.extractall(extracted)
 
-    if check_root(extracted):
-        os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
-        os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
-
-    update_config(extracted)
-    make_deletions(extracted)
-    install_emulators(extracted)
-    merge_gamelist(extracted)
-    merge_emulators_cfg(extracted)
+    if official:
+        if check_root(extracted):
+            os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
+            os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+        update_config(extracted)
+        make_deletions(extracted)
+        install_emulators(extracted)
+    else:
+        prepare_unofficial_update(extracted)
+    merge_gamelist(extracted, official)
+    if official:
+        merge_emulators_cfg(extracted)
     copydir(extracted, "/")
-    
-    if check_root(extracted):
-        os.system("sudo chown -R root:root /etc/emulationstation/")
+    if official:
+        if check_root(extracted):
+            os.system("sudo chown -R root:root /etc/emulationstation/")
 
     try:
         shutil.rmtree(extracted)
@@ -3552,6 +3817,21 @@ def process_improvement(file: str, extracted: str, auto_clean=False):
         return False
 
     return True
+
+
+def do_unofficial_improvements(selected_updates: list, auto_clean=True):
+    start_time = datetime.datetime.utcnow()
+    improvements_dir = Path("/", "tmp", "improvements")
+    os.makedirs(improvements_dir, exist_ok=True)
+    extracted = improvements_dir / "extracted"
+
+    remove_improvements = True
+    installed_updates = []
+
+    for update in selected_updates:
+        improvement_passed = process_improvement(update, extracted)
+
+    return
 
 
 def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
