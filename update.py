@@ -2490,6 +2490,243 @@ def do_sort_gamelists(systems: list):
     return
 
 
+def return_invalid_files(files: list):
+    invalid_files = []
+    for file in files:
+        if not os.path.isfile(file):
+            invalid_files.append(file)
+
+    return invalid_files
+
+
+def do_process_unofficial_package(selected_items: list, name: str):
+    start_time = datetime.datetime.utcnow()
+    tmp_dir = Path("/", "tmp", "package")
+    rom_dir = "/home/pi/RetroPie/roms"
+    do_not_overwrite = ["favorite", "lastplayed", "playcount"]
+    total_size = 0
+    game_number = 0
+    counter = 0
+
+    print("Packaging {} games into {}.zip".format(len(selected_items), name))
+    if os.path.isdir(str(tmp_dir)):
+        shutil.rmtree(str(tmp_dir))
+
+    for selected_item in selected_items:
+        game_size = 0
+        system = selected_item[0]
+        rom_file = selected_item[1]
+        img_file = ""
+        snap_file = ""
+        counter += 1
+
+        gamelist = "{}/{}/gamelist.xml".format(rom_dir, system)
+        system_dir = "{}/{}/".format(rom_dir, system)
+        if not os.path.isfile(gamelist):
+            continue
+
+        print("Now Packaging Game {} of {}: [{}]\t{}\t({})".format(counter, len(selected_items), system, selected_item[2], rom_file))
+        src_tree = ET.parse(gamelist)
+        src_root = src_tree.getroot()
+
+        parent = src_tree.find(".//game[path=\"./{}\"]".format(rom_file))
+        if parent is not None:
+            node = parent.find("image")
+            if node is not None:
+                if node.text is not None:
+                    img_file = node.text
+            node = parent.find("video")
+            if node is not None:
+                if node.text is not None:
+                    snap_file = node.text
+
+            # do the intial check to see if the elements exist in the xml file
+            if len(img_file) == 0:
+                print("-no image file defined, not processing...")
+                continue
+            elif len(snap_file) == 0:
+                print("-no snap file defined, not processing...")
+                continue
+
+            rom_file = system_dir + rom_file
+            img_file = img_file.replace("./", system_dir)
+            snap_file = snap_file.replace("./", system_dir)
+            # do final check
+            if not os.path.isfile(rom_file):
+                print("-missing rom file \"{}\", not procesing...".format(rom_file))
+                continue
+            elif not os.path.isfile(img_file):
+                print("-missing image file \"{}\", not procesing...".format(img_file))
+                continue
+            elif not os.path.isfile(snap_file):
+                print("-missing snap file \"{}\", not procesing...".format(snap_file))
+                continue
+
+            # deal with .cue and .m3u files...
+            if os.path.splitext(rom_file)[1] == ".cue":
+                cue_files = parse_cue_file(rom_file)
+                if len(return_invalid_files(cue_files)) > 0:
+                    print("-cue file has invalid entries, not processing...")
+                    continue
+                for cue_file in cue_files:
+                    if os.path.isfile(cue_file):
+                        os.makedirs(str(tmp_dir) + os.path.dirname(cue_file), exist_ok=True)
+                        file_size = os.path.getsize(cue_file)
+                        total_size += file_size
+                        print("-now copying: {} ({})".format(cue_file, convert_filesize(str(file_size))))
+                        shutil.copyfile(cue_file, str(tmp_dir) + cue_file)                        
+            if os.path.splitext(rom_file)[1] == ".m3u":
+                m3u_files = get_recursive_m3u_files(rom_file, os.path.dirname(rom_file))
+                if len(return_invalid_files(m3u_files)) > 0:
+                    print("-m3u file has invalid entries, not processing...")
+                    continue
+                for m3u_file in m3u_files:
+                    if os.path.isfile(m3u_file):
+                        os.makedirs(str(tmp_dir) + os.path.dirname(m3u_file), exist_ok=True)
+                        file_size = os.path.getsize(m3u_file)
+                        total_size += file_size
+                        print("-now copying: {} ({})".format(m3u_file, convert_filesize(str(file_size))))
+                        shutil.copyfile(m3u_file, str(tmp_dir) + m3u_file)                        
+
+            os.makedirs(str(tmp_dir) + os.path.dirname(rom_file), exist_ok=True)
+            file_size = os.path.getsize(rom_file)
+            total_size += file_size
+            print("-now copying: {} ({})".format(rom_file, convert_filesize(str(file_size))))
+            shutil.copyfile(rom_file, str(tmp_dir) + rom_file)
+
+            os.makedirs(str(tmp_dir) + os.path.dirname(img_file), exist_ok=True)
+            file_size = os.path.getsize(img_file)
+            total_size += file_size
+            print("-now copying: {} ({})".format(img_file, convert_filesize(str(file_size))))
+            shutil.copyfile(img_file, str(tmp_dir) + img_file)
+
+            os.makedirs(str(tmp_dir) + os.path.dirname(snap_file), exist_ok=True)
+            file_size = os.path.getsize(snap_file)
+            total_size += file_size
+            print("-now copying: {} ({})".format(snap_file, convert_filesize(str(file_size))))
+            shutil.copyfile(snap_file, str(tmp_dir) + snap_file)
+
+            if not os.path.isfile(str(tmp_dir) + gamelist):
+                with open(str(tmp_dir) + gamelist, 'wb') as file:
+                    file.write(bytes("<gamelist></gamelist>", 'utf-8'))
+
+            #merge_xml(gamelist, str(tmp_dir) + gamelist)
+            dest_tree = ET.parse(str(tmp_dir) + gamelist)
+            dest_root = dest_tree.getroot()
+            
+            print("-adding to gamelist.xml")
+            dest_root.append(ET.fromstring("<game></game>"))
+            dest_parent = dest_root[len(dest_root) - 1]
+            for src_node in parent:
+                if src_node.tag not in do_not_overwrite:
+                    child = ET.SubElement(dest_parent, src_node.tag)
+                    child.text = src_node.text
+
+            indent(dest_root, space="\t", level=0)
+            with open(str(tmp_dir) + gamelist, "wb") as fh:
+                dest_tree.write(fh, "utf-8")
+
+            game_number += 1
+
+    for gamelist_file in tmp_dir.rglob('gamelist.xml'):
+        total_size += os.path.getsize(gamelist_file)
+
+    zip_file = "/home/pi/.update_tool/unofficial_packages/{}.zip".format(name)
+    os.makedirs(os.path.dirname(zip_file), exist_ok=True)
+
+    print("-compressing {} into {}.zip".format(convert_filesize(str(total_size)), name))
+    with zipfile.ZipFile(zip_file,'w') as zip:
+        # writing each file one by one
+        for file in tmp_dir.glob('**/*'):
+            if str(file) == zip_file:
+                continue
+            zip.write(file, arcname=file.relative_to(tmp_dir), compress_type=zipfile.ZIP_DEFLATED)        
+
+    shutil.rmtree(str(tmp_dir))
+
+    d.msgbox("Complete!\n\nPackaged {} of {} games ({}) in {}.\n\nYour file is located at:\n{}".format(game_number, len(selected_items), convert_filesize(str(total_size)), str(datetime.datetime.utcnow() - start_time)[:-7], zip_file))
+
+    return
+
+
+def package_unofficial_update_name_dialog():
+    code, string = d.inputbox("What would you like to name your update package?")
+    if code == d.OK:
+        return string
+    
+    return None
+
+
+def package_unofficial_update_dialog(systems: list):
+    rom_dir = "/home/pi/RetroPie/roms"
+    dialog_title = "Package Unofficial Update"
+    menu_choices = []
+    all_roms = {}
+    selected_items = []
+
+    for system in systems:
+        official_roms = []
+        gamelist = "{}/{}/gamelist.xml".format(rom_dir, system)
+
+        rickdangerous_file = "{}/{}/.RickDangerous".format(rom_dir, system)
+        if os.path.isfile(rickdangerous_file):
+            with open(rickdangerous_file, 'r') as file:
+                official_roms = file.readlines()
+
+        src_tree = ET.parse(gamelist)
+        src_root = src_tree.getroot()
+
+        for src_game in src_root.iter("game"):
+            rom_file = ""
+            name = ""
+
+            # get rom file
+            src_node = src_game.find("path")
+            if src_node is not None:
+                if src_node.text is not None:
+                    rom_file = os.path.basename(src_node.text)
+                # get rom file
+            src_node = src_game.find("name")
+            if src_node is not None:
+                if src_node.text is not None:
+                    name = src_node.text
+
+            # just to be sure that name or path is not empty
+            if len(rom_file) == 0 or len(name) == 0:
+                continue
+
+            # check if rom is official
+            if "./" + rom_file + "\n" in official_roms:
+                continue
+
+            menu_choice = "{}\t{}\t{}".format("[" + system + "]", name, "(" + rom_file + ")")
+            menu_choices.append((menu_choice, "", False))
+            all_roms[menu_choice] = (system, rom_file, name)
+
+    menu_choices.sort()
+    code, tags = d.checklist(text="Select Games:",
+                choices=menu_choices,
+                ok_label="Add Selected", 
+                extra_button=True, 
+                extra_label="Add All", 
+                title=dialog_title)
+    
+    if code == d.OK:
+        for tag in tags:
+            selected_items.append(all_roms[tag])
+
+    if code == d.EXTRA:
+        for selected_item in all_roms.keys():
+            selected_items.append(all_roms[selected_item])
+
+    if len(selected_items) > 0:
+        name = package_unofficial_update_name_dialog()
+        if name is not None and len(name) > 0:
+            do_process_unofficial_package(selected_items, name)
+
+    return
+
+
 def gamelists_dialog(function: str):
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -2514,6 +2751,9 @@ def gamelists_dialog(function: str):
     elif function == "Count":
         dialog_title = "Count of Games"
         button_text = "Count"
+    elif function == "Package":
+        dialog_title = "Package Unofficial Update"
+        button_text = "Select"
 
     systems = get_all_systems_from_cfg()
     menu_choices = []
@@ -2538,6 +2778,9 @@ def gamelists_dialog(function: str):
             do_genre_realignment(tags)
         elif function == "Sort":
             do_sort_gamelists(tags)
+        elif function == "Package":
+            return tags
+            #package_unofficial_update_dialog(tags)
         else:
             gamelists_orphan_dialog(tags, function == "Clean")
 
@@ -2550,6 +2793,9 @@ def gamelists_dialog(function: str):
             do_genre_realignment(systems, True)
         elif function == "Sort":
             do_sort_gamelists(systems)
+        elif function == "Package":
+            return systems
+            #package_unofficial_update_dialog(systems)
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
@@ -3246,9 +3492,10 @@ def improvements_dialog():
                     choices=[("1", "Download and Install Updates"),
                              ("2", "Manually Install Downloaded Updates"), 
                              ("3", "Manually Install Downloaded Unofficial Updates"), 
-                             ("4", "Update Status"), 
-                             ("5", "Validate Downloaded Updates"), 
-                             ("6", "Manual Updates Story")],
+                             ("4", "Package Unofficial Update"), 
+                             ("5", "Update Status"), 
+                             ("6", "Validate Downloaded Updates"), 
+                             ("7", "Manual Updates Story")],
                     title="Improvements")
 
     if code == d.OK:
@@ -3269,10 +3516,15 @@ def improvements_dialog():
             if update_dir is not None:
                 unofficial_improvements_dialog(update_dir=update_dir, delete=True)
         elif tag == "4":
-            check_update_status_dialog()
+            systems = None
+            systems = gamelists_dialog("Package")
+            if systems is not None:
+                package_unofficial_update_dialog(systems)
         elif tag == "5":
-            validate_manual_updates()
+            check_update_status_dialog()
         elif tag == "6":
+            validate_manual_updates()
+        elif tag == "7":
             get_manual_updates_story()
 
         cls()
