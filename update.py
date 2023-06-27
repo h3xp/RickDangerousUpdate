@@ -2657,9 +2657,8 @@ def package_unofficial_update_name_dialog():
     return None
 
 
-def package_unofficial_update_dialog(systems: list):
+def unofficial_update_dialog(systems: list, dialog_title: str):
     rom_dir = "/home/pi/RetroPie/roms"
-    dialog_title = "Package Unofficial Update"
     menu_choices = []
     all_roms = {}
     selected_items = []
@@ -2704,7 +2703,7 @@ def package_unofficial_update_dialog(systems: list):
             all_roms[menu_choice] = (system, rom_file, name)
 
     menu_choices.sort()
-    code, tags = d.checklist(text="Select Games:",
+    code, tags = d.checklist(text="Select Games",
                 choices=menu_choices,
                 ok_label="Add Selected", 
                 extra_button=True, 
@@ -2719,12 +2718,7 @@ def package_unofficial_update_dialog(systems: list):
         for selected_item in all_roms.keys():
             selected_items.append(all_roms[selected_item])
 
-    if len(selected_items) > 0:
-        name = package_unofficial_update_name_dialog()
-        if name is not None and len(name) > 0:
-            do_process_unofficial_package(selected_items, name)
-
-    return
+    return selected_items
 
 
 def gamelists_dialog(function: str):
@@ -2754,6 +2748,9 @@ def gamelists_dialog(function: str):
     elif function == "Package":
         dialog_title = "Package Unofficial Update"
         button_text = "Select"
+    elif function == "Package":
+        dialog_title = "Remove Unofficial Roms"
+        button_text = "Select"
 
     systems = get_all_systems_from_cfg()
     menu_choices = []
@@ -2780,7 +2777,9 @@ def gamelists_dialog(function: str):
             do_sort_gamelists(tags)
         elif function == "Package":
             return tags
-            #package_unofficial_update_dialog(tags)
+            #unofficial_update_dialog(tags)
+        elif function == "Remove":
+            return tags
         else:
             gamelists_orphan_dialog(tags, function == "Clean")
 
@@ -2795,7 +2794,9 @@ def gamelists_dialog(function: str):
             do_sort_gamelists(systems)
         elif function == "Package":
             return systems
-            #package_unofficial_update_dialog(systems)
+            #unofficial_update_dialog(systems)
+        elif function == "Remove":
+            return systems
         else:
             gamelists_orphan_dialog(systems, function == "Clean")        
 
@@ -3028,12 +3029,38 @@ def check_clean_emulators_dialog():
 
     return
 
+
+def do_clean_unofficial_roms(selected_items: list):
+    for selected_item in selected_items:
+        system = selected_item[0]
+        rom_file = selected_item[1]
+
+        gamelist = "/home/pi/RetroPie/roms/{}/gamelist.xml".format(system)
+        if not os.path.isfile(gamelist):
+            continue
+
+        src_tree = ET.parse(gamelist)
+        src_root = src_tree.getroot()
+
+        parents = src_tree.findall(".//game[path=\"./{}\"]".format(rom_file))
+        for parent in parents:
+            src_root.remove(parent)
+            
+    with open(gamelist, "wb") as fh:
+        src_tree.write(fh, "utf-8")
+
+    clean_unofficial_roms(selected_items)
+
+    return
+
+
 def check_clean_utilities_dialog():
     code, tag = d.menu("Main Menu", 
                     choices=[("1", "Check Game Lists"), 
                              ("2", "Clean Game Lists"), 
                              ("3", "Restore Clean Game List Logs"), 
-                             ("4", "Remove Check/Clean Game List Logs")],
+                             ("4", "Remove Check/Clean Game List Logs"), 
+                             ("5", "Clean Unoffical Roms")],
                     title="Check/Clean Game List Utilities")
     
     if code == d.OK:
@@ -3045,6 +3072,13 @@ def check_clean_utilities_dialog():
             logs_dialog("gamelist_logs", "Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
         elif tag == "4":
             logs_dialog("gamelist_logs", "Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
+        elif tag == "5":
+            systems = None
+            systems = gamelists_dialog("Remove")
+            if systems is not None:
+                selected_items = unofficial_update_dialog(systems, "Clean Unoffical Roms")
+                if len(selected_items) > 0:
+                    do_clean_unofficial_roms(selected_items)
 
     if code == d.CANCEL:
         cls()
@@ -3133,6 +3167,37 @@ def get_manual_updates(path: str, available_updates: list, good=True):
                 manual_updates.append(update)
 
     return manual_updates
+
+
+def clean_unofficial_roms(selected_items: list):
+    file_time = datetime.datetime.utcnow()
+    log_file = "/home/pi/.update_tool/gamelist_logs/clean_unofficial_roms-{}.log".format(file_time.strftime("%Y%m%d-%H%M%S"))
+    systems = []
+    if len(selected_items) > 0:
+        log_this(log_file, "CLEANING UNOFFICIAL ROMS:", overwrite=True)
+        for selected_item in selected_items:
+            system = selected_item[0]
+            rom = selected_item[1]
+            name = selected_item[2]
+
+            if selected_item[0] == None or selected_item[1] == None or selected_item[2] == None:
+                continue
+
+            log_this(log_file, "-[{}]\t{}\t({})".format(system, name, rom))
+            if system not in systems:
+                systems.append(system)
+
+        log_this(log_file, "")
+        log_this(log_file, "\nSYSTEMS CLEANED:")
+        systems.sort()
+        for system in systems:
+            log_this(log_file, "-{}".format(system))
+        log_this(log_file, "")
+        log_this(log_file, "")
+
+        do_process_gamelists(systems, del_roms=True, del_art=True, del_snaps=True, del_m3u=True, clean=True, log_file=log_file, auto_clean=True)
+    
+    return
 
 
 def auto_clean_gamelists(installed_updates: list, manual=False, official=True):
@@ -3313,29 +3378,19 @@ def get_default_update_dir(official=True):
     return "/"
 
 
-def downloaded_update_question_dialog():
-    code = d.yesno(text="You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
-                        "\nThis will process the .zip file(s)?"
-                        "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package."
-                        "\n\nSelecting \"Keep\" will keep the .zip files once the process is complete."
+def downloaded_update_question_dialog(official=True):
+    message_text = ("You will be asked to choose a .zip file to load, or a directory where multiple .zip files are located."
+                    "\nThis will process the .zip file(s)?"
+                    "\n\nIf the name of a .zip file is identified as a valid official update, it will be processed as an official update package.")
+    if not official:
+        message_text = ("You are now processing unofficial updates, these files will be processed in a manner that prioritizes the official build image."
+                        "\nYou will not overwrite official roms and assets.")
+                        
+    code = d.yesno(text=message_text + "\n\nSelecting \"Keep\" will keep the .zip files once the process is complete."
                         "\nSelecting \"Delete\" will delete the .zip files once the process is complete."
                         "\n\nWould you like to remove .zip files?", yes_label="Keep", no_label="Delete")
 
-    update_dir = get_default_update_dir()
-    update_dir = get_valid_path_portion(update_dir)
-
-    if code == d.OK:
-        update_dir = manual_updates_dialog(update_dir, False)
-        if update_dir is not None:
-            official_improvements_dialog(update_dir, False)
-        
-
-    if code == d.CANCEL:
-        update_dir = manual_updates_dialog(update_dir, True)
-        if update_dir is not None:
-            official_improvements_dialog(update_dir, True)
-
-    return
+    return code
 
 
 def check_update_status_dialog(available_updates=[]):
@@ -3508,18 +3563,26 @@ def improvements_dialog():
                 official_improvements_dialog()
         elif tag == "2":
             space_warning()
-            downloaded_update_question_dialog()
+            update_dir = get_default_update_dir()
+            update_dir = get_valid_path_portion(update_dir)
+            code = downloaded_update_question_dialog()
+            official_improvements_dialog(update_dir, delete=False if code == d.OK else True)
         elif tag == "3":
             update_dir = get_default_update_dir(official=False)
             update_dir = get_valid_path_portion(update_dir)            
             update_dir = manual_updates_dialog(update_dir, False, official=False)
             if update_dir is not None:
-                unofficial_improvements_dialog(update_dir=update_dir, delete=True)
+                code = downloaded_update_question_dialog(official=False)
+                unofficial_improvements_dialog(update_dir=update_dir, delete=False if code == d.OK else True)
         elif tag == "4":
             systems = None
             systems = gamelists_dialog("Package")
             if systems is not None:
-                package_unofficial_update_dialog(systems)
+                selected_items = unofficial_update_dialog(systems, "Package Unofficial Update")
+                if len(selected_items) > 0:
+                    name = package_unofficial_update_name_dialog()
+                    if name is not None and len(name) > 0:
+                        do_process_unofficial_package(selected_items, name)
         elif tag == "5":
             check_update_status_dialog()
         elif tag == "6":
