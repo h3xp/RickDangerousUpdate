@@ -1199,7 +1199,6 @@ def check_internet():
 def update_available():
     url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
     try:
-        return False
         resp = requests.get(url)
         latest_tag = resp.json().get('tag_name').replace("v","")
     except requests.exceptions.RequestException as e:
