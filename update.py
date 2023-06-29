@@ -2507,8 +2507,14 @@ def do_process_unofficial_package(selected_items: list, name: str):
     total_size = 0
     game_number = 0
     counter = 0
+    systems = []
+    no_m3u_support = ["atari800"]
 
+    packaging_options = get_config_value("CONFIG_ITEMS", "packaging_options",return_none=False).strip().split(",")
     print("Packaging {} games into {}.zip".format(len(selected_items), name))
+    if "FULL_GAMELIST" in packaging_options:
+        print("Including full gammelist.xml files")
+    
     if os.path.isdir(str(tmp_dir)):
         shutil.rmtree(str(tmp_dir))
 
@@ -2520,6 +2526,8 @@ def do_process_unofficial_package(selected_items: list, name: str):
         snap_file = ""
         counter += 1
 
+        if system not in systems:
+            systems.append(system)
         gamelist = "{}/{}/gamelist.xml".format(rom_dir, system)
         system_dir = "{}/{}/".format(rom_dir, system)
         if not os.path.isfile(gamelist):
@@ -2588,6 +2596,15 @@ def do_process_unofficial_package(selected_items: list, name: str):
                         print("-now copying: {} ({})".format(m3u_file, convert_filesize(str(file_size))))
                         shutil.copyfile(m3u_file, str(tmp_dir) + m3u_file)                        
 
+            # deal with no m3u support <- this is a hack that Rick does
+            if system in no_m3u_support:
+                data_file = "{}/{}/.data/{}".format(rom_dir, system, os.path.basename(rom_file))
+                if os.path.isdir(Path(data_file).with_suffix("")):
+                    data_dir = str(Path(data_file).with_suffix(""))
+                    if os.path.isdir(str(tmp_dir) + data_dir):
+                        shutil.rmtree(str(tmp_dir) + data_dir)
+                    shutil.copytree(data_dir, str(tmp_dir) + data_dir)
+
             os.makedirs(str(tmp_dir) + os.path.dirname(rom_file), exist_ok=True)
             file_size = os.path.getsize(rom_file)
             total_size += file_size
@@ -2628,8 +2645,13 @@ def do_process_unofficial_package(selected_items: list, name: str):
 
             game_number += 1
 
-    for gamelist_file in tmp_dir.rglob('gamelist.xml'):
-        total_size += os.path.getsize(gamelist_file)
+    if "FULL_GAMELIST" not in packaging_options:
+        for gamelist_file in tmp_dir.rglob('gamelist.xml'):
+            total_size += os.path.getsize(gamelist_file)
+    else:
+        for system in systems:
+            gamelist = "{}/{}/gamelist.xml".format(rom_dir, system)
+            shutil.copyfile(gamelist, str(tmp_dir) + gamelist)
 
     zip_file = "/home/pi/.update_tool/unofficial_packages/{}.zip".format(name)
     os.makedirs(os.path.dirname(zip_file), exist_ok=True)
@@ -3247,6 +3269,7 @@ def process_unofficial_manual_updates(path: str, updates: list, delete=False, au
         if not os.path.isfile(file):
             log_this(log_file, "Filename " + file + " can't be located, skip update for this")
         else:
+            print("Now preparing unoffical update {}".format(os.path.basename(update)))
             if validate_unofficial_update(update):
                 if process_improvement(file, extracted, auto_clean=True, official=False) == True:
                     if delete == True:
@@ -4004,7 +4027,24 @@ def is_unofficial_media_official(system: str, media: str, tag: str, media_dir: s
 
 def prepare_unofficial_update(directory):
     roms_dir = "/home/pi/RetroPie/roms/"
+    tmp_roms_dir = str(directory) + roms_dir
     bad_roms = []
+    all_files = []
+    no_m3u_support = ["atari800"]
+
+    
+    for file in directory.glob('**/*'):
+        if os.path.isfile(str(file)) and "/home/pi/RetroPie/roms/" in str(file):
+            if not os.path.basename(file) == "gamelist.xml":
+                all_files.append(str(file))
+
+    for system in no_m3u_support:
+        data_dir = "/home/pi/RetroPie/roms/{}/.data/".format(system)
+        indices = [position for position, phrase in enumerate(all_files) if data_dir in phrase]
+        indices.sort(reverse=True)
+        for index in indices:
+            del all_files[index]
+
     # check if gamelist.xml has been updated
     for gamelist in Path(directory).rglob('gamelist.xml'):
         system = ""
@@ -4034,20 +4074,46 @@ def prepare_unofficial_update(directory):
             if src_node is not None:
                 if src_node.text is not None:
                     rom_file = os.path.basename(src_node.text)
+                    # keep rom files
+                    tmp_rom_file = str(directory) + src_node.text.replace("./", roms_dir + system + "/")
+                    if tmp_rom_file in all_files:
+                        all_files.remove(tmp_rom_file)
+                    # deal with .cue files
+                    if os.path.splitext(tmp_rom_file)[1] == ".cue":
+                        cue_files = parse_cue_file(tmp_rom_file)
+                        for cue_file in cue_files:
+                            if cue_file in all_files:
+                                all_files.remove(cue_file)
+                    # deal with .m3u files
+                    if os.path.splitext(tmp_rom_file)[1] == ".m3u":
+                        m3u_files = get_recursive_m3u_files(tmp_rom_file, os.path.dirname(tmp_rom_file))
+                        for m3u_file in m3u_files:
+                            if m3u_file in all_files:
+                                all_files.remove(m3u_file)
+                    # deal with no_m3u_support <-- not needed any more, dealt with above
+                    #tmp_data_dir = os.path.dirname(str(directory) + src_node.text.replace("./", roms_dir + system + "/")) + "/.data/" + str(Path(rom_file).with_suffix(""))
             # get img file
             src_node = src_game.find("image")
             if src_node is not None:
                 if src_node.text is not None:
                     img_file = os.path.basename(src_node.text)
+                    # keep img files
+                    tmp_img_file = str(directory) + src_node.text.replace("./", roms_dir + system + "/")
+                    if tmp_img_file in all_files:
+                        all_files.remove(tmp_img_file)
             # get snap file
             src_node = src_game.find("video")
             if src_node is not None:
                 if src_node.text is not None:
                     snap_file = os.path.basename(src_node.text)
+                    # keep snap files
+                    tmp_snap_file = str(directory) + src_node.text.replace("./", roms_dir + system + "/")
+                    if tmp_snap_file in all_files:
+                        all_files.remove(tmp_snap_file)
 
             # check if rom is in official roms
             if "./" + rom_file + "\n" in official_roms:
-                bad_roms.append([rom_file, img_file, snap_file])
+                bad_roms.append([tmp_rom_file, tmp_img_file, tmp_snap_file])
 
         # remove entry that shouldn't be there
         for rom in bad_roms:
@@ -4055,41 +4121,47 @@ def prepare_unofficial_update(directory):
             img_file = rom[1]
             snap_file = rom[2]
             m3u_files = []
+
+            print("removing \"offical\" rom {}".format(rom))
             parents = src_tree.findall(".//game[path=\"./{}\"]".format(rom_file))
             for parent in parents:
                 src_root.remove(parent)
 
             # remove rom file
-            file = "{}/{}/{}/{}".format(directory, roms_dir, system, rom_file)
-            file = file.replace("//", "/")
-            if os.path.isfile(file):
+            #file = "{}/{}/{}/{}".format(directory, roms_dir, system, rom_file)
+            #file = file.replace("//", "/")
+            if os.path.isfile(rom_file):
                 # deal with .cue files
-                if os.path.splitext(file)[1] == ".cue":
-                    cue_files = parse_cue_file(file)
+                if os.path.splitext(rom_file)[1] == ".cue":
+                    cue_files = parse_cue_file(rom_file)
                     for cue_file in cue_files:
                         if os.path.isfile(cue_file):
                             os.remove(cue_file)
                 # deal with .m3u files
-                if os.path.splitext(file)[1] == ".m3u":
-                    m3u_files = get_recursive_m3u_files(file, os.path.dirname(file))
+                if os.path.splitext(rom_file)[1] == ".m3u":
+                    m3u_files = get_recursive_m3u_files(rom_file, os.path.dirname(rom_file))
                     for m3u_file in m3u_files:
                         if os.path.isfile(m3u_file):
                             os.remove(m3u_file)
-                os.remove(file)
+                os.remove(rom_file)
             # remove img file
-            file = "{}/{}/{}/boxart/{}".format(directory, roms_dir, system, img_file)
-            file = file.replace("//", "/")
-            if os.path.isfile(file):
-                os.remove(file)
+            #file = "{}/{}/{}/boxart/{}".format(directory, roms_dir, system, img_file)
+            #file = file.replace("//", "/")
+            if os.path.isfile(img_file):
+                os.remove(img_file)
             # remove snaps file
             file = "{}/{}/{}/snaps/{}".format(directory, roms_dir, system, rom_file)
             file = file.replace("//", "/")
-            if os.path.isfile(file):
-                os.remove(file)
+            if os.path.isfile(snap_file):
+                os.remove(snap_file)
             
         with open(gamelist, "wb") as file:
             src_tree.write(file, "utf-8")
 
+        # kill all files that are not referenced in the gamelist.xml file
+        for file in all_files:
+            os.remove(file)
+            
         # we will check all remaining image/video files...
         # check img files
         for img_file in os.listdir(os.path.dirname(str(gamelist)) + "/boxart"):
