@@ -1199,6 +1199,7 @@ def check_internet():
 def update_available():
     url = "https://api.github.com/repos/h3xp/RickDangerousUpdate/releases/latest"
     try:
+        return False
         resp = requests.get(url)
         latest_tag = resp.json().get('tag_name').replace("v","")
     except requests.exceptions.RequestException as e:
@@ -2598,12 +2599,30 @@ def do_process_unofficial_package(selected_items: list, name: str):
 
             # deal with no m3u support <- this is a hack that Rick does
             if system in no_m3u_support:
-                data_file = "{}/{}/.data/{}".format(rom_dir, system, os.path.basename(rom_file))
-                if os.path.isdir(Path(data_file).with_suffix("")):
-                    data_dir = str(Path(data_file).with_suffix(""))
-                    if os.path.isdir(str(tmp_dir) + data_dir):
-                        shutil.rmtree(str(tmp_dir) + data_dir)
-                    shutil.copytree(data_dir, str(tmp_dir) + data_dir)
+                data_dir = Path("{}/{}/.data/{}".format(rom_dir, system, os.path.basename(rom_file))).with_suffix("")
+                if os.path.isdir(data_dir):
+                    for file in os.scandir(data_dir):
+                        if os.path.isfile(file.path):
+                            os.makedirs(str(tmp_dir) + os.path.dirname(file.path), exist_ok=True)
+                            file_size = os.path.getsize(file)
+                            total_size == file_size
+                            print("-now copying: {} ({})".format(file.path, convert_filesize(str(file_size))))
+                            shutil.copyfile(file.path, str(tmp_dir) + file.path)
+                #shutil.copytree(data_dir, str(tmp_dir) + data_dir)
+                data_file = Path("{}/{}/.multidisk/{}".format(rom_dir, system, os.path.basename(rom_file))).with_suffix("")
+                if os.path.isfile(data_file):
+                    os.makedirs(str(tmp_dir) + os.path.dirname(str(data_file)), exist_ok=True)
+                    file_size = os.path.getsize(file)
+                    total_size == file_size
+                    print("-now copying: {} ({})".format(str(data_file), convert_filesize(str(file_size))))
+                    shutil.copyfile(str(data_file), str(tmp_dir) + str(data_file))
+                #data_file = "{}/{}/.data/{}".format(rom_dir, system, os.path.basename(rom_file))
+                #if os.path.isdir(Path(data_file).with_suffix("")):
+                #    data_dir = str(Path(data_file).with_suffix(""))
+                #    if os.path.isdir(str(tmp_dir) + data_dir):
+                #        shutil.rmtree(str(tmp_dir) + data_dir)
+                #    shutil.copytree(data_dir, str(tmp_dir) + data_dir)
+
 
             os.makedirs(str(tmp_dir) + os.path.dirname(rom_file), exist_ok=True)
             file_size = os.path.getsize(rom_file)
@@ -2723,6 +2742,10 @@ def unofficial_update_dialog(systems: list, dialog_title: str):
             menu_choice = "{}\t{}\t{}".format("[" + system + "]", name, "(" + rom_file + ")")
             menu_choices.append((menu_choice, "", False))
             all_roms[menu_choice] = (system, rom_file, name)
+
+    if len(menu_choices) == 0:
+        d.msgbox("No unofficial roms found!")
+        return []
 
     menu_choices.sort()
     code, tags = d.checklist(text="Select Games",
@@ -3834,7 +3857,7 @@ def unofficial_improvements_dialog(update_dir=None, delete=False, available_upda
         selected_updates = available_updates
     
     if len(selected_updates) > 0:
-        process_unofficial_manual_updates(update_dir, selected_updates, delete=True, auto_clean=auto_clean)
+        process_unofficial_manual_updates(update_dir, selected_updates, delete=delete, auto_clean=auto_clean)
 
     return
 
@@ -4038,12 +4061,12 @@ def prepare_unofficial_update(directory):
             if not os.path.basename(file) == "gamelist.xml":
                 all_files.append(str(file))
 
-    for system in no_m3u_support:
-        data_dir = "/home/pi/RetroPie/roms/{}/.data/".format(system)
-        indices = [position for position, phrase in enumerate(all_files) if data_dir in phrase]
-        indices.sort(reverse=True)
-        for index in indices:
-            del all_files[index]
+    #for system in no_m3u_support:
+    #    data_dir = "/home/pi/RetroPie/roms/{}/.data/".format(system)
+    #    indices = [position for position, phrase in enumerate(all_files) if data_dir in phrase]
+    #    indices.sort(reverse=True)
+    #    for index in indices:
+    #        del all_files[index]
 
     # check if gamelist.xml has been updated
     for gamelist in Path(directory).rglob('gamelist.xml'):
@@ -4090,7 +4113,18 @@ def prepare_unofficial_update(directory):
                         for m3u_file in m3u_files:
                             if m3u_file in all_files:
                                 all_files.remove(m3u_file)
-                    # deal with no_m3u_support <-- not needed any more, dealt with above
+                    # deal with no m3u support
+                    if system in no_m3u_support:
+                        tmp_data_dir = os.path.dirname(str(directory) + src_node.text.replace("./", roms_dir + system + "/")) + "/.data/" + str(Path(rom_file).with_suffix(""))
+                        if os.path.isdir(tmp_data_dir):
+                            for file in os.scandir(tmp_data_dir):
+                                if os.path.isfile(file.path):
+                                    if file.path in all_files:
+                                        all_files.remove(file.path)
+                        tmp_data_file = os.path.dirname(str(directory) + src_node.text.replace("./", roms_dir + system + "/")) + "/.multidisk/" + str(Path(rom_file).with_suffix(""))
+                        if os.path.isfile(str(tmp_data_file)):
+                            if str(tmp_data_file) in all_files:
+                                all_files.remove(str(tmp_data_file))
                     #tmp_data_dir = os.path.dirname(str(directory) + src_node.text.replace("./", roms_dir + system + "/")) + "/.data/" + str(Path(rom_file).with_suffix(""))
             # get img file
             src_node = src_game.find("image")
@@ -4161,7 +4195,7 @@ def prepare_unofficial_update(directory):
         # kill all files that are not referenced in the gamelist.xml file
         for file in all_files:
             os.remove(file)
-            
+
         # we will check all remaining image/video files...
         # check img files
         for img_file in os.listdir(os.path.dirname(str(gamelist)) + "/boxart"):
