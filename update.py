@@ -3090,8 +3090,8 @@ def do_clean_unofficial_roms(selected_items: list):
         for parent in parents:
             src_root.remove(parent)
             
-    with open(gamelist, "wb") as fh:
-        src_tree.write(fh, "utf-8")
+        with open(gamelist, "wb") as fh:
+            src_tree.write(fh, "utf-8")
 
     clean_unofficial_roms(selected_items)
 
