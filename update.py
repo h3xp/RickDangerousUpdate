@@ -3115,7 +3115,7 @@ def check_clean_utilities_dialog():
         elif tag == "3":
             logs_dialog("gamelist_logs", "Restore", "Restore Clean Game List Logs", ["clean_gamelists*", "auto_clean_gamelists*"], multi=False)
         elif tag == "4":
-            logs_dialog("gamelist_logs", "Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*"], multi=True)
+            logs_dialog("gamelist_logs", "Remove", "Remove Check/Clean Game List Logs", ["check_gamelists*", "clean_gamelists*", "auto_clean_gamelists*", "clean_unofficial_roms*"], multi=True)
         elif tag == "5":
             systems = None
             systems = gamelists_dialog("Remove")
