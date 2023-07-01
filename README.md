@@ -18,6 +18,8 @@ Join Rick's discord server to keep track on the latest changes.
   - [Improvements](#improvements)
     - [Download and Install Updates](#download-and-install-updates)
     - [Manually Install Downloaded Updates](#manually-install-downloaded-updates)
+    - [Manually Install Downloaded Unofficial Updates](#manually-install-downloaded-unofficial-updates)
+    - [Package Unofficial Updates](#package-unofficial-updates)
     - [Update Status](#update-status)
     - [Validate Downloaded Updates](#validate-downloaded-updates)
     - [Manual Updates Story](#manual-updates-story)
@@ -28,6 +30,7 @@ Join Rick's discord server to keep track on the latest changes.
         - [Clean Game Lists](#clean-game-lists)
         - [Restore Clean Game List Logs](#restore-clean-game-list-logs)
         - [Remove Check or Clean Game List Logs](#remove-check-or-clean-game-list-logs)
+        - [Clean Unofficial Roms](#clean-unofficial-roms)
       - [Genre Utilities](#genre-utilities)
         - [Manually Select Genres](#manually-select-genres)
         - [Realign Genre Collections](#realign-genre-collections)
@@ -91,6 +94,14 @@ This will allow you to easily select single or multiple updates to download from
 
 This allows you to install updates that you have manually downloaded from the MEGA drive directory.
 
+### Manually Install Downloaded Unofficial Updates
+
+This allows you to install unofficial update packages that you have found and manually downloaded from that are not part of the official build.
+
+### Package Unofficial Updates
+
+This allows you to create distribution packages of unofficial games you have previously manually added to your installation of the build.
+
 ### Update Status
 
 This does a check of your exisiting installation and lets you know which updates you have installed and what other updates are available to you.
@@ -128,6 +139,10 @@ This will let you reverse the changes you applied with the "Clean Game Lists"-fe
 ##### Remove Check or Clean Game List Logs
 
 Allows you to delete log files left by previous gamelist utilities clean or check actions.
+
+##### Clean Unofficial Roms
+
+Allows you to select and uninstall unofficial roms you have previously added to your installation.
 
 #### Genre Utilities
 
