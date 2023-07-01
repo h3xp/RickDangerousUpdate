@@ -96,11 +96,11 @@ This allows you to install updates that you have manually downloaded from the ME
 
 ### Manually Install Downloaded Unofficial Updates
 
-This allows you to install unofficial updates that you have manually downloaded from other sources.
+This allows you to install unofficial update packages that you have found and manually downloaded from that are not part of the official build.
 
 ### Package Unofficial Updates
 
-This allows you to create game bundles from unofficial games you have previously manually added to the build.
+This allows you to create distribution packages of unofficial games you have previously manually added to your installation of the build.
 
 ### Update Status
 
