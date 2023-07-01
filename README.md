@@ -142,7 +142,7 @@ Allows you to delete log files left by previous gamelist utilities clean or chec
 
 ##### Clean Unofficial Roms
 
-Allows you to select unofficial roms you have added and remove them cleanly from your build.
+Allows you to select and uninstall unofficial roms you have previously added to your installation.
 
 #### Genre Utilities
 
