@@ -601,6 +601,40 @@ def install():
     return
 
 
+def status_bar(total_size: float, current_size: float, start_time: datetime, complete=False, start_char="\t"):
+    current_time = datetime.datetime.utcnow()
+    percent_complete = round((current_size / total_size) * 100)
+    if percent_complete > 99 and not complete:
+        percent_complete = 99
+    kbs = return_bps(current_size, (current_time - start_time).total_seconds())
+    pad = (12 - len(kbs))
+
+    if not complete:
+        print(f"{start_char}{percent_complete if percent_complete < 100 else 99}% complete: [{'='*percent_complete}>{' '*(99 - percent_complete)}] ({kbs}) (total elapsed time: {str(current_time - start_time)[:-7]}){' '*pad}", end = "\r")
+    else:
+        print(f"{start_char}100% complete: [{'='*100}] ({kbs}) (total elapsed time: {str(current_time - start_time)[:-7]}){' '*pad}")
+
+    return
+
+
+def return_bps(bytes: float, seconds: float):
+    retval = ""
+    units = ["B", "KB", "MB", "GB"]
+    unit = "B"
+    count = 0
+    filesize = bytes / seconds
+    while (filesize) >= 1000:
+        count += 1
+        filesize /= 1024
+
+    if count == 0:
+        retval = "%0.2f" % filesize + " " + unit + "/s"
+    else:
+        retval = "%0.2f" % filesize + " " + units[count] + "/s"
+
+    return retval    
+
+
 def download_file(file_handle,
                   file_key,
                   file_data,
@@ -610,6 +644,8 @@ def download_file(file_handle,
          file_key[2] ^ file_key[6], file_key[3] ^ file_key[7])
     iv = file_key[4:6] + (0, 0)
     meta_mac = file_key[6:8]
+
+    start_time = datetime.datetime.utcnow()
 
     # Seems to happens sometime... When this occurs, files are
     # inaccessible also in the official also in the official web app.
@@ -644,8 +680,9 @@ def download_file(file_handle,
         iv_str = a32_to_str([iv[0], iv[1], iv[0], iv[1]])
         i = None
         for chunk_start, chunk_size in get_chunks(file_size):
-            percent_complete = round(((chunk_start + chunk_size) / file_size) * 100)
-            print("\t{}% complete: [{}>{}]".format(percent_complete if percent_complete < 100 else 99, "="*percent_complete, " "*(99 - percent_complete)), end = "\r")
+            #percent_complete = round(((chunk_start + chunk_size) / file_size) * 100)
+            #print("\t{}% complete: [{}>{}]".format(percent_complete if percent_complete < 100 else 99, "="*percent_complete, " "*(99 - percent_complete)), end = "\r")
+            status_bar(file_size, (chunk_start + chunk_size), start_time)
 
             chunk = input_file.read(chunk_size)
             chunk = aes.decrypt(chunk)
@@ -680,7 +717,8 @@ def download_file(file_handle,
                 file_mac[2] ^ file_mac[3]) != meta_mac:
             raise ValueError('Mismatched mac')
         output_path = Path(dest_path + file_name)
-    print("\t100% complete: [{}]".format("="*100))
+    #print("\t100% complete: [{}]".format("="*100))
+    status_bar(file_size, file_size, start_time, complete=True)
     shutil.move(temp_output_file.name, output_path)
     return output_path
 
@@ -1070,9 +1108,14 @@ def install_emulators(directory):
 def merge_gamelist(directory: str, official: bool):
     # get origin file
     origin = get_config_value("CONFIG_ITEMS", "origin_file")
+    print_status = True
     
     # check if gamelist.xml has been updated
     for gamelist in Path(directory).rglob('gamelist.xml'):
+        # better statusing
+        if print_status:
+            print("Merging gamelists...")
+            print_status = False
         clear_do_not_overwrite_tags(str(gamelist))
         # find corresponding xmls
         corr = gamelist.parts
@@ -4054,6 +4097,7 @@ def prepare_unofficial_update(directory):
     all_files = []
     no_m3u_support = ["atari800"]
 
+    print("Preparing...")
     
     for file in directory.glob('**/*'):
         if os.path.isfile(str(file)) and "/home/pi/RetroPie/roms/" in str(file):
@@ -4208,10 +4252,39 @@ def prepare_unofficial_update(directory):
     return
 
 
-def process_improvement(file: str, extracted: str, auto_clean=False, official=True):
-    print("Processing {}official update: {}...".format("un" if not official else "", os.path.basename(file)))
-    with zipfile.ZipFile(file, 'r') as zip_ref:
-        zip_ref.extractall(extracted)
+def extract_zipfile(zip_file:str, dir_name: str):
+    start_time = datetime.datetime.utcnow()
+    total_size = 0
+    last_size = 0
+    current_size = 0
+
+    with zipfile.ZipFile(zip_file, 'r') as zip_ref:
+        total_size = sum([zinfo.file_size for zinfo in zip_ref.filelist])
+
+    if os.path.isdir(dir_name):
+        shutil.rmtree(dir_name)
+    os.mkdir(dir_name)
+    pid = subprocess.Popen(["/usr/bin/unzip", "-q", zip_file, "-d", dir_name]).pid
+
+    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+    while str(pid) in pids:
+        result = subprocess.run(["/usr/bin/du", "-sb", dir_name], stdout=subprocess.PIPE)
+        current_size = int(result.stdout.split()[0])
+        status_bar(total_size, current_size, start_time)
+        time.sleep(.5)
+        pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+
+    status_bar(total_size, current_size, start_time, complete=True)
+
+    return
+
+
+def process_improvement(file: str, extracted: str, status=True, auto_clean=False, official=True):
+    print("Processing {}official update: {} ({})...".format("un" if not official else "", os.path.basename(file), convert_filesize(os.path.getsize(file))))
+    print("Extracting...")
+    extract_zipfile(file, extracted)
+    #with zipfile.ZipFile(file, 'r') as zip_ref:
+    #    zip_ref.extractall(extracted)
 
     if official:
         if check_root(extracted):
@@ -4225,6 +4298,7 @@ def process_improvement(file: str, extracted: str, auto_clean=False, official=Tr
     merge_gamelist(extracted, official)
     if official:
         merge_emulators_cfg(extracted)
+    print("Performing copy...")
     copydir(extracted, "/")
     if official:
         if check_root(extracted):
