@@ -3903,13 +3903,15 @@ def improvements_dialog():
             update_dir = get_default_update_dir()
             update_dir = get_valid_path_portion(update_dir)
             code = downloaded_update_question_dialog()
-            official_improvements_dialog(update_dir, delete=False if code == d.OK else True)
+            update_dir = manual_updates_dialog(update_dir, delete=False if code == d.OK else True, official=True)
+            if update_dir is not None:
+                official_improvements_dialog(update_dir, delete=False if code == d.OK else True)
         elif tag == "3":
             update_dir = get_default_update_dir(official=False)
-            update_dir = get_valid_path_portion(update_dir)            
+            update_dir = get_valid_path_portion(update_dir)
+            code = downloaded_update_question_dialog(official=False)
             update_dir = manual_updates_dialog(update_dir, False, official=False)
             if update_dir is not None:
-                code = downloaded_update_question_dialog(official=False)
                 unofficial_improvements_dialog(update_dir=update_dir, delete=False if code == d.OK else True)
         elif tag == "4":
             systems = None
