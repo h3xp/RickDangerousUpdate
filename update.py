@@ -4959,11 +4959,36 @@ def check_for_updates():
         return False
 
 
+def fix_lame_update_dirs(key: str):
+    ret_val = ""
+
+    update_dir = get_config_value("CONFIG_ITEMS", key, return_none=False)
+    if len(update_dir.strip()) == 0:
+        set_config_value("CONFIG_ITEMS", key, "")
+        return
+    
+    parts = update_dir.strip().split("/")
+    while "" in parts:
+        index = parts.index("")
+        del parts[index]
+
+    for part in parts:
+        ret_val += "/" + part.strip()
+        if not os.path.isdir(ret_val):
+            os.mkdir(ret_val)
+
+    set_config_value("CONFIG_ITEMS", key, ret_val + "/")
+
+    return
+
+
 def main():
     global update_available_result
     update_available_result = update_available()
     if os.path.isfile(tool_ini):
         mega_ini_check()
+        fix_lame_update_dirs("update_dir")
+        fix_lame_update_dirs("unofficial_update_dir")
 
     if not os.path.isfile("/home/pi/.update_tool/override_emulators.cfg"):
         log_this("/home/pi/.update_tool/override_emulators.cfg", "# place emulators.cfg entries here that you ABSOLUTELY do not want to get overwritten")
