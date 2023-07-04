@@ -3317,6 +3317,7 @@ def clear_recently_added_collection():
 
 
 def process_unofficial_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    cls()
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
     log_file = "/home/pi/.update_tool/process_manual_updates.log"
@@ -3355,6 +3356,7 @@ def process_unofficial_manual_updates(path: str, updates: list, delete=False, au
     return
 
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    cls()
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
     log_file = "/home/pi/.update_tool/process_manual_updates.log"
@@ -4314,6 +4316,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
 
 
 def do_unofficial_improvements(selected_updates: list, auto_clean=True):
+    cls()
     start_time = datetime.datetime.utcnow()
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
@@ -4329,6 +4332,7 @@ def do_unofficial_improvements(selected_updates: list, auto_clean=True):
 
 
 def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
+    cls()
     start_time = datetime.datetime.utcnow()
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
