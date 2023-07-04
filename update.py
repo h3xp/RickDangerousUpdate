@@ -348,6 +348,16 @@ def get_overlay_systems():
     return retval
 
 
+def read_ini(ini_file: str):
+    if os.path.isfile(ini_file):
+        config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read(ini_file)
+        return config
+
+    return None
+
+
 def read_config():
     if os.path.exists(tool_ini):
         if os.path.isfile(tool_ini):
@@ -357,11 +367,33 @@ def read_config():
             return config
     return None
     
+
+def get_ini_section(ini_file: str, section: str):
+    config = read_ini(ini_file)
+    if config is not None:
+        if config.has_section(section):
+            return config.items(section)
+
+    return None
+
+
 def get_config_section(section: str):
     config = read_config()
     if config is not None:
         if config.has_section(section):
             return config.items(section)
+
+    return None
+
+
+def get_ini_value(ini_file: str, section: str, key: str, return_none=True):
+    config = read_ini(ini_file)
+    if config is not None:
+        if config.has_option(section, key):
+            return config[section][key]
+
+    if return_none == False:
+        return ""
 
     return None
 
@@ -1634,6 +1666,118 @@ def process_supporting_files(src_game: ET.Element, src_name: str, subelement_nam
     return
 
 
+def get_parent_dir(filename: str):
+    parent_dir = ""
+
+    parts = filename.split("/")
+    while "" in parts:
+        index = parts.index("")
+        del parts[index]
+
+    if len(parts) == 1:
+        return "/"
+    
+    for i in range(len(parts) - 1):
+        parent_dir += "/" + parts[i]
+    
+    return parent_dir
+
+
+def process_orphaned_extra_files(system: str, orphaned_files: list, backup_dir: str, log_file: str, clean=False):
+    # this exists because extra files were an afterthough, and are fully pathed
+    # this should probably be what the entire check/clean should be like, but for now we just leave it as is
+    orphaned_directories = []
+    do_not_move = ["/home/pi/RetroPie/roms/scummvm/.bugged", "/home/pi/RetroPie/roms/scummvm/.Other_Langs"]
+
+    orphaned_files.sort()
+    process = "DELETING" if clean == True else "IDENTIFIED"
+
+    # this is a HACK, because atari800 multidisk sucks
+    # we ned to brute force he remainder of .multidisk files to find ophans..
+    if system == "atari800":
+        multidisk_files = []
+        for file in orphaned_files:
+            if "/home/pi/RetroPie/roms/atari800/.multidisk/" in file:
+                multidisk_files.append(file)
+        for file in multidisk_files:
+            # first parse the files were looking for
+            parsed_files = []
+            if os.path.isfile(file):
+                with open(file, 'r') as md_file:
+                    for line in md_file:
+                        if line.strip()[:1] == "#":
+                            continue
+                        if not "/home/pi/RetroPie/roms/atari800" in line:
+                            continue
+                        parsed_files.append(line.strip())      
+            count = 0
+            file_name = os.path.basename(file)
+            file_match = ""
+            while count < len(file_name):
+                if not file_name[count].isalnum():
+                    break
+                file_match += file_name[count]
+                count += 1
+            for rom_file in Path("/home/pi/RetroPie/roms/atari800").glob(file_match + "*"):
+                process_file = True
+                if os.path.splitext(rom_file)[1] == ".zip":
+                    with zipfile.ZipFile(rom_file, 'r') as zip_ref:
+                        for file_listing in zip_ref.infolist():
+                            file_found = False
+                            for parsed_file in parsed_files:
+                                if file_listing.filename in parsed_file:
+                                    file_found = True
+                                    break
+                            process_file &= file_found
+                            if process_file:
+                                break
+                if process_file:
+                    log_this(log_file, "-\"{}\" pretty much sucks, please consider re-naming it to match the gamelist \"name\" entry, or chnge the gamelist \"name\" entry to match the filename...".format(file))
+                    if file in orphaned_files:
+                        index = orphaned_files.index(file)
+                        del orphaned_files[index]
+                    for parsed_file in parsed_files:
+                        if parsed_file in orphaned_files:
+                            index = orphaned_files.index(parsed_file)
+                            del orphaned_files[index]
+
+    # now back to the story...
+    for orphaned_file in orphaned_files:
+        if os.path.isdir(orphaned_file):
+            orphaned_directories.append(orphaned_file)
+            continue
+        if not os.path.isfile(orphaned_file):
+            continue
+        backup_file = orphaned_file.replace("/home/pi/RetroPie/roms", backup_dir)
+        log_this(log_file, "-{} orphaned extra file: \"{}\"".format(process, orphaned_file))
+        if clean == True:
+            #os.remove(file_path)
+            if not os.path.exists(os.path.dirname(backup_file)):
+                os.makedirs(os.path.dirname(backup_file))
+            shutil.move(orphaned_file, os.path.dirname(backup_file))
+
+    for orphaned_directory in orphaned_directories:
+        if orphaned_directory in do_not_move:
+            continue
+        backup_directory = orphaned_directory.replace("/home/pi/RetroPie/roms", backup_dir)
+        if system == "atari800":
+            if not os.listdir(orphaned_directory):
+                log_this(log_file, "-{} orphaned extra directory because it is empty: \"{}\"".format(process, orphaned_directory))
+                if clean == True:
+                    shutil.rmtree(orphaned_directory)
+        else:
+            log_this(log_file, "-{} orphaned extra directory: \"{}\"".format(process, orphaned_directory))
+            if clean == True:
+                if not os.path.isdir(get_parent_dir(backup_directory)):
+                    os.makedirs(get_parent_dir(backup_directory))
+                if os.path.isdir(backup_directory):
+                    shutil.rmtree(backup_directory)
+                shutil.copytree(orphaned_directory, backup_directory)
+                shutil.rmtree(orphaned_directory)
+
+    return
+
+
 def process_orphaned_files(orphaned_files: list, dir: str, log_file: str, dir_backup: str, file_type: str, clean=False):
     orphaned_files.sort()
     process = "DELETING" if clean == True else "IDENTIFIED"
@@ -1765,7 +1909,98 @@ def kill_origins(src_xml: str, log_file: str):
     return
 
 
-def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, auto_clean=False):
+def get_extra_files(system: str, system_roms: str):
+    # these are sort of hacks I think that are pretty specific to Rick's build, unsure really...
+    extra_files = []
+    keep_rom_dirs = ["boxart", "snaps"]
+    if system == "atari800":
+            # atar800 has a fle in .multidisk, with a matching directory in .data
+            # I could parse the file in .multidisk, but I think this is good enough?
+            for item in os.scandir(system_roms + "/.multidisk"):
+                if not os.path.isfile(item.path):
+                    continue
+                extra_files.append(item.path)
+            for item in os.scandir(system_roms + "/.data"):
+                if not os.path.isdir(item.path):
+                    continue
+                extra_files.append(item.path)
+                for file in os.scandir(item.path):
+                    if os.path.isfile(file.path):
+                        extra_files.append(file.path)
+    if system == "scummvm":
+        for item in os.scandir(system_roms):
+            if os.path.isdir(item.path):
+                if item.name not in keep_rom_dirs:
+                    extra_files.append(item.path)
+    if system == "snesmsu1":
+        # this has a om irectory that is in each .sh file
+        # I am just getting all dirs hre, minus boxart/snaps
+        for item in os.scandir(system_roms):
+            if os.path.isdir(item.path):
+                if item.name not in keep_rom_dirs:
+                    extra_files.append(item.path)
+
+    return extra_files
+
+
+def process_extra_files(system:str, system_roms: str, rom_path: str, rom_name: str, extra_files: list):
+    if system == "atari800":
+        # i am looking for an entry in .multidisk folder, with a matching directory in .data folder
+        # i will only keep entry in .data folder if file is found in .multidisk folder
+        multidisk_file = os.path.join(system_roms, ".multidisk", rom_name)
+        if os.path.isfile(multidisk_file):
+            with open(multidisk_file, 'r') as file:
+                for line in file:
+                    if line.strip()[:1] == "#":
+                        continue
+                    if not system_roms in line:
+                        continue
+                    if os.path.isfile(line.strip()):
+                        if line.strip() in extra_files:
+                            index = extra_files.index(line.strip())
+                            del extra_files[index]
+            if multidisk_file in extra_files:
+                index = extra_files.index(multidisk_file)
+                del extra_files[index]
+                multidisk_folder = os.path.join(system_roms, ".data", rom_name)
+    if system == "scummvm":
+        # directoy is stored in "/opt/retropie/configs/scummvm/scummvm.ini"
+        rom_path_name = os.path.splitext(os.path.basename(rom_path))[0]
+        files_dir = get_ini_value("/opt/retropie/configs/scummvm/scummvm.ini", rom_path_name, "path")
+        if files_dir is not None:
+            index = extra_files.index(files_dir)
+            del extra_files[index]
+    if system == "snesmsu1":
+        # directory is parsed out of .sh file
+        with open(rom_path, 'r') as file:
+            for line in file:
+                if line.strip()[:1] == "#":
+                    continue
+                if not "/home/pi/RetroPie/roms/snesmsu1/" in line:
+                    continue
+                index = line.find("/home/pi/RetroPie/roms/snesmsu1/")
+                if index < 0:
+                    continue
+                file_name = line[index:].strip()
+                if file_name[-1] == '"' or file_name[-1] == "'":
+                    file_name = file_name[0:len(file_name) -1]
+                parts = file_name.split("/")
+                files_dir = ""
+                for part in parts:
+                    if len(part.strip()) == 0:
+                        continue
+                    if os.path.isdir(files_dir + "/" + part):
+                        files_dir += "/" + part
+                    else:
+                        break
+                if files_dir in extra_files:
+                    index = extra_files.index(files_dir)
+                    del extra_files[index]                
+
+    return
+
+
+def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_dir: str, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, del_extra=False, clean=False, auto_clean=False):
     file_time = datetime.datetime.utcnow().strftime("%Y%m%d-%H%M%S")
     rom_dir = "/home/pi/RetroPie/roms"
     art_dir = "boxart"
@@ -1800,6 +2035,7 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     snaps_files = []
     rom_files = []
     m3u_files = []
+    extra_fles = []
     bad_roms = []
     remove_entries = []
 
@@ -1839,6 +2075,9 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
                 if os.path.isfile(item.path):
                     m3u_files.append(item.name)
 
+    # get exta files
+    extra_files = get_extra_files(system, system_roms)
+
     src_xml = os.path.join(system_gamelists, "gamelist.xml")
     if not os.path.exists(src_xml):
         log_this(log_file, "ERROR: gamelist.xml does not exist!")
@@ -1864,9 +2103,12 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
         src_name = ""
         rom_file = ""
         src_name_node = src_game.find("name")
-        if src_name_node is not None:
-            src_name = src_name_node.text
-            print(src_name)
+        if src_name_node is not None:        
+            if src_name_node.text is not None:
+                src_name = src_name_node.text
+                print(src_name)
+            else:
+                continue
 
         # get rom file
         src_node = src_game.find("path")
@@ -1908,6 +2150,9 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
 
                 # check if snap exists
                 process_supporting_files(src_game, src_name, "video", system_roms, rom_file, snaps_dir, system_snaps, snaps_types, snaps_files, found_files, log_file, clean=clean)
+
+                # deal with extra files
+                process_extra_files(system, system_roms, rom_path, src_name, extra_files)
 
             # check for auto gamelist removal
             if len(found_files) == 0:
@@ -1982,13 +2227,14 @@ def process_gamelist(system: str, gamelist_roms_dir: str, log_file: str, backup_
     if del_m3u == True:
         if system not in no_m3u_spport:
             process_orphaned_files(m3u_files, system_m3u, log_file, backup_m3u, "m3u disk", clean=clean)
-        else:
-            log_this(log_file, "-cannot process orphaned files from {} directory because m3u file is not supported for {}".format(m3u_dir, system))
+
+    if del_extra == True:
+        process_orphaned_extra_files(system, extra_files, backup_dir, log_file, clean=clean)
     
     return
 
 
-def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, clean=False, log_file="", auto_clean=False):
+def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps=False, del_m3u=False, del_extra=False, clean=False, log_file="", auto_clean=False):
     cls()
     file_time = datetime.datetime.utcnow()
     process_type = "clean" if clean == True else "check"
@@ -2026,7 +2272,7 @@ def do_process_gamelists(systems: list, del_roms=False, del_art=False, del_snaps
         for single_system in system.split("/"):
             print("")
             print("Now processing {}...".format(single_system))
-            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean, auto_clean=auto_clean)
+            process_gamelist(single_system, gamelist_roms_dir, log_file, backup_dir, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, del_extra=del_extra, clean=clean, auto_clean=auto_clean)
 
     log_this(log_file, "\n")
     log_this(log_file, "{}ING GAMELISTS: ended at {}".format(process_type.upper(), datetime.datetime.utcnow()))
@@ -2056,15 +2302,16 @@ def gamelists_orphan_dialog(systems, clean: bool):
                     "\n\nCheck orphaned:")
 
     code, tags = d.checklist(text=menu_text, 
-                            choices=[("Roms", "", False), ("Artwork", "", False), ("Snapshots", "", False), ("M3U Disk Files", "", False)])
+                            choices=[("Roms", "", False), ("Artwork", "", False), ("Snapshots", "", False), ("M3U Disk Files", "", False), ("Extra Files", "", False)])
 
     if code == d.OK:
         del_roms = True if "Roms" in tags else False
         del_art = True if "Artwork" in tags else False
         del_snaps = True if "Snapshots" in tags else False
         del_m3u = True if "M3U Disk Files" in tags else False
+        del_extra = True if "Extra Files" in tags else False
 
-        do_process_gamelists(systems, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, clean=clean)
+        do_process_gamelists(systems, del_roms=del_roms, del_art=del_art, del_snaps=del_snaps, del_m3u=del_m3u, del_extra=del_extra, clean=clean)
 
     cls()
     gamelists_dialog("Clean" if clean == True else "Check")
@@ -3317,6 +3564,7 @@ def clear_recently_added_collection():
 
 
 def process_unofficial_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    cls()
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
     log_file = "/home/pi/.update_tool/process_manual_updates.log"
@@ -3355,6 +3603,7 @@ def process_unofficial_manual_updates(path: str, updates: list, delete=False, au
     return
 
 def process_manual_updates(path: str, updates: list, delete=False, auto_clean=False):
+    cls()
     start_time = datetime.datetime.utcnow()
     extracted = Path("/", "tmp", "extracted")
     log_file = "/home/pi/.update_tool/process_manual_updates.log"
@@ -4314,6 +4563,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
 
 
 def do_unofficial_improvements(selected_updates: list, auto_clean=True):
+    cls()
     start_time = datetime.datetime.utcnow()
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
@@ -4329,6 +4579,7 @@ def do_unofficial_improvements(selected_updates: list, auto_clean=True):
 
 
 def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
+    cls()
     start_time = datetime.datetime.utcnow()
     improvements_dir = Path("/", "tmp", "improvements")
     os.makedirs(improvements_dir, exist_ok=True)
