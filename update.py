@@ -1732,7 +1732,7 @@ def process_orphaned_extra_files(system: str, orphaned_files: list, backup_dir: 
                             if process_file:
                                 break
                 if process_file:
-                    log_this(log_file, "-\"{}\" pretty much sucks, please consider re-naming it to match the gamelist \"name\" entry, or chnge the gamelist \"name\" entry to match the filename...".format(file))
+                    log_this(log_file, "-\"{}\" please consider renaming this or change the gamelist \"name\" entry to match the filename...".format(file))
                     if file in orphaned_files:
                         index = orphaned_files.index(file)
                         del orphaned_files[index]
