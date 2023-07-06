@@ -4961,12 +4961,27 @@ def check_for_updates():
 
 def fix_lame_update_dirs(key: str):
     ret_val = ""
+    mounts = []
+
+    mount_cmd = runcmd("mount")
+    mount_points = mount_cmd.split("\n")
+    for mount_point in mount_points:
+        if mount_point[0:2] != "//":
+            continue
+        start_index = mount_point.find(" on ") + 4
+        end_index = mount_point.find(" type ")
+        mounts.append(mount_point[start_index: end_index])
 
     update_dir = get_config_value("CONFIG_ITEMS", key, return_none=False)
+
     if len(update_dir.strip()) == 0:
         set_config_value("CONFIG_ITEMS", key, "")
         return
-    
+
+    for mount in mounts:
+        if mount in update_dir.strip():
+            return
+
     parts = update_dir.strip().split("/")
     while "" in parts:
         index = parts.index("")
@@ -4974,6 +4989,8 @@ def fix_lame_update_dirs(key: str):
 
     for part in parts:
         ret_val += "/" + part.strip()
+        if os.path.ismount(ret_val):
+            return
         if not os.path.isdir(ret_val):
             os.mkdir(ret_val)
 
