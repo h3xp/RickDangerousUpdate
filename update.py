@@ -4966,11 +4966,12 @@ def fix_lame_update_dirs(key: str):
     mount_cmd = runcmd("mount")
     mount_points = mount_cmd.split("\n")
     for mount_point in mount_points:
-        if mount_point[0:2] != "//":
-            continue
-        start_index = mount_point.find(" on ") + 4
-        end_index = mount_point.find(" type ")
-        mounts.append(mount_point[start_index: end_index])
+        if " on " in mount_point and " type " in mount_point:
+            start_index = mount_point.find(" on ") + 4
+            end_index = mount_point.find(" type ")
+            mount_dir = mount_point[start_index: end_index]
+            if "/home/pi/" in mount_dir:
+                mounts.append(mount_dir)
 
     update_dir = get_config_value("CONFIG_ITEMS", key, return_none=False)
 
