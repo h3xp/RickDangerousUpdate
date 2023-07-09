@@ -1971,31 +1971,32 @@ def process_extra_files(system:str, system_roms: str, rom_path: str, rom_name: s
             index = extra_files.index(files_dir)
             del extra_files[index]
     if system == "snesmsu1":
-        # directory is parsed out of .sh file
-        with open(rom_path, 'r') as file:
-            for line in file:
-                if line.strip()[:1] == "#":
-                    continue
-                if not "/home/pi/RetroPie/roms/snesmsu1/" in line:
-                    continue
-                index = line.find("/home/pi/RetroPie/roms/snesmsu1/")
-                if index < 0:
-                    continue
-                file_name = line[index:].strip()
-                if file_name[-1] == '"' or file_name[-1] == "'":
-                    file_name = file_name[0:len(file_name) -1]
-                parts = file_name.split("/")
-                files_dir = ""
-                for part in parts:
-                    if len(part.strip()) == 0:
+        if os.path.isfile(rom_path):
+            # directory is parsed out of .sh file
+            with open(rom_path, 'r') as file:
+                for line in file:
+                    if line.strip()[:1] == "#":
                         continue
-                    if os.path.isdir(files_dir + "/" + part):
-                        files_dir += "/" + part
-                    else:
-                        break
-                if files_dir in extra_files:
-                    index = extra_files.index(files_dir)
-                    del extra_files[index]                
+                    if not "/home/pi/RetroPie/roms/snesmsu1/" in line:
+                        continue
+                    index = line.find("/home/pi/RetroPie/roms/snesmsu1/")
+                    if index < 0:
+                        continue
+                    file_name = line[index:].strip()
+                    if file_name[-1] == '"' or file_name[-1] == "'":
+                        file_name = file_name[0:len(file_name) -1]
+                    parts = file_name.split("/")
+                    files_dir = ""
+                    for part in parts:
+                        if len(part.strip()) == 0:
+                            continue
+                        if os.path.isdir(files_dir + "/" + part):
+                            files_dir += "/" + part
+                        else:
+                            break
+                    if files_dir in extra_files:
+                        index = extra_files.index(files_dir)
+                        del extra_files[index]                
 
     return
 
