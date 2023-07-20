@@ -4538,6 +4538,8 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
     #with zipfile.ZipFile(file, 'r') as zip_ref:
     #    zip_ref.extractall(extracted)
 
+    os.system("sudo chmod -R +w {} > /tmp/test".format(str(extracted)))
+
     if official:
         if check_root(extracted):
             os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
