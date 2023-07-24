@@ -4516,25 +4516,47 @@ def extract_zipfile(zip_file:str, dir_name: str):
     if os.path.isdir(dir_name):
         shutil.rmtree(dir_name)
     os.mkdir(dir_name)
-    pid = subprocess.Popen(["/usr/bin/unzip", "-q", zip_file, "-d", dir_name]).pid
+    proc = subprocess.Popen(["/usr/bin/unzip", "-q", zip_file, "-d", dir_name])
 
-    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
-    while str(pid) in pids:
+    while proc.poll() == None:
         result = subprocess.run(["/usr/bin/du", "-sb", dir_name], stdout=subprocess.PIPE)
         current_size = int(result.stdout.split()[0])
         status_bar(total_size, current_size, start_time)
         time.sleep(.5)
-        pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+        
+    if proc.returncode != 0:
+        text = f"Error unzipping file: {zip_file}\n\nWould you like to continue processing and skip this fie?"
+        code = d.yesno(text=text, ok_label="Continue")
+        if code == d.OK:
+            return False
+        return None
+        
+    #pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
+    #while str(pid) in pids:
+    #    result = subprocess.run(["/usr/bin/du", "-sb", dir_name], stdout=subprocess.PIPE)
+    #    current_size = int(result.stdout.split()[0])
+    #    status_bar(total_size, current_size, start_time)
+    #    time.sleep(.5)
+    #    pids = [pid for pid in os.listdir('/proc') if pid.isdigit()]
 
     status_bar(total_size, current_size, start_time, complete=True)
 
-    return
+    return True
 
 
 def process_improvement(file: str, extracted: str, status=True, auto_clean=False, official=True):
     print("Processing {}official update: {} ({})...".format("un" if not official else "", os.path.basename(file), convert_filesize(os.path.getsize(file))))
     print("Extracting...")
-    extract_zipfile(file, extracted)
+    zip_return = extract_zipfile(file, extracted)
+    if zip_return == None:
+        exit(1)
+    elif zip_return == False:
+        if os.path.exists(extracted) and os.path.isdir(extracted):
+            try:
+                shutil.rmtree(extracted)
+            except OSError as e:
+                print("Error: %s : %s" % (extracted, e.strerror))
+        return False
     #with zipfile.ZipFile(file, 'r') as zip_ref:
     #    zip_ref.extractall(extracted)
 
