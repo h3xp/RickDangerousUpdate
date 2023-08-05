@@ -5018,7 +5018,10 @@ def fix_lame_update_dirs(key: str):
         if os.path.ismount(ret_val):
             return
         if not os.path.isdir(ret_val):
-            os.mkdir(ret_val)
+            try:
+                os.mkdir(ret_val)
+            except:
+                pass
 
     set_config_value("CONFIG_ITEMS", key, ret_val + "/")
 
@@ -5085,7 +5088,8 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         #print("")
-        nothing = None
+        #nothing = None
+        pass
     except:
         # need to clean this up if we changed it
         os.system("sudo chown -R root:root /etc/emulationstation/")
