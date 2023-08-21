@@ -4620,7 +4620,7 @@ def do_improvements(selected_updates: list, megadrive: str, auto_clean=False):
         file_path = download_update(update[1], improvements_dir, megadrive, update[3])
 
         if file_path is None:
-            d.msgbox("Unable to download from MEGA.\n\nThe site enforces a 5GB per day download limit, based on your public IP address. You may have reached this limit.\n\nPlease try again later...", 10, 60)
+            d.msgbox("Unable to download from MEGA.\n\nThis site enforces a 5GB per day download limit.\nThe limit is based on your public IP address.\nYou may have reached this limit.\n\nPlease try again later...", 10, 60)
             break
 
         improvement_passed = process_improvement(file_path, extracted)
@@ -5018,7 +5018,10 @@ def fix_lame_update_dirs(key: str):
         if os.path.ismount(ret_val):
             return
         if not os.path.isdir(ret_val):
-            os.mkdir(ret_val)
+            try:
+                os.mkdir(ret_val)
+            except:
+                pass
 
     set_config_value("CONFIG_ITEMS", key, ret_val + "/")
 
@@ -5085,7 +5088,8 @@ if __name__ == "__main__":
         main()
     except SystemExit:
         #print("")
-        nothing = None
+        #nothing = None
+        pass
     except:
         # need to clean this up if we changed it
         os.system("sudo chown -R root:root /etc/emulationstation/")
