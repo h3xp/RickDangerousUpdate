@@ -5058,7 +5058,6 @@ def fix_lame_update_dirs(key: str):
 
 
 def main():
-    install_emulators("/tmp/Extracted")
     global update_available_result
     update_available_result = update_available()
     if os.path.isfile(tool_ini):
