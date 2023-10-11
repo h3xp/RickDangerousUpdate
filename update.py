@@ -4075,7 +4075,9 @@ def check_root(directory):
     for files in os.listdir(directory):
         if os.path.exists(directory / "etc" / "emulationstation"):
             return True
-
+        if os.path.exists(directory / "opt" / "retropie" / "libretrocores"):
+            return True
+        
     return False
 
 
@@ -4566,6 +4568,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         if check_root(extracted):
             os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
             os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+            os.system("sudo chown -R pi:pi /opt/retropie/libretrocores/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
         install_emulators(extracted)
@@ -4579,6 +4582,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
     if official:
         if check_root(extracted):
             os.system("sudo chown -R root:root /etc/emulationstation/")
+            os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
 
     try:
         shutil.rmtree(extracted)
