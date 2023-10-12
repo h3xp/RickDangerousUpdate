@@ -1134,6 +1134,8 @@ def get_retropie_cores():
 
 
 def install_emulators(directory):
+    if len(list(Path(directory).rglob('retropie.pkg'))) == 0:
+        return
     # get official cores
     cores = get_retropie_cores()
     # check if retropie.pkg files exist
@@ -1142,7 +1144,8 @@ def install_emulators(directory):
         if "/opt/retropie/libretrocores" in package_dir:
             if os.path.basename(package_dir) not in cores:
                 # I took this out of check_root
-                os.system("sudo chown -R pi:pi /opt/retropie/libretrocores/ > /tmp/test")
+                if os.path.isdir(f"/opt/retropie/libretrocores/{os.path.basename(package_dir)}"):
+                    os.system(f"sudo chown -R pi:pi /opt/retropie/libretrocores/{os.path.basename(package_dir)} > /tmp/test")
                 return
         os.system("sudo chown -R pi:pi {} > /tmp/test".format(os.path.dirname(package)))
         local_package = str(package).replace(str(directory), "")
