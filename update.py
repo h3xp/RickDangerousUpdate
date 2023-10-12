@@ -1144,8 +1144,9 @@ def install_emulators(directory):
         if "/opt/retropie/libretrocores" in package_dir:
             if os.path.basename(package_dir) not in cores:
                 # I took this out of check_root
-                if os.path.isdir(f"/opt/retropie/libretrocores/{os.path.basename(package_dir)}"):
-                    os.system(f"sudo chown -R pi:pi /opt/retropie/libretrocores/{os.path.basename(package_dir)} > /tmp/test")
+                if not os.path.isdir(f"/opt/retropie/libretrocores/{os.path.basename(package_dir)}"):
+                    os.system(f"sudo mkdir /opt/retropie/libretrocores/{os.path.basename(package_dir)} > /tmp/test")
+                os.system(f"sudo chown -R pi:pi /opt/retropie/libretrocores/{os.path.basename(package_dir)} > /tmp/test")
                 return
         os.system("sudo chown -R pi:pi {} > /tmp/test".format(os.path.dirname(package)))
         local_package = str(package).replace(str(directory), "")
