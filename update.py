@@ -1116,9 +1116,38 @@ def get_package_date(file: str):
     return datetime.datetime.fromisoformat("1900-01-01T00:00:00")
 
 
+def get_retropie_cores():
+    cores = []
+    found = False
+    val = subprocess.check_output(["/bin/bash", "-c", "sudo /home/pi/RetroPie-Setup/retropie_packages.sh | less"])
+    lines = val.decode("utf-8").split(str("\n"))
+    for line in lines:
+        if not found:
+            if line[0:10:] == "----------":
+                found = True
+        else:
+            parts = line.split(":")
+            if len(parts) == 3:
+                cores.append(parts[0].strip())
+
+    return cores
+
+
 def install_emulators(directory):
+    if len(list(Path(directory).rglob('retropie.pkg'))) == 0:
+        return
+    # get official cores
+    cores = get_retropie_cores()
     # check if retropie.pkg files exist
     for package in Path(directory).rglob('retropie.pkg'):
+        package_dir = os.path.dirname(package)
+        if "/opt/retropie/libretrocores" in package_dir:
+            if os.path.basename(package_dir) not in cores:
+                # I took this out of check_root
+                if not os.path.isdir(f"/opt/retropie/libretrocores/{os.path.basename(package_dir)}"):
+                    os.system(f"sudo mkdir /opt/retropie/libretrocores/{os.path.basename(package_dir)} > /tmp/test")
+                os.system(f"sudo chown -R pi:pi /opt/retropie/libretrocores/{os.path.basename(package_dir)} > /tmp/test")
+                return
         os.system("sudo chown -R pi:pi {} > /tmp/test".format(os.path.dirname(package)))
         local_package = str(package).replace(str(directory), "")
         if os.path.isfile(local_package):
@@ -4075,7 +4104,9 @@ def check_root(directory):
     for files in os.listdir(directory):
         if os.path.exists(directory / "etc" / "emulationstation"):
             return True
-
+        #if os.path.exists(directory / "opt" / "retropie" / "libretrocores"):
+        #    return True
+        
     return False
 
 
@@ -4566,6 +4597,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         if check_root(extracted):
             os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
             os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
+            #os.system("sudo chown -R pi:pi /opt/retropie/libretrocores/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
         install_emulators(extracted)
@@ -4579,6 +4611,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
     if official:
         if check_root(extracted):
             os.system("sudo chown -R root:root /etc/emulationstation/")
+        os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
 
     try:
         shutil.rmtree(extracted)
