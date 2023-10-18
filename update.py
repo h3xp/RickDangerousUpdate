@@ -1283,7 +1283,9 @@ def make_deletions(directory):
     if os.path.isfile(directory):
         f = open(directory, 'r' )
         for lines in f:
-            if os.path.isfile(lines.rstrip()):
+            if os.path.islink(lines.rstrip()):
+                os.unlink(lines.rstrip())
+            elif os.path.isfile(lines.rstrip()):
                 os.remove(lines.rstrip())
             elif os.path.isdir(lines.rstrip()):
                 shutil.rmtree(lines.rstrip())
