@@ -770,16 +770,12 @@ def get_file_data(file_id: str, root_folder: str):
 # def get_nodes_in_shared_folder(root_folder: str) -> dict:
 def get_nodes_in_shared_folder(root_folder: str):
     data = [{"a": "f", "c": 1, "ca": 1, "r": 1}]
-    try:
-        response = requests.post(
-            "https://g.api.mega.co.nz/cs",
-            params={'id': 0,  # self.sequence_num
-                    'n': root_folder},
-            data=json.dumps(data)
-        )
-    except requests.exceptions.RequestException as e:
-        print(e)
-    #print(response)
+    response = requests.post(
+        "https://g.api.mega.co.nz/cs",
+        params={'id': 0,  # self.sequence_num
+                'n': root_folder},
+        data=json.dumps(data)
+    )
     json_resp = response.json()
     return json_resp[0]["f"]
 
