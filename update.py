@@ -4596,6 +4596,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
             os.system("sudo chown -R pi:pi {} > /tmp/test".format(str(extracted)))
             os.system("sudo chown -R pi:pi /etc/emulationstation/ > /tmp/test")
             #os.system("sudo chown -R pi:pi /opt/retropie/libretrocores/ > /tmp/test")
+        os.system("sudo chown -R pi:pi /opt/retropie/ports/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
         install_emulators(extracted)
