@@ -4610,6 +4610,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         if check_root(extracted):
             os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
+        os.system("sudo chown -R root:root /opt/retropie/ports/")
 
     try:
         shutil.rmtree(extracted)
