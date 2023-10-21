@@ -66,6 +66,8 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
     files_added = []
     files_deleted = []
     files_updated = []
+    pre_processing = []
+    post_processing = []
 
     log_this(log_file, "")
     log_this(log_file, "")
@@ -90,6 +92,20 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
 
                         current_files[line] = ["DELETED", os.path.basename(path), None, previous_size]
                         files_deleted.append(line)
+                        
+        if "read me pre-process!.txt" in zip_ref.namelist():
+            zip_ref.extract("read me pre-process!.txt", "/tmp")
+            with open("/tmp/read me pre-process!.txt", 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines:
+                    pre_processing.append(line)
+
+        if "read me post-process!.txt" in zip_ref.namelist():
+            zip_ref.extract("read me post-process!.txt", "/tmp")
+            with open("/tmp/read me post-process!.txt", 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines:
+                    post_processing.append(line)
 
         for file_listing in zip_ref.infolist():
             #info_dict = parse_zipinfo(file_listing)
@@ -119,6 +135,12 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
         files_deleted = print_sort(files_deleted, directories)
         print_files(current_files, files_deleted, log_file)
 
+    if len(pre_processing) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"PRE-PROCESSING COMMANDS")
+        for pre_cmd in pre_processing:
+            log_this(log_file, pre_cmd)
+
     if len(files_added) > 0:
         log_this(log_file, "")
         log_this(log_file,"ADDED")
@@ -130,6 +152,12 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
         log_this(log_file,"UPDATED")
         files_updated = print_sort(files_updated, directories)
         print_files(current_files, files_updated, log_file)
+
+    if len(post_processing) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"POST-PROCESSING COMMANDS")
+        for post_cmd in post_processing:
+            log_this(log_file, post_cmd)
 
     return
 
@@ -1288,7 +1316,30 @@ def make_deletions(directory):
         f.close()
         os.remove(directory)
 
+def execute_pre_process(directory):
+    directory = directory / "read me pre-process!.txt"
+    if os.path.isfile(directory):
+        print("Executing pre-processing commands...")
+        f = open(directory, 'r' )
+        for lines in f:
+            os.system("{} > /tmp/test".format(lines))
+        f.close()
+        os.remove(directory)
 
+def prepare_post_process(directory):
+    directory = directory / "read me post-process!.txt"
+    if os.path.isfile(directory):
+        shutil.move(directory, "/tmp/read me post-process!.txt")
+
+def execute_post_process():
+    if os.path.isfile("/tmp/read me post-process!.txt"):
+        print("Executing post-processing commands...")
+        f = open("/tmp/read me post-process!.txt", 'r' )
+        for lines in f:
+            os.system("{} > /tmp/test".format(lines))
+        f.close()
+        os.remove("/tmp/read me post-process!.txt")
+        
 def check_internet():
     url = "http://www.google.com/"
     try:
@@ -4599,6 +4650,8 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         os.system("sudo chown -R pi:pi /opt/retropie/ports/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
+        execute_pre_process(extracted)
+        prepare_post_process(extracted)
         install_emulators(extracted)
     else:
         prepare_unofficial_update(extracted)
@@ -4612,6 +4665,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
             os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
         os.system("sudo chown -R root:root /opt/retropie/ports/")
+        execute_post_process()
 
     try:
         shutil.rmtree(extracted)
