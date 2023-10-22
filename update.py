@@ -1329,7 +1329,7 @@ def execute_script(script_name):
     if os.path.isfile(script_name):
         os.system("dos2unix '{}' > /tmp/test".format(script_name))
         print("Executing ...", script_name)
-        os.system("/bin/bash '{}' > /tmp/test".format(script_name))
+        os.system("/bin/bash '{}' &> '{}'.log".format(script_name, script_name))
         
 def check_internet():
     url = "http://www.google.com/"
