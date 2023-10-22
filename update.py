@@ -1316,29 +1316,20 @@ def make_deletions(directory):
         f.close()
         os.remove(directory)
 
-def execute_pre_process(directory):
-    directory = directory / "read me pre-process!.txt"
+def prepare_script(directory, script_name):
+    actual_script = ""
+    directory = directory / script_name
     if os.path.isfile(directory):
-        print("Executing pre-processing commands...")
-        f = open(directory, 'r' )
-        for lines in f:
-            os.system("{} > /tmp/test".format(lines))
-        f.close()
-        os.remove(directory)
+        actual_script = "/tmp/{}".format(script_name)
+        shutil.move(directory, actual_script)
 
-def prepare_post_process(directory):
-    directory = directory / "read me post-process!.txt"
-    if os.path.isfile(directory):
-        shutil.move(directory, "/tmp/read me post-process!.txt")
+    return actual_script
 
-def execute_post_process():
-    if os.path.isfile("/tmp/read me post-process!.txt"):
-        print("Executing post-processing commands...")
-        f = open("/tmp/read me post-process!.txt", 'r' )
-        for lines in f:
-            os.system("{} > /tmp/test".format(lines))
-        f.close()
-        os.remove("/tmp/read me post-process!.txt")
+def execute_script(script_name):
+    if os.path.isfile(script_name):
+        os.system("dos2unix '{}' > /tmp/test".format(script_name))
+        print("Executing ...", script_name)
+        os.system("/bin/bash '{}' > /tmp/test".format(script_name))
         
 def check_internet():
     url = "http://www.google.com/"
@@ -4650,8 +4641,8 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         os.system("sudo chown -R pi:pi /opt/retropie/ports/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
-        execute_pre_process(extracted)
-        prepare_post_process(extracted)
+        execute_script(prepare_script(extracted, "read me pre-process!.txt"))
+        post_process_script = prepare_script(extracted, "read me post-process!.txt")
         install_emulators(extracted)
     else:
         prepare_unofficial_update(extracted)
@@ -4665,7 +4656,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
             os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
         os.system("sudo chown -R root:root /opt/retropie/ports/")
-        execute_post_process()
+        execute_script(post_process_script)
 
     try:
         shutil.rmtree(extracted)
