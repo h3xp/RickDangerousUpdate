@@ -1329,7 +1329,11 @@ def execute_script(script_name):
     if os.path.isfile(script_name):
         os.system("dos2unix '{}' > /tmp/test".format(script_name))
         print("Executing ...", script_name)
-        os.system("/bin/bash '{}' &> '{}'.$$.log".format(script_name, script_name))
+        result = subprocess.run(["/bin/bash",script_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE, check=True)
+        if result.stderr.decode('utf-8') != "":
+            cls()
+            d.msgbox(result.stderr.decode('utf-8'), title="Error(s) reported from {}".format(script_name))
+            cls()
         
 def check_internet():
     url = "http://www.google.com/"
