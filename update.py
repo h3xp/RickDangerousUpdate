@@ -1325,15 +1325,20 @@ def prepare_script(directory, script_name):
 
     return actual_script
 
-def execute_script(script_name):
+def execute_script(script_name, update_name):
     if os.path.isfile(script_name):
         os.system("dos2unix '{}' > /tmp/test".format(script_name))
         print("Executing ...", script_name)
         result = subprocess.run(["/bin/bash",script_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        if result.stderr.decode('utf-8') != "":
+        err_text = result.stderr.decode('utf-8')
+        if err_text != "":
+            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nstderr from {} of {}\n\n{}\n\n".format(datetime.datetime.utcnow(), script_name, update_name, err_text))
             cls()
-            d.msgbox(result.stderr.decode('utf-8'), title="Error(s) reported from {}".format(script_name))
+            code = d.msgbox("\n{}\nLogged to /home/pi/.update_tool/exception.log\n".format(err_text), title = "Error(s) reported from '{}' of '{}'".format(os.path.basename(script_name), os.path.basename(update_name), err_text), extra_button=True, extra_label="Abort and Exit")
             cls()
+
+            if code == d.EXTRA:
+                exit(0)
         
 def check_internet():
     url = "http://www.google.com/"
@@ -4645,7 +4650,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         os.system("sudo chown -R pi:pi /opt/retropie/ports/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
-        execute_script(prepare_script(extracted, "read me pre-process!.txt"))
+        execute_script(prepare_script(extracted, "read me pre-process!.txt"), file)
         post_process_script = prepare_script(extracted, "read me post-process!.txt")
         install_emulators(extracted)
     else:
@@ -4660,7 +4665,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
             os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
         os.system("sudo chown -R root:root /opt/retropie/ports/")
-        execute_script(post_process_script)
+        execute_script(post_process_script, file)
 
     try:
         shutil.rmtree(extracted)
