@@ -42,7 +42,7 @@ update_available_result = "no connection"
 tool_ini = "/home/pi/.update_tool/update_tool.ini"
 
 genres = {}
-
+update_being_processed = "None"
 
 def print_files(current_files: dict, file_list: list, log_file: str, spacer="\t", starter="-"):
     for file in file_list:
@@ -4625,6 +4625,9 @@ def extract_zipfile(zip_file:str, dir_name: str):
 
 
 def process_improvement(file: str, extracted: str, status=True, auto_clean=False, official=True):
+    global update_being_processed
+    update_being_processed = file
+    
     print("Processing {}official update: {} ({})...".format("un" if not official else "", os.path.basename(file), convert_filesize(os.path.getsize(file))))
     print("Extracting...")
     zip_return = extract_zipfile(file, extracted)
@@ -4636,6 +4639,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
                 shutil.rmtree(extracted)
             except OSError as e:
                 print("Error: %s : %s" % (extracted, e.strerror))
+        update_being_processed = "None"
         return False
     #with zipfile.ZipFile(file, 'r') as zip_ref:
     #    zip_ref.extractall(extracted)
@@ -4671,8 +4675,10 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         shutil.rmtree(extracted)
     except OSError as e:
         print("Error: %s : %s" % (extracted, e.strerror))
+        update_being_processed = "None"
         return False
 
+    update_being_processed = "None"
     return True
 
 
@@ -5187,7 +5193,7 @@ if __name__ == "__main__":
             version = get_config_value("CONFIG_ITEMS", "tool_ver")
             if version is not None:
                 title_text += "Version: " + version + "\n\n"
-            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nVersion: {}\n\n{}".format(datetime.datetime.utcnow(), version, traceback.format_exc()))
+            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nVersion: {}\nUpdate: {}\n\n{}".format(datetime.datetime.utcnow(), version, update_being_processed, traceback.format_exc()))
             log_this("/home/pi/.update_tool/exception.log", "\n\n")
 
         d.msgbox(title_text + traceback.format_exc(), title="Something has gone really bad...")
