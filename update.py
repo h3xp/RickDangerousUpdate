@@ -42,7 +42,7 @@ update_available_result = "no connection"
 tool_ini = "/home/pi/.update_tool/update_tool.ini"
 
 genres = {}
-
+update_being_processed = "None"
 
 def print_files(current_files: dict, file_list: list, log_file: str, spacer="\t", starter="-"):
     for file in file_list:
@@ -66,6 +66,8 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
     files_added = []
     files_deleted = []
     files_updated = []
+    pre_processing = []
+    post_processing = []
 
     log_this(log_file, "")
     log_this(log_file, "")
@@ -90,6 +92,20 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
 
                         current_files[line] = ["DELETED", os.path.basename(path), None, previous_size]
                         files_deleted.append(line)
+                        
+        if "read me pre-process!.txt" in zip_ref.namelist():
+            zip_ref.extract("read me pre-process!.txt", "/tmp")
+            with open("/tmp/read me pre-process!.txt", 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines:
+                    pre_processing.append(line)
+
+        if "read me post-process!.txt" in zip_ref.namelist():
+            zip_ref.extract("read me post-process!.txt", "/tmp")
+            with open("/tmp/read me post-process!.txt", 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+                for line in lines:
+                    post_processing.append(line)
 
         for file_listing in zip_ref.infolist():
             #info_dict = parse_zipinfo(file_listing)
@@ -119,6 +135,12 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
         files_deleted = print_sort(files_deleted, directories)
         print_files(current_files, files_deleted, log_file)
 
+    if len(pre_processing) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"PRE-PROCESSING COMMANDS")
+        for pre_cmd in pre_processing:
+            log_this(log_file, pre_cmd)
+
     if len(files_added) > 0:
         log_this(log_file, "")
         log_this(log_file,"ADDED")
@@ -130,6 +152,12 @@ def list_info_in_update(current_files: dict, path: str, log_file: str, directori
         log_this(log_file,"UPDATED")
         files_updated = print_sort(files_updated, directories)
         print_files(current_files, files_updated, log_file)
+
+    if len(post_processing) > 0:
+        log_this(log_file, "")
+        log_this(log_file,"POST-PROCESSING COMMANDS")
+        for post_cmd in post_processing:
+            log_this(log_file, post_cmd)
 
     return
 
@@ -1288,7 +1316,30 @@ def make_deletions(directory):
         f.close()
         os.remove(directory)
 
+def prepare_script(directory, script_name):
+    actual_script = ""
+    directory = directory / script_name
+    if os.path.isfile(directory):
+        actual_script = "/tmp/{}".format(script_name)
+        shutil.move(directory, actual_script)
 
+    return actual_script
+
+def execute_script(script_name, update_name):
+    if os.path.isfile(script_name):
+        os.system("dos2unix '{}' > /tmp/test".format(script_name))
+        print("Executing ...", script_name)
+        result = subprocess.run(["/bin/bash",script_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        err_text = result.stderr.decode('utf-8')
+        if err_text != "":
+            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nstderr from {} of {}\n\n{}\n\n".format(datetime.datetime.utcnow(), script_name, update_name, err_text))
+            cls()
+            code = d.msgbox("\n{}\nLogged to /home/pi/.update_tool/exception.log\n".format(err_text), title = "Error(s) reported from '{}' of '{}'".format(os.path.basename(script_name), os.path.basename(update_name), err_text), extra_button=True, extra_label="Abort and Exit")
+            cls()
+
+            if code == d.EXTRA:
+                exit(0)
+        
 def check_internet():
     url = "http://www.google.com/"
     try:
@@ -4574,6 +4625,9 @@ def extract_zipfile(zip_file:str, dir_name: str):
 
 
 def process_improvement(file: str, extracted: str, status=True, auto_clean=False, official=True):
+    global update_being_processed
+    update_being_processed = file
+    
     print("Processing {}official update: {} ({})...".format("un" if not official else "", os.path.basename(file), convert_filesize(os.path.getsize(file))))
     print("Extracting...")
     zip_return = extract_zipfile(file, extracted)
@@ -4585,6 +4639,7 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
                 shutil.rmtree(extracted)
             except OSError as e:
                 print("Error: %s : %s" % (extracted, e.strerror))
+        update_being_processed = "None"
         return False
     #with zipfile.ZipFile(file, 'r') as zip_ref:
     #    zip_ref.extractall(extracted)
@@ -4599,6 +4654,8 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
         os.system("sudo chown -R pi:pi /opt/retropie/ports/ > /tmp/test")
         update_config(extracted)
         make_deletions(extracted)
+        execute_script(prepare_script(extracted, "read me pre-process!.txt"), file)
+        post_process_script = prepare_script(extracted, "read me post-process!.txt")
         install_emulators(extracted)
     else:
         prepare_unofficial_update(extracted)
@@ -4612,13 +4669,16 @@ def process_improvement(file: str, extracted: str, status=True, auto_clean=False
             os.system("sudo chown -R root:root /etc/emulationstation/")
         os.system("sudo chown -R root:root /opt/retropie/libretrocores/")
         os.system("sudo chown -R root:root /opt/retropie/ports/")
+        execute_script(post_process_script, file)
 
     try:
         shutil.rmtree(extracted)
     except OSError as e:
         print("Error: %s : %s" % (extracted, e.strerror))
+        update_being_processed = "None"
         return False
 
+    update_being_processed = "None"
     return True
 
 
@@ -5133,7 +5193,7 @@ if __name__ == "__main__":
             version = get_config_value("CONFIG_ITEMS", "tool_ver")
             if version is not None:
                 title_text += "Version: " + version + "\n\n"
-            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nVersion: {}\n\n{}".format(datetime.datetime.utcnow(), version, traceback.format_exc()))
+            log_this("/home/pi/.update_tool/exception.log", "*****\nDate: {}\nVersion: {}\nUpdate: {}\n\n{}".format(datetime.datetime.utcnow(), version, update_being_processed, traceback.format_exc()))
             log_this("/home/pi/.update_tool/exception.log", "\n\n")
 
         d.msgbox(title_text + traceback.format_exc(), title="Something has gone really bad...")
