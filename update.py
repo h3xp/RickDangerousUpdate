@@ -4594,7 +4594,8 @@ def extract_zipfile(zip_file:str, dir_name: str):
         total_size = sum([zinfo.file_size for zinfo in zip_ref.filelist])
 
     if os.path.isdir(dir_name):
-        shutil.rmtree(dir_name)
+        os.system("sudo rm -rf {} > /tmp/test".format(dir_name))
+        #shutil.rmtree(dir_name)
     os.mkdir(dir_name)
     proc = subprocess.Popen(["/usr/bin/unzip", "-q", zip_file, "-d", dir_name])
 
@@ -4604,7 +4605,7 @@ def extract_zipfile(zip_file:str, dir_name: str):
         status_bar(total_size, current_size, start_time)
         time.sleep(.5)
         
-    if proc.returncode != 0:
+    if proc.returncode > 1:
         text = f"Error unzipping file: {zip_file}\n\nWould you like to continue processing and skip this fie?"
         code = d.yesno(text=text, ok_label="Continue")
         if code == d.OK:
@@ -5052,12 +5053,14 @@ def reboot_dialog(reboot_msg):
 def clean_failures():
     if os.path.exists("/tmp/improvements"):
         if os.path.isdir("/tmp/improvements"):
-            os.system("sudo chown -R pi:pi /tmp/improvements/")
-            shutil.rmtree("/tmp/improvements")
+            #os.system("sudo chown -R pi:pi /tmp/improvements/")
+            #shutil.rmtree("/tmp/improvements")
+            os.system("sudo rm -rf /tmp/improvements/")
     if os.path.exists("/tmp/extracted"):
         if os.path.isdir("/tmp/extracted"):
-            os.system("sudo chown -R pi:pi /tmp/extracted/")
-            shutil.rmtree("/tmp/extracted")
+            #os.system("sudo chown -R pi:pi /tmp/extracted/")
+            #shutil.rmtree("/tmp/extracted")
+            os.system("sudo rm -rf /tmp/extracted/")
 
     return
 
