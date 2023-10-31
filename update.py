@@ -5053,12 +5053,14 @@ def reboot_dialog(reboot_msg):
 def clean_failures():
     if os.path.exists("/tmp/improvements"):
         if os.path.isdir("/tmp/improvements"):
-            os.system("sudo chown -R pi:pi /tmp/improvements/")
-            shutil.rmtree("/tmp/improvements")
+            #os.system("sudo chown -R pi:pi /tmp/improvements/")
+            #shutil.rmtree("/tmp/improvements")
+            os.system("sudo rm -rf /tmp/improvements/")
     if os.path.exists("/tmp/extracted"):
         if os.path.isdir("/tmp/extracted"):
-            os.system("sudo chown -R pi:pi /tmp/extracted/")
-            shutil.rmtree("/tmp/extracted")
+            #os.system("sudo chown -R pi:pi /tmp/extracted/")
+            #shutil.rmtree("/tmp/extracted")
+            os.system("sudo rm -rf /tmp/extracted/")
 
     return
 
