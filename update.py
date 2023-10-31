@@ -4604,7 +4604,7 @@ def extract_zipfile(zip_file:str, dir_name: str):
         status_bar(total_size, current_size, start_time)
         time.sleep(.5)
         
-    if proc.returncode != 0:
+    if proc.returncode > 1:
         text = f"Error unzipping file: {zip_file}\n\nWould you like to continue processing and skip this fie?"
         code = d.yesno(text=text, ok_label="Continue")
         if code == d.OK:
