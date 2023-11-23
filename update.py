@@ -4244,6 +4244,8 @@ def official_improvements_dialog(update_dir=None, delete=False, available_update
     title_msg  = "Download and Install Official Updates"
     if update_dir is not None:
         title_msg  = "Manually Install Official Updates"
+    if process_improvements == False:
+        title_msg  = "Generate Manual Updates Story"
 
     if len(available_updates) == 0:
         available_updates = get_available_updates(megadrive, status=True)
