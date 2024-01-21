@@ -1185,6 +1185,7 @@ def install_emulators(directory):
         print(f"Now installing {core} from bin...")
         runcmd(f"sudo /home/pi/RetroPie-Setup/retropie_packages.sh {core} depends")
         runcmd(f"sudo /home/pi/RetroPie-Setup/retropie_packages.sh {core} install_bin")
+        runcmd(f"sudo /home/pi/RetroPie-Setup/retropie_packages.sh {core} configure")
         os.remove(str(package))
 
     return
@@ -1327,7 +1328,7 @@ def prepare_script(directory, script_name):
 
 def execute_script(script_name, update_name):
     if os.path.isfile(script_name):
-        os.system(f"dos2unix 'f{script_name}' > /tmp/test")
+        os.system(f"dos2unix '{script_name}' > /tmp/test")
         print("Executing ...", script_name)
         result = subprocess.run(["/bin/bash",script_name], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         err_text = result.stderr.decode('utf-8')
