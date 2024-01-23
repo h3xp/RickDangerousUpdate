@@ -1051,10 +1051,9 @@ def clean_emulators_cfg(items: dict, log_file: str, check=False):
 
                 continue
             for file in os.scandir(system_dir):
-                if os.path.isfile(file.path):
-                    pos = file.path.rfind(".")
-                    emulator_cfg_name = get_emulators_cfg_filename(file.path[:pos].strip().replace(system_dir + "/", ""))
-                    system_roms.append(emulator_cfg_name)
+                pos = file.path.rfind(".")
+                emulator_cfg_name = get_emulators_cfg_filename(file.path[:pos].strip().replace(system_dir + "/", ""))
+                system_roms.append(emulator_cfg_name)
         if item[len(parts[0]) + 1:] in system_roms:
             cleaned[item] = items[item]
         else:
